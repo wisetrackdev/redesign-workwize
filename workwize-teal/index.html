@@ -38,7 +38,7 @@
         </div>
         <div class="tools" id="tools" hidden>
           <button class="chip" id="btnCopy">Copy</button>
-          <button class="chip" id="btnCsv">CSV</button>
+          <button class="chip" id="btnExcel">Excel</button>
           <button class="chip" id="btnPrint">Print</button>
         </div>
       </div>
@@ -53,10 +53,10 @@
           <option value="area">Area A-Z</option>
         </select>
         <select id="pageSize" aria-label="Rows per page">
-          <option value="6">6 / page</option>
-          <option value="12" selected>12 / page</option>
-          <option value="24">24 / page</option>
-          <option value="48">48 / page</option>
+          <option value="50" selected>50 / page</option>
+          <option value="100">100 / page</option>
+          <option value="150">150 / page</option>
+          <option value="200">200 / page</option>
         </select>
         <div class="vtoggle" role="group" aria-label="Layout">
           <button id="viewGrid" title="Card view">
@@ -302,6 +302,7 @@
   <button class="totop" id="toTop" aria-label="Back to top" hidden>&uarr;</button>
   <div class="toast" id="toast" role="status"></div>
 
+  <script src="assets/xlsx.full.min.js"></script>
   <script src="data.js"></script>
   <script src="script.js"></script>
 </body>

@@ -106,7 +106,7 @@
 
   /* ================= State ================= */
   var jobs = load();
-  var state = { tab: 'open', q: '', status: 'all', area: 'all', sort: 'new', pageSize: 12, layout: 'list', page: { open: 1, closed: 1 } };
+  var state = { tab: 'open', q: '', status: 'all', area: 'all', sort: 'new', pageSize: 50, layout: 'list', page: { open: 1, closed: 1 } };
   var editId = null, editFromView = false, deleteId = null, photoData = '';
   var assignTargetId = null;
   var closeTargetId = null, closePhotoData = '';
@@ -202,7 +202,6 @@
       '<button data-act="view" data-id="' + j.id + '">' + I.eye + ' View Details</button>' +
       (!closed ? '<button data-act="assign" data-id="' + j.id + '">' + I.user + (isAssigned ? ' Reassign' : ' Assign to Team') + '</button>' : '') +
       (!closed ? '<button data-act="close" data-id="' + j.id + '">' + I.check + ' Close Job</button>' : '') +
-      (closed ? '<button data-act="reopen" data-id="' + j.id + '">' + I.undo + ' Reopen Job</button>' : '') +
       '<button data-act="edit" data-id="' + j.id + '">' + I.edit + ' Edit Job</button>' +
       '<button class="del" data-act="delete" data-id="' + j.id + '">' + I.del + ' Delete Job</button>' +
       '</div></div>';
@@ -239,14 +238,14 @@
         ? '<span>Closed by</span><b title="' + esc(j.closedBy) + '">' + na(j.closedBy) + ' &middot; ' + fmt(j.closedAt) + '</b>'
         : '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) + (j.assignDept && j.assignDept !== 'NA' ? ' <small style="color:var(--muted)">(' + esc(j.assignDept) + ')</small>' : '') : '<span class="na">Not assigned</span>') + '</b>');
 
-    // Bottom direct actions: Assign / Reassign for open tab jobs; Reopen for closed jobs (No Close button on cards)
+    // Bottom direct actions: Assign / Reassign for open tab jobs; No reopen button for closed jobs
     var bottomActions = !closed
       ? '<div class="btns-row"><button type="button" class="btn-assign" data-act="assign" data-id="' + j.id + '">' + I.user + (isAssigned ? ' Reassign' : ' Assign') + '</button></div>'
-      : '<div class="btns-row"><button type="button" class="btn-reopen" data-act="reopen" data-id="' + j.id + '">' + I.undo + ' Reopen</button></div>';
+      : '';
 
     return '<article class="jcard ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="top">' +
-        '<div class="left"><div class="num" title="Sr.No">#' + j.id + '</div><span class="prop-badge" title="Prop ID">' + esc(propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
+        '<div class="left"><span class="prop-badge" title="Job ID">' + esc(propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
         menuHTML(j) +
       '</div>' +
       '<h3 title="' + esc(j.details) + '">' + hl(j.details) + '</h3>' +
@@ -266,10 +265,9 @@
 
     var acts = !closed
       ? '<button type="button" class="btn-assign" data-act="assign" data-id="' + j.id + '" style="padding:5px 9px">' + I.user + (isAssigned ? ' Reassign' : ' Assign') + '</button>'
-      : '<button type="button" class="btn-reopen" data-act="reopen" data-id="' + j.id + '" style="padding:5px 9px">' + I.undo + ' Reopen</button>';
+      : '';
 
     return '<article class="jrow ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
-      '<div class="num" title="Sr.No">#' + j.id + '</div>' +
       '<div class="rt">' +
         '<span class="prop-badge" title="Job ID">' + esc(propId) + '</span>' +
         '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
@@ -338,7 +336,7 @@
     var items = jobs.filter(matches).sort(function (a, b) { return new Date(b.opened) - new Date(a.opened); }).slice(0, 8);
     $('#recentList').innerHTML = items.length ? items.map(function (j) {
       var propId = j.propId || getPropId(j);
-      return '<li data-view="' + j.id + '"><div><b>' + hl(j.details) + '</b><small>#' + j.id + ' &middot; <span class="prop-badge" style="font-size:10.5px;padding:1px 6px">' + esc(propId) + '</span> &middot; ' + esc(j.dept) + ' &middot; ' + esc(j.area) + ' &middot; ' + fmt(j.opened) + '</small></div><span class="tag st-' + j.status + '">' + j.status + '</span></li>';
+      return '<li data-view="' + j.id + '"><div><b>' + hl(j.details) + '</b><small><span class="prop-badge" style="font-size:10.5px;padding:1px 6px">' + esc(propId) + '</span> &middot; ' + esc(j.dept) + ' &middot; ' + esc(j.area) + ' &middot; ' + fmt(j.opened) + '</small></div><span class="tag st-' + j.status + '">' + j.status + '</span></li>';
     }).join('') : '<li class="nohover">No matching jobs</li>';
   }
 
@@ -427,7 +425,7 @@
     else if (act === 'reopen') {
       job.status = job.assigned ? 'Assigned' : 'Open';
       job.closedAt = ''; job.closedBy = '';
-      save(); render(); refreshView(id); toast('Job #' + id + ' reopened');
+      save(); render(); refreshView(id); toast('Job ' + (job.propId || getPropId(job)) + ' reopened');
     }
   }
 
@@ -450,7 +448,7 @@
   function openAssign(job) {
     assignTargetId = job.id;
     var propId = job.propId || getPropId(job);
-    $('#assignId').textContent = '#' + job.id + ' (' + propId + ')';
+    $('#assignId').textContent = propId;
     $('#assignBrief').innerHTML =
       '<b>' + esc(job.details) + '</b>' +
       '<small><b>Prop ID:</b> ' + esc(propId) + '</small>' +
@@ -504,7 +502,7 @@
     closeModals();
     render();
     refreshView(job.id);
-    toast('Job #' + job.id + ' assigned to ' + member + ' (' + dept + ')');
+    toast('Job ' + (job.propId || getPropId(job)) + ' assigned to ' + member + ' (' + dept + ')');
   });
 
   /* =====================================================================
@@ -514,7 +512,7 @@
     closeTargetId = job.id;
     closePhotoData = '';
     var propId = job.propId || getPropId(job);
-    $('#closeId').textContent = '#' + job.id + ' (' + propId + ')';
+    $('#closeId').textContent = propId;
     $('#closeBrief').innerHTML =
       '<b>' + esc(job.details) + '</b>' +
       '<small><b>Prop ID:</b> ' + esc(propId) + '</small>' +
@@ -580,7 +578,7 @@
     closeModals();
     render();
     refreshView(job.id);
-    toast('Job #' + job.id + ' closed by ' + closer);
+    toast('Job ' + (job.propId || getPropId(job)) + ' closed by ' + closer);
   });
 
   /* =====================================================================
@@ -629,13 +627,10 @@
       viewActions =
         '<button class="btn p" data-vact="assign">' + I.user + (isAssigned ? ' Reassign' : ' Assign Job') + '</button>' +
         '<button class="btn g" data-vact="close">' + I.check + ' Close Job</button>';
-    } else {
-      viewActions =
-        '<button class="btn p" data-vact="reopen">' + I.undo + ' Reopen Job</button>';
     }
 
     $('#viewDialog').innerHTML =
-      '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips"><span class="vid">Job #' + j.id + '</span><span class="prop-badge">' + esc(propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span><span class="age">' + age + '</span></div>' +
+      '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips"><span class="prop-badge" style="font-size:12px;padding:3px 9px">' + esc(propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span><span class="age">' + age + '</span></div>' +
       '<div class="vnav"><button data-vnav="-1" title="Previous (&larr;)"' + (pos <= 0 ? ' disabled' : '') + '>&lsaquo;</button><span>' + (pos + 1) + ' of ' + tot + '</span><button data-vnav="1" title="Next (&rarr;)"' + (pos >= tot - 1 ? ' disabled' : '') + '>&rsaquo;</button><button class="vx" data-vclose title="Close (Esc)">&times;</button></div></div>' +
       '<h2>' + esc(j.details) + '</h2><p>Issued To: ' + esc(j.dept) + ' &middot; ' + esc(j.area) + (j.sub ? ' &rsaquo; ' + esc(j.sub) : '') + '</p></div>' +
       '<div class="vbody"><div class="vmain"><h4>Job Information</h4><div class="fv">' + fields + '</div>' +
@@ -714,7 +709,7 @@
   function openEdit(j, fromView) {
     editId = j.id; editFromView = !!fromView;
     var propId = j.propId || getPropId(j);
-    $('#editId').textContent = '#' + j.id + ' (' + propId + ')';
+    $('#editId').textContent = propId;
     $('#eDetails').value = j.details; $('#eDept').value = j.dept; $('#eArea').value = j.area; $('#eSub').value = j.sub;
     $('#eSubDept').value = j.assignDept || 'NA'; $('#eAssigned').value = j.assigned || '';
     $('#eStatus').value = j.status; $('#eClosedBy').value = j.closedBy || ''; $('#eRemarks').value = j.remarks || '';
@@ -744,21 +739,24 @@
     j.photoBefore = editPhotos.Before; j.photoAfter = editPhotos.After; j.status = st;
     if (st === 'Closed') { j.closedBy = $('#eClosedBy').value.trim() || ME; if (was !== 'Closed') j.closedAt = new Date().toISOString(); }
     else { j.closedAt = ''; j.closedBy = ''; }
-    save(); closeModals(); render(); toast('Job #' + j.id + ' updated');
+    save(); closeModals(); render(); toast('Job ' + (j.propId || getPropId(j)) + ' updated');
     if (editFromView) openView(j.id, ctx.ids);
   });
 
   /* ================= Delete ================= */
   function openDelete(j) {
     deleteId = j.id;
-    $('#delText').textContent = 'Are you sure you want to delete job #' + j.id + ' "' + j.details + '"? This cannot be undone.';
+    var propId = j.propId || getPropId(j);
+    $('#delText').textContent = 'Are you sure you want to delete job ' + propId + ' "' + j.details + '"? This cannot be undone.';
     $('#delModal').hidden = false;
   }
   $('#confirmDelete').addEventListener('click', function () {
     var id = deleteId, i = ctx.ids.indexOf(id);
+    var job = byId(id);
+    var pId = job ? (job.propId || getPropId(job)) : '';
     jobs = jobs.filter(function (j) { return j.id !== id; });
     ctx.ids = ctx.ids.filter(function (x) { return x !== id; });
-    save(); $('#delModal').hidden = true; render(); toast('Job #' + id + ' deleted');
+    save(); $('#delModal').hidden = true; render(); toast('Job ' + pId + ' deleted');
     if (!$('#viewModal').hidden) {
       if (ctx.ids.length) { ctx.id = ctx.ids[Math.min(i, ctx.ids.length - 1)]; renderView(); } else closeView();
     }
@@ -828,25 +826,53 @@
       id: id, propId: propId, details: $('#fDetails').value.trim(), by: $('#fBy').value, dept: dept, area: $('#fArea').value, sub: $('#fSub').value.trim(),
       opened: opened, photoBefore: photoData, assignDept: 'NA', assigned: '', photoAfter: '', status: 'Open', remarks: '', closedBy: '', closedAt: ''
     });
-    save(); resetForm(); render(); setTab('open'); toast('Job #' + id + ' (' + propId + ') created - see it in the Open tab');
+    save(); resetForm(); render(); setTab('open'); toast('Job ' + propId + ' created - see it in the Open tab');
   });
 
   /* ================= Export ================= */
   function exportRows() {
-    var head = ['Sr.No', 'Prop ID', 'Job Details', 'Issued By', 'Issued To', 'Area', 'Sub-Area', 'Open Date/Time', 'Assign Sub-Dept', 'Assign Name', 'Status', 'Closed By', 'Closed Date/Time', 'Remarks'];
+    var head = ['Job ID', 'Job Details', 'Issued By', 'Issued To', 'Area', 'Sub-Area', 'Open Date/Time', 'Assign Sub-Dept', 'Assign Name', 'Status', 'Closed By', 'Closed Date/Time', 'Remarks'];
     return [head].concat(listFor(state.tab).map(function (j) {
-      return [j.id, j.propId || getPropId(j), j.details, j.by, j.dept, j.area, j.sub, fmt(j.opened), j.assignDept || 'NA', j.assigned || 'NA', j.status, j.closedBy || '', j.closedAt ? fmt(j.closedAt) : '', j.remarks || ''];
+      return [j.propId || getPropId(j), j.details, j.by, j.dept, j.area, j.sub, fmt(j.opened), j.assignDept || 'NA', j.assigned || 'NA', j.status, j.closedBy || '', j.closedAt ? fmt(j.closedAt) : '', j.remarks || ''];
     }));
   }
   $('#btnCopy').addEventListener('click', function () {
     var txt = exportRows().map(function (r) { return r.join('\t'); }).join('\n');
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { toast('Copied ' + (exportRows().length - 1) + ' rows'); }, function () { toast('Copy not allowed in this browser'); });
   });
-  $('#btnCsv').addEventListener('click', function () {
-    var csv = '﻿' + exportRows().map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
-    var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = 'workwize-' + state.tab + '-jobs.csv'; a.click(); URL.revokeObjectURL(a.href);
-  });
+
+  function exportExcel() {
+    var rows = exportRows();
+    var sheetName = state.tab === 'closed' ? 'Closed Jobs' : 'Open Jobs';
+    var fileName = 'workwize-' + state.tab + '-jobs.xlsx';
+
+    if (window.XLSX) {
+      var ws = XLSX.utils.aoa_to_sheet(rows);
+      var colWidths = rows[0].map(function (col, ci) {
+        var maxLen = rows.reduce(function (max, r) {
+          var val = r[ci] != null ? String(r[ci]) : '';
+          return Math.max(max, val.length);
+        }, String(col).length);
+        return { wch: Math.min(Math.max(maxLen + 3, 12), 48) };
+      });
+      ws['!cols'] = colWidths;
+
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      XLSX.writeFile(wb, fileName);
+      toast('Exported ' + (rows.length - 1) + ' jobs to Excel (' + fileName + ')');
+    } else {
+      var csv = '\uFEFF' + rows.map(function (r) { return r.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+      var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'application/vnd.ms-excel;charset=utf-8' }));
+      a.download = fileName; a.click(); URL.revokeObjectURL(a.href);
+      toast('Exported ' + (rows.length - 1) + ' jobs');
+    }
+  }
+
+  var btnExcel = $('#btnExcel') || $('#btnCsv');
+  if (btnExcel) btnExcel.addEventListener('click', exportExcel);
+  var btnCsv = $('#btnCsv');
+  if (btnCsv && btnCsv !== btnExcel) btnCsv.addEventListener('click', exportExcel);
   $('#btnPrint').addEventListener('click', function () { window.print(); });
 
   /* ================= Reset Demo ================= */
