@@ -106,7 +106,7 @@
 
   /* ================= State ================= */
   var jobs = load();
-  var state = { tab: 'open', q: '', status: 'all', area: 'all', sort: 'new', pageSize: 50, layout: 'list', page: { open: 1, closed: 1 }, period: 'today' };
+  var state = { tab: 'open', q: '', status: 'all', area: 'all', dept: 'all', sort: 'new', pageSize: 50, layout: 'list', page: { open: 1, closed: 1 }, period: 'today' };
   var editId = null, editFromView = false, deleteId = null, photoData = '';
   var assignTargetId = null;
   var closeTargetId = null, closePhotoData = '';
@@ -168,6 +168,7 @@
   function listFor(tab, ignoreStatus) {
     var arr = baseFor(tab).filter(function (j) {
       return matches(j) && (state.area === 'all' || j.area === state.area) &&
+        (state.dept === 'all' || !state.dept || j.dept === state.dept) &&
         (ignoreStatus || tab === 'closed' || state.status === 'all' || j.status === state.status);
     });
     var s = state.sort;
@@ -404,7 +405,14 @@
   });
   $('#clearSearch').addEventListener('click', function () { $('#search').value = ''; state.q = ''; this.hidden = true; resetPages(); render(); $('#search').focus(); });
   function clearAll() {
-    state.q = ''; state.area = 'all'; state.status = 'all'; $('#search').value = ''; $('#clearSearch').hidden = true; resetPages(); render();
+    state.q = ''; state.area = 'all'; state.status = 'all'; state.dept = 'all'; $('#search').value = ''; $('#clearSearch').hidden = true;
+    var sv = $('#pdSelectedValue'); if (sv) sv.textContent = 'Testing';
+    $$('.pd-option-item').forEach(function (it) {
+      var isTesting = it.dataset.val === 'Testing';
+      it.classList.toggle('active', isTesting);
+      var ic = it.querySelector('.pd-check-icon'); if (ic) ic.hidden = !isTesting;
+    });
+    resetPages(); render();
   }
   $('#clearFilters').addEventListener('click', clearAll);
   $('#statusChips').addEventListener('click', function (e) { var b = e.target.closest('[data-status]'); if (b) { state.status = b.dataset.status; resetPages(); render(); } });
@@ -818,6 +826,7 @@
     $('#closeModal').hidden = true;
     $('#editModal').hidden = true;
     $('#delModal').hidden = true;
+    var rp = $('#resetPwdModal'); if (rp) rp.hidden = true;
   }
   document.addEventListener('click', function (e) {
     if (e.target.hasAttribute('data-close') || (e.target.classList.contains('modal') && e.target.id !== 'viewModal')) {
@@ -827,6 +836,22 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
+      var pdMenu = $('#pdTestingMenu');
+      if (pdMenu && !pdMenu.hidden) {
+        pdMenu.hidden = true;
+        var sbtn = $('#pdTestingSelectBtn');
+        if (sbtn) { sbtn.classList.remove('open'); sbtn.setAttribute('aria-expanded', 'false'); }
+        return;
+      }
+      var pDropdown = $('#profileDropdown');
+      if (pDropdown && !pDropdown.hidden) {
+        pDropdown.hidden = true;
+        var pTrig = $('#userMenuTrigger');
+        if (pTrig) pTrig.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      var rpModal = $('#resetPwdModal');
+      if (rpModal && !rpModal.hidden) { rpModal.hidden = true; return; }
       if (!$('#lightbox').hidden) { $('#lightbox').hidden = true; return; }
       if (!$('#delModal').hidden) { $('#delModal').hidden = true; return; }
       if (!$('#assignModal').hidden) { $('#assignModal').hidden = true; return; }
@@ -938,6 +963,125 @@
   var toTop = $('#toTop');
   window.addEventListener('scroll', function () { toTop.hidden = window.scrollY < 500; }, { passive: true });
   toTop.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+  /* ================= Profile Menu & Dropdown (image.png) ================= */
+  var userMenuTrigger = $('#userMenuTrigger');
+  var profileDropdown = $('#profileDropdown');
+  var pdTestingSelectBtn = $('#pdTestingSelectBtn');
+  var pdTestingMenu = $('#pdTestingMenu');
+  var pdSelectedValue = $('#pdSelectedValue');
+  var pdResetPwdBtn = $('#pdResetPwdBtn');
+  var pdLogoutBtn = $('#pdLogoutBtn');
+  var resetPwdModal = $('#resetPwdModal');
+  var resetPwdForm = $('#resetPwdForm');
+
+  if (userMenuTrigger && profileDropdown) {
+    userMenuTrigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var willOpen = profileDropdown.hidden;
+      profileDropdown.hidden = !willOpen;
+      userMenuTrigger.setAttribute('aria-expanded', String(willOpen));
+      if (willOpen && pdTestingMenu) {
+        pdTestingMenu.hidden = true;
+        if (pdTestingSelectBtn) {
+          pdTestingSelectBtn.classList.remove('open');
+          pdTestingSelectBtn.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  }
+
+  if (pdTestingSelectBtn && pdTestingMenu) {
+    pdTestingSelectBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var willOpen = pdTestingMenu.hidden;
+      pdTestingMenu.hidden = !willOpen;
+      pdTestingSelectBtn.classList.toggle('open', willOpen);
+      pdTestingSelectBtn.setAttribute('aria-expanded', String(willOpen));
+    });
+
+    $$('.pd-option-item').forEach(function (opt) {
+      opt.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var val = opt.dataset.val || 'Testing';
+        if (pdSelectedValue) pdSelectedValue.textContent = val;
+
+        $$('.pd-option-item').forEach(function (item) {
+          var isCurrent = item === opt;
+          item.classList.toggle('active', isCurrent);
+          var icon = item.querySelector('.pd-check-icon');
+          if (icon) icon.hidden = !isCurrent;
+        });
+
+        pdTestingMenu.hidden = true;
+        pdTestingSelectBtn.classList.remove('open');
+        pdTestingSelectBtn.setAttribute('aria-expanded', 'false');
+
+        state.dept = (val === 'Testing' ? 'all' : val);
+        resetPages();
+        render();
+        toast('Switched property to ' + val);
+      });
+    });
+  }
+
+  // Close profile dropdown or testing dropdown on outside click
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.user-menu-wrap')) {
+      if (profileDropdown && !profileDropdown.hidden) {
+        profileDropdown.hidden = true;
+        if (userMenuTrigger) userMenuTrigger.setAttribute('aria-expanded', 'false');
+      }
+      if (pdTestingMenu && !pdTestingMenu.hidden) {
+        pdTestingMenu.hidden = true;
+        if (pdTestingSelectBtn) {
+          pdTestingSelectBtn.classList.remove('open');
+          pdTestingSelectBtn.setAttribute('aria-expanded', 'false');
+        }
+      }
+    }
+  });
+
+  // Reset Password action
+  if (pdResetPwdBtn && resetPwdModal) {
+    pdResetPwdBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (profileDropdown) profileDropdown.hidden = true;
+      if (userMenuTrigger) userMenuTrigger.setAttribute('aria-expanded', 'false');
+      resetPwdModal.hidden = false;
+      var np = $('#newPwd');
+      if (np) setTimeout(function () { np.focus(); }, 60);
+    });
+  }
+
+  if (resetPwdForm) {
+    resetPwdForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var p1 = ($('#newPwd').value || '').trim();
+      var p2 = ($('#confirmPwd').value || '').trim();
+      if (!p1 || p1.length < 6) {
+        toast('Password must be at least 6 characters long');
+        return;
+      }
+      if (p1 !== p2) {
+        toast('Passwords do not match');
+        return;
+      }
+      resetPwdForm.reset();
+      resetPwdModal.hidden = true;
+      toast('Password updated successfully for IT (App admin)!');
+    });
+  }
+
+  // Log Out action
+  if (pdLogoutBtn) {
+    pdLogoutBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (profileDropdown) profileDropdown.hidden = true;
+      if (userMenuTrigger) userMenuTrigger.setAttribute('aria-expanded', 'false');
+      toast('Logged out successfully. Goodbye IT!');
+    });
+  }
 
   // Default to Open tab so user directly sees the Excel jobs!
   setTab('open');

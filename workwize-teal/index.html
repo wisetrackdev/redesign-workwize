@@ -22,7 +22,75 @@
       <button class="icon-btn" aria-label="Notifications">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
       </button>
-      <div class="avatar">SD<i></i></div>
+      <div class="user-menu-wrap">
+        <div class="avatar" id="userMenuTrigger" role="button" tabindex="0" aria-label="User profile menu" aria-haspopup="true" aria-expanded="false" title="IT - App admin">
+          <img src="assets/avatar.png" alt="SD" class="avatar-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+          <span class="avatar-initials" style="display:none;">SD</span>
+        </div>
+
+        <!-- ===== Profile Dropdown Popover (image.png) ===== -->
+        <div class="profile-dropdown" id="profileDropdown" hidden>
+          <!-- Top User Info -->
+          <div class="pd-header">
+            <div class="pd-avatar-wrap">
+              <img src="assets/avatar.png" alt="IT" class="pd-avatar">
+            </div>
+            <div class="pd-user-info">
+              <div class="pd-name">IT</div>
+              <div class="pd-role">App admin</div>
+            </div>
+          </div>
+
+          <div class="pd-divider"></div>
+
+          <!-- Testing Dropdown -->
+          <div class="pd-select-container">
+            <div class="pd-select-box" id="pdTestingSelectBtn" tabindex="0" role="button" aria-haspopup="listbox" aria-expanded="false">
+              <span class="pd-select-value" id="pdSelectedValue">Testing</span>
+              <svg class="pd-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </div>
+            <div class="pd-options-menu" id="pdTestingMenu" hidden role="listbox">
+              <div class="pd-option-item active" role="option" data-val="Testing">
+                <span>Testing</span>
+                <svg class="pd-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="pd-option-item" role="option" data-val="Testing-House Keeping">
+                <span>Testing-House Keeping</span>
+                <svg class="pd-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" hidden><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="pd-option-item" role="option" data-val="Testing-Engineering">
+                <span>Testing-Engineering</span>
+                <svg class="pd-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" hidden><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+              <div class="pd-option-item" role="option" data-val="Testing-Security">
+                <span>Testing-Security</span>
+                <svg class="pd-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" hidden><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Items -->
+          <div class="pd-menu">
+            <button type="button" class="pd-action-btn" id="pdResetPwdBtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+              </svg>
+              <span>Reset Password</span>
+            </button>
+            <button type="button" class="pd-action-btn danger" id="pdLogoutBtn">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                <line x1="12" y1="2" x2="12" y2="12"/>
+              </svg>
+              <span>Log Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -297,6 +365,31 @@
       <div class="btns">
         <button type="button" class="btn s" data-close>Cancel</button>
         <button type="submit" class="btn g">Confirm &amp; Close Job</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===== RESET PASSWORD MODAL ===== -->
+  <div class="modal" id="resetPwdModal" hidden>
+    <form class="dialog small" id="resetPwdForm" novalidate>
+      <div class="dhead">
+        <h3>Reset Password</h3>
+        <button type="button" class="x" data-close>&times;</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Update the password for <b>IT (App admin)</b>.</p>
+      <div class="fgrid">
+        <div class="fld full">
+          <label for="newPwd">New Password</label>
+          <input type="password" id="newPwd" placeholder="Enter new password (min. 6 characters)" required minlength="6">
+        </div>
+        <div class="fld full">
+          <label for="confirmPwd">Confirm Password</label>
+          <input type="password" id="confirmPwd" placeholder="Re-enter new password" required minlength="6">
+        </div>
+      </div>
+      <div class="btns">
+        <button type="button" class="btn s" data-close>Cancel</button>
+        <button type="submit" class="btn p">Update Password</button>
       </div>
     </form>
   </div>

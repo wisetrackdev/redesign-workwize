@@ -43,8 +43,148 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .hr{display:flex;align-items:center;gap:16px;color:#D3DBF3}
 .icon-btn{background:none;border:0;color:inherit;display:flex;padding:6px;border-radius:8px}
 .icon-btn:hover{background:rgba(255,255,255,.1);color:#fff}
-.avatar{position:relative;width:38px;height:38px;border-radius:50%;background:var(--green);color:var(--primary-deep);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
-.avatar i{position:absolute;right:0;bottom:0;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--primary)}
+/* User Menu & Avatar */
+.user-menu-wrap{position:relative;display:flex;align-items:center}
+.avatar{position:relative;width:38px;height:38px;border-radius:50%;background:#e2e8f0;color:var(--primary-deep);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;cursor:pointer;user-select:none;transition:transform .15s,box-shadow .15s}
+.avatar:hover{transform:scale(1.04);box-shadow:0 0 0 2px rgba(255,255,255,.3)}
+.avatar:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.avatar .avatar-img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.avatar i{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+
+/* Profile Dropdown Popover (image.png) */
+.profile-dropdown{
+  position:absolute;
+  top:calc(100% + 10px);
+  right:0;
+  width:226px;
+  background:#ffffff;
+  border-radius:10px;
+  border:1px solid #d9dee3;
+  box-shadow:0 6px 24px rgba(67,89,113,.16),0 2px 6px rgba(67,89,113,.06);
+  padding:14px 16px;
+  z-index:100;
+  color:#566a7f;
+  animation:pdPop .15s ease-out;
+}
+@keyframes pdPop{
+  from{opacity:0;transform:translateY(-6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.pd-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.pd-avatar-wrap{position:relative;width:42px;height:42px;flex-shrink:0}
+.pd-avatar{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;background:#f1f5f9}
+.pd-status-dot{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;background:#22c55e;border:2px solid #fff}
+.pd-user-info{display:flex;flex-direction:column;min-width:0}
+.pd-name{font-size:15px;font-weight:600;color:#566a7f;line-height:1.2}
+.pd-role{font-size:13px;color:#a1acb8;margin-top:2px;line-height:1.2}
+
+.pd-divider{height:1px;background:#eceef1;margin:0 -16px 12px -16px}
+
+/* Testing Dropdown Selector */
+.pd-select-container{position:relative;margin-bottom:12px}
+.pd-select-box{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  padding:8px 12px;
+  background:#fff;
+  border:1px solid #d9dee3;
+  border-radius:6px;
+  color:#697a8d;
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+  transition:border-color .15s,box-shadow .15s;
+  user-select:none;
+}
+.pd-select-box:hover,.pd-select-box.open{
+  border-color:#696cff;
+  box-shadow:0 0 0 2px rgba(105,108,255,.12);
+}
+.pd-select-box .pd-chevron{
+  color:#a1acb8;
+  transition:transform .2s ease;
+  flex-shrink:0;
+}
+.pd-select-box.open .pd-chevron{
+  transform:rotate(180deg);
+}
+.pd-options-menu{
+  position:absolute;
+  top:calc(100% + 4px);
+  left:0;
+  right:0;
+  background:#fff;
+  border:1px solid #d9dee3;
+  border-radius:6px;
+  box-shadow:0 6px 18px rgba(67,89,113,.16);
+  z-index:20;
+  max-height:170px;
+  overflow-y:auto;
+  padding:4px 0;
+}
+.pd-option-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 12px;
+  font-size:13px;
+  color:#566a7f;
+  cursor:pointer;
+  transition:background .15s,color .15s;
+}
+.pd-option-item:hover{
+  background:#f5f5f9;
+  color:#4058a6;
+}
+.pd-option-item.active{
+  font-weight:600;
+  color:#4058a6;
+  background:rgba(64,88,166,.07);
+}
+.pd-option-item .pd-check-icon{
+  color:#4058a6;
+  flex-shrink:0;
+}
+
+/* Action items (Reset Password, Log Out) */
+.pd-menu{display:flex;flex-direction:column;gap:4px}
+.pd-action-btn{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  padding:8px 10px;
+  background:none;
+  border:0;
+  border-radius:6px;
+  color:#697a8d;
+  font-size:14px;
+  font-weight:500;
+  text-align:left;
+  cursor:pointer;
+  transition:background .15s,color .15s;
+}
+.pd-action-btn:hover{
+  background:#f5f5f9;
+  color:#566a7f;
+}
+.pd-action-btn svg{
+  color:#697a8d;
+  flex-shrink:0;
+  transition:color .15s;
+}
+.pd-action-btn:hover svg{
+  color:#566a7f;
+}
+.pd-action-btn.danger:hover{
+  background:#fff1f2;
+  color:#e11d48;
+}
+.pd-action-btn.danger:hover svg{
+  color:#e11d48;
+}
 
 /* ---------- Layout / sticky toolbar ---------- */
 .wrap{width:100%;max-width:1302px;margin:0 auto 24px;padding:0 32px;flex:1}
