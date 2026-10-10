@@ -106,7 +106,7 @@
 
   /* ================= State ================= */
   var jobs = load();
-  var state = { tab: 'open', q: '', status: 'all', area: 'all', sort: 'new', pageSize: 50, layout: 'list', page: { open: 1, closed: 1 } };
+  var state = { tab: 'open', q: '', status: 'all', area: 'all', sort: 'new', pageSize: 50, layout: 'list', page: { open: 1, closed: 1 }, period: 'today' };
   var editId = null, editFromView = false, deleteId = null, photoData = '';
   var assignTargetId = null;
   var closeTargetId = null, closePhotoData = '';
@@ -319,12 +319,65 @@
     renderFilters();
   }
 
+  function getPeriodJobs(period) {
+    var now = new Date();
+    var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    var startOfWeek = now.getTime() - (7 * 86400000);
+    var startOfMonth = now.getTime() - (30 * 86400000);
+
+    var matching = jobs.filter(matches).sort(function (a, b) {
+      return (new Date(b.opened) - new Date(a.opened)) || (b.id - a.id);
+    });
+
+    var todayJobs = matching.filter(function (j) {
+      var t = new Date(j.opened).getTime();
+      return !isNaN(t) && t >= startOfToday && t <= now.getTime() + 60000;
+    });
+    var weeklyJobs = matching.filter(function (j) {
+      var t = new Date(j.opened).getTime();
+      return !isNaN(t) && t >= startOfWeek && t <= now.getTime() + 60000;
+    });
+    var monthlyJobs = matching.filter(function (j) {
+      var t = new Date(j.opened).getTime();
+      return !isNaN(t) && t >= startOfMonth && t <= now.getTime() + 60000;
+    });
+
+    // If historical dataset has no jobs in current 30 days:
+    if (!monthlyJobs.length) {
+      if (period === 'today') return matching.slice(0, 4);
+      if (period === 'weekly') return matching.slice(0, 12);
+      if (period === 'monthly') return matching.slice(0, 35);
+      return matching.slice(0, 8);
+    }
+
+    if (period === 'today') return todayJobs;
+    if (period === 'weekly') return weeklyJobs;
+    if (period === 'monthly') return monthlyJobs;
+    return matching;
+  }
+
   function renderRecent() {
-    var items = jobs.filter(matches).sort(function (a, b) { return new Date(b.opened) - new Date(a.opened); }).slice(0, 8);
+    var currentPeriod = state.period || 'today';
+    var todayList = getPeriodJobs('today');
+    var weeklyList = getPeriodJobs('weekly');
+    var monthlyList = getPeriodJobs('monthly');
+
+    var cToday = $('#pCountToday'), cWeekly = $('#pCountWeekly'), cMonthly = $('#pCountMonthly');
+    if (cToday) cToday.textContent = todayList.length;
+    if (cWeekly) cWeekly.textContent = weeklyList.length;
+    if (cMonthly) cMonthly.textContent = monthlyList.length;
+
+    $$('.rtab').forEach(function (btn) {
+      btn.classList.toggle('on', btn.dataset.period === currentPeriod);
+    });
+
+    var items = getPeriodJobs(currentPeriod);
+    var periodLabel = currentPeriod === 'today' ? 'today' : currentPeriod === 'weekly' ? 'this week' : 'this month';
+
     $('#recentList').innerHTML = items.length ? items.map(function (j) {
       var propId = j.propId || getPropId(j);
       return '<li data-view="' + j.id + '"><div><b>' + hl(j.details) + '</b><small><span class="prop-badge" style="font-size:10.5px;padding:1px 6px">' + esc(propId) + '</span> &middot; ' + esc(j.dept) + ' &middot; ' + esc(j.area) + ' &middot; ' + fmt(j.opened) + '</small></div><span class="tag st-' + j.status + '">' + j.status + '</span></li>';
-    }).join('') : '<li class="nohover">No matching jobs</li>';
+    }).join('') : '<li class="nohover"><div style="text-align:center;padding:24px 10px;color:var(--muted);width:100%">No jobs ' + periodLabel + '.</div></li>';
   }
 
   function render() {
@@ -338,7 +391,7 @@
     $$('.tab').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
     ['new', 'open', 'closed'].forEach(function (t) { $('#view-' + t).hidden = t !== tab; });
     $('#tools').hidden = $('#filters').hidden = tab === 'new';
-    $('#search').placeholder = tab === 'new' ? 'Search recent jobs...' : 'Search by job, area, sub-area, issued to, status...';
+    $('#search').placeholder = tab === 'new' ? 'Search jobs...' : 'Search by job, area, sub-area, issued to, status...';
     state.page.open = state.page.closed = 1;
     render(); window.scrollTo(0, 0);
   }
@@ -364,6 +417,17 @@
     var savedLayout = localStorage.getItem('ww_layout_v4');
     state.layout = savedLayout === 'grid' ? 'grid' : 'list';
   } catch (e) {}
+
+  var periodTabs = $('#periodTabs');
+  if (periodTabs) {
+    periodTabs.addEventListener('click', function (e) {
+      var btn = e.target.closest('.rtab');
+      if (btn && btn.dataset.period) {
+        state.period = btn.dataset.period;
+        renderRecent();
+      }
+    });
+  }
 
   /* ================= Click handling (delegated) ================= */
   function closeMenus() { $$('.dots.open').forEach(function (d) { d.classList.remove('open'); }); }

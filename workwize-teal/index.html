@@ -132,7 +132,13 @@
         </form>
 
         <aside class="card recent">
-          <h2>Recent Jobs</h2>
+          <div class="recent-top">
+            <div class="recent-tabs" id="periodTabs" role="tablist">
+              <button type="button" class="rtab on" data-period="today">Today <span class="badge" id="pCountToday">0</span></button>
+              <button type="button" class="rtab" data-period="weekly">Weekly <span class="badge" id="pCountWeekly">0</span></button>
+              <button type="button" class="rtab" data-period="monthly">Monthly <span class="badge" id="pCountMonthly">0</span></button>
+            </div>
+          </div>
           <ul id="recentList"></ul>
         </aside>
       </div>

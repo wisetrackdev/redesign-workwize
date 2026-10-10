@@ -96,7 +96,14 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .btn.d{background:var(--red);color:#fff}.btn.d:hover{background:#b91c1c}
 .btn.dl{background:#fff;color:var(--red);border:1.5px solid #fecaca}.btn.dl:hover{background:#fef2f2}
 
-/* recent */
+/* recent / period tabs */
+.recent-top{margin-bottom:14px}
+.recent-tabs{display:flex;background:#F0F4FC;padding:4px;border-radius:10px;border:1px solid #D9E2F5;gap:4px}
+.rtab{flex:1;background:transparent;border:0;color:var(--ink);font-weight:600;font-size:12.5px;padding:7px 10px;border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:.15s;font-family:inherit}
+.rtab:hover{color:var(--primary);background:rgba(255,255,255,.6)}
+.rtab.on{background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(31,44,94,.12);font-weight:700}
+.rtab .badge{background:#DCE4F8;color:var(--primary);font-size:11px;padding:2px 7px;border-radius:10px;font-weight:700;line-height:1}
+.rtab.on .badge{background:var(--primary);color:#fff}
 .recent ul{list-style:none;display:flex;flex-direction:column;gap:10px;max-height:470px;overflow:auto}
 .recent li{padding:12px 14px;border-radius:12px;background:#F7F9FD;border:1px solid #E3E8F5;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer}
 .recent li:hover{border-color:var(--primary)}
