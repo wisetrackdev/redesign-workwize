@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WorkWize - Quick Fix</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="logo-pill"><img src="assets/logo.png" alt="WorkWize"></div>
+
+    <nav class="seg" id="tabs">
+      <button class="tab on" data-tab="new"><span class="ic">+</span> New Job</button>
+      <button class="tab" data-tab="open">Open <span class="badge" id="openBadge">0</span></button>
+      <button class="tab" data-tab="closed">Closed <span class="badge muted-b" id="closedBadge">0</span></button>
+    </nav>
+
+    <div class="hr">
+      <button class="icon-btn" aria-label="Notifications">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
+      </button>
+      <div class="avatar">SD<i></i></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+
+    <!-- ===== SEARCH + FILTERS (sticky, every tab) ===== -->
+    <div class="sticky-bar">
+      <div class="topbar">
+        <div class="search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          <input id="search" type="text" placeholder="Search by job, area, sub-area, issued by, status..." autocomplete="off">
+          <button id="clearSearch" class="clear" title="Clear" hidden>&times;</button>
+        </div>
+        <div class="tools" id="tools" hidden>
+          <button class="chip" id="btnCopy">Copy</button>
+          <button class="chip" id="btnCsv">CSV</button>
+          <button class="chip" id="btnPrint">Print</button>
+        </div>
+      </div>
+
+      <div class="filters" id="filters" hidden>
+        <div class="chips" id="statusChips"></div>
+        <select id="fltArea" aria-label="Filter by area"></select>
+        <select id="sortBy" aria-label="Sort">
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="az">Job name A-Z</option>
+          <option value="area">Area A-Z</option>
+        </select>
+        <select id="pageSize" aria-label="Rows per page">
+          <option value="6">6 / page</option>
+          <option value="12" selected>12 / page</option>
+          <option value="24">24 / page</option>
+          <option value="48">48 / page</option>
+        </select>
+        <div class="vtoggle" role="group" aria-label="Layout">
+          <button id="viewGrid" title="Card view">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          </button>
+          <button id="viewList" class="on" title="Table view">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+        </div>
+        <button class="link" id="clearFilters" hidden>Clear filters</button>
+        <span class="count" id="resultCount"></span>
+      </div>
+    </div>
+
+    <!-- ===== NEW JOB ===== -->
+    <section id="view-new" class="view">
+      <div class="split">
+        <form class="card" id="jobForm" novalidate>
+          <h2>Create New Job</h2>
+          <div class="fgrid">
+            <div class="fld">
+              <label for="fDept">Issued To Dept.</label>
+              <select id="fDept" required>
+                <option value="">Select department</option>
+                <option>Testing-Engineering</option>
+                <option>Testing-House Keeping</option>
+                <option>Testing-Security</option>
+              </select>
+              <small class="err"></small>
+            </div>
+            <div class="fld">
+              <label for="fBy">Issued By</label>
+              <input id="fBy" type="text" value="IT [App admin: null]" readonly>
+            </div>
+            <div class="fld">
+              <label for="fArea">Area</label>
+              <select id="fArea" required>
+                <option value="">Select area</option>
+                <option>Waste Management</option>
+                <option>Public Area</option>
+                <option>Utility</option>
+                <option>Guest Villa</option>
+                <option>CAPEX</option>
+              </select>
+              <small class="err"></small>
+            </div>
+            <div class="fld">
+              <label for="fSub">Sub-Area</label>
+              <input id="fSub" type="text" placeholder="Subarea">
+            </div>
+            <div class="fld full">
+              <label for="fDetails">Job Details</label>
+              <input id="fDetails" type="text" placeholder="Enter job detail" required>
+              <small class="err"></small>
+            </div>
+            <div class="fld full">
+              <label>Photo (Size Limit: 5MB)</label>
+              <label class="drop" id="drop" for="fPhoto">
+                <input id="fPhoto" type="file" accept="image/*" hidden>
+                <div id="dropText">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
+                  <span>Click to upload photo &middot; max 5MB</span>
+                </div>
+                <img id="preview" alt="" hidden>
+              </label>
+              <small class="err" id="photoErr"></small>
+            </div>
+          </div>
+          <div class="btns">
+            <button type="button" class="btn s" id="btnCancel">Cancel</button>
+            <button type="submit" class="btn p">Submit</button>
+          </div>
+        </form>
+
+        <aside class="card recent">
+          <h2>Recent Jobs</h2>
+          <ul id="recentList"></ul>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ===== OPEN ===== -->
+    <section id="view-open" class="view" hidden>
+      <div class="cards" id="openCards"></div>
+      <div class="pager" id="openPager"></div>
+    </section>
+
+    <!-- ===== CLOSED ===== -->
+    <section id="view-closed" class="view" hidden>
+      <div class="cards" id="closedCards"></div>
+      <div class="pager" id="closedPager"></div>
+    </section>
+
+  </main>
+
+  <footer class="foot">
+    &copy; 2023-2026 WorkWize . All Rights Reserved
+    <button class="link" id="resetDemo">Reset demo data</button>
+  </footer>
+
+  <!-- ===== VIEW DETAILS MODAL ===== -->
+  <div class="modal" id="viewModal" hidden>
+    <div class="vdialog" id="viewDialog" role="dialog" aria-modal="true" aria-label="Job details"></div>
+  </div>
+
+  <!-- ===== EDIT MODAL ===== -->
+  <div class="modal" id="editModal" hidden>
+    <form class="dialog" id="editForm" novalidate>
+      <div class="dhead"><h3>Edit Job <span id="editId" class="muted"></span></h3><button type="button" class="x" data-close>&times;</button></div>
+      <div class="fgrid">
+        <div class="fld full"><label>Job Details</label><input id="eDetails" required></div>
+        <div class="fld"><label>Issued To Dept.</label>
+          <select id="eDept"><option>Testing-Engineering</option><option>Testing-House Keeping</option><option>Testing-Security</option></select></div>
+        <div class="fld"><label>Area</label>
+          <select id="eArea"><option>Waste Management</option><option>Public Area</option><option>Utility</option><option>Guest Villa</option><option>CAPEX</option></select></div>
+        <div class="fld"><label>Sub-Area</label><input id="eSub"></div>
+        <div class="fld"><label>Assign Sub-Dept.</label>
+          <select id="eSubDept"><option>NA</option><option>Engineering</option><option>Testing-House Keeping</option><option>Security</option></select></div>
+        <div class="fld"><label>Assign Name</label><input id="eAssigned" placeholder="NA"></div>
+        <div class="fld"><label>Status</label>
+          <select id="eStatus"><option>Open</option><option>Assigned</option><option>Closed</option></select></div>
+        <div class="fld" id="eClosedByWrap" hidden><label>Closed By</label><input id="eClosedBy"></div>
+        <div class="fld full"><label>Remarks</label><input id="eRemarks" placeholder="NA"></div>
+
+        <div class="fld">
+          <label>Photo Before</label>
+          <div class="pp" data-which="Before">
+            <img alt="" hidden><span class="none">No photo</span>
+            <div class="ppb"><button type="button" class="mini" data-pick>Choose</button><button type="button" class="mini danger" data-remove>Remove</button></div>
+            <input type="file" accept="image/*" hidden>
+          </div>
+        </div>
+        <div class="fld">
+          <label>Photo After</label>
+          <div class="pp" data-which="After">
+            <img alt="" hidden><span class="none">No photo</span>
+            <div class="ppb"><button type="button" class="mini" data-pick>Choose</button><button type="button" class="mini danger" data-remove>Remove</button></div>
+            <input type="file" accept="image/*" hidden>
+          </div>
+        </div>
+      </div>
+      <small class="err" id="editPhotoErr"></small>
+      <div class="btns">
+        <button type="button" class="btn s" data-close>Cancel</button>
+        <button type="submit" class="btn p">Save Changes</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===== DELETE MODAL ===== -->
+  <div class="modal" id="delModal" hidden>
+    <div class="dialog small">
+      <div class="dhead"><h3>Delete Job?</h3><button type="button" class="x" data-close>&times;</button></div>
+      <p id="delText" class="muted"></p>
+      <div class="btns">
+        <button type="button" class="btn s" data-close>Cancel</button>
+        <button type="button" class="btn d" id="confirmDelete">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ASSIGN MODAL ===== -->
+  <div class="modal" id="assignModal" hidden>
+    <form class="dialog" id="assignForm" novalidate>
+      <div class="dhead">
+        <h3>Assign Job <span id="assignId" class="muted"></span></h3>
+        <button type="button" class="x" data-close>&times;</button>
+      </div>
+      <div class="job-brief" id="assignBrief"></div>
+      <div class="fgrid">
+        <div class="fld full">
+          <label for="asDept">Select Team / Department</label>
+          <select id="asDept" required>
+            <option value="Testing-House Keeping">Housekeeping (Testing-House Keeping)</option>
+            <option value="Testing-Engineering">Engineering (Testing-Engineering)</option>
+            <option value="Testing-Security">Security (Testing-Security)</option>
+          </select>
+        </div>
+        <div class="fld full">
+          <label for="asMember">Assign To Team Member</label>
+          <select id="asMember" required></select>
+        </div>
+        <div class="fld full" id="customMemberWrap" hidden>
+          <label for="asCustomMember">Custom Member Name</label>
+          <input id="asCustomMember" placeholder="Enter staff name">
+        </div>
+        <div class="fld full">
+          <label for="asRemarks">Assignment Notes / Instructions (Optional)</label>
+          <input id="asRemarks" placeholder="e.g. Please check urgently">
+        </div>
+      </div>
+      <div class="btns">
+        <button type="button" class="btn s" data-close>Cancel</button>
+        <button type="submit" class="btn p">Assign Job</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===== CLOSE JOB MODAL ===== -->
+  <div class="modal" id="closeModal" hidden>
+    <form class="dialog" id="closeForm" novalidate>
+      <div class="dhead">
+        <h3>Close Job <span id="closeId" class="muted"></span></h3>
+        <button type="button" class="x" data-close>&times;</button>
+      </div>
+      <div class="job-brief" id="closeBrief"></div>
+      <div class="team-rule-note">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="closeTeamNotice">Jobs can be closed by authorized members of the responsible team.</span>
+      </div>
+      <div class="fgrid">
+        <div class="fld full">
+          <label for="clBy">Closing Team Member</label>
+          <select id="clBy" required></select>
+        </div>
+        <div class="fld full">
+          <label for="clRemarks">Completion Remarks</label>
+          <input id="clRemarks" placeholder="e.g. Work completed. Done." value="Done." required>
+        </div>
+        <div class="fld full">
+          <label>Photo After (Optional)</label>
+          <div class="pp" id="closePhotoWrap" data-which="After">
+            <img id="closePhotoPrev" alt="" hidden><span class="none">No photo</span>
+            <div class="ppb">
+              <button type="button" class="mini" id="closePhotoPick">Choose</button>
+              <button type="button" class="mini danger" id="closePhotoDel" hidden>Remove</button>
+            </div>
+            <input type="file" id="closePhotoInput" accept="image/*" hidden>
+          </div>
+        </div>
+      </div>
+      <div class="btns">
+        <button type="button" class="btn s" data-close>Cancel</button>
+        <button type="submit" class="btn g">Confirm &amp; Close Job</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===== PHOTO LIGHTBOX ===== -->
+  <div class="lightbox" id="lightbox" hidden><img alt=""><button class="x" id="lbClose">&times;</button></div>
+  <input type="file" accept="image/*" id="quickPhoto" hidden>
+
+  <button class="totop" id="toTop" aria-label="Back to top" hidden>&uarr;</button>
+  <div class="toast" id="toast" role="status"></div>
+
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
