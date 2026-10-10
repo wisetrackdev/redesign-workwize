@@ -238,11 +238,6 @@
         ? '<span>Closed by</span><b title="' + esc(j.closedBy) + '">' + na(j.closedBy) + ' &middot; ' + fmt(j.closedAt) + '</b>'
         : '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) + (j.assignDept && j.assignDept !== 'NA' ? ' <small style="color:var(--muted)">(' + esc(j.assignDept) + ')</small>' : '') : '<span class="na">Not assigned</span>') + '</b>');
 
-    // Bottom direct actions: Assign / Reassign for open tab jobs; No reopen button for closed jobs
-    var bottomActions = !closed
-      ? '<div class="btns-row"><button type="button" class="btn-assign" data-act="assign" data-id="' + j.id + '">' + I.user + (isAssigned ? ' Reassign' : ' Assign') + '</button></div>'
-      : '';
-
     return '<article class="jcard ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="top">' +
         '<div class="left"><span class="prop-badge" title="Job ID">' + esc(propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
@@ -253,19 +248,12 @@
       '<div class="kv">' + rows + '</div>' +
       '<div class="card-actions">' +
         '<div class="dt">' + (closed ? 'Resolved in ' + span(j.opened, j.closedAt) : 'Open ' + span(j.opened, new Date())) + '</div>' +
-        bottomActions +
       '</div>' +
     '</article>';
   }
 
   function rowHTML(j) {
-    var closed = j.status === 'Closed';
-    var isAssigned = j.status === 'Assigned';
     var propId = j.propId || getPropId(j);
-
-    var acts = !closed
-      ? '<button type="button" class="btn-assign" data-act="assign" data-id="' + j.id + '" style="padding:5px 9px">' + I.user + (isAssigned ? ' Reassign' : ' Assign') + '</button>'
-      : '';
 
     return '<article class="jrow ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="rt">' +
@@ -277,7 +265,6 @@
       '<div class="rc"><span>Opened</span>' + fmt(j.opened) + '</div>' +
       '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
       '<div class="rs"><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
-      '<div class="row-acts">' + acts + '</div>' +
       menuHTML(j) +
     '</article>';
   }
