@@ -201,13 +201,69 @@
 
         <aside class="card recent">
           <div class="recent-top">
+            <h3 class="recent-heading">Job Statistics</h3>
             <div class="recent-tabs" id="periodTabs" role="tablist">
               <button type="button" class="rtab on" data-period="today">Today <span class="badge" id="pCountToday">0</span></button>
               <button type="button" class="rtab" data-period="weekly">Weekly <span class="badge" id="pCountWeekly">0</span></button>
               <button type="button" class="rtab" data-period="monthly">Monthly <span class="badge" id="pCountMonthly">0</span></button>
             </div>
           </div>
-          <ul id="recentList"></ul>
+
+          <!-- Period Metrics Grid (4 Boxes: Total, Open, Assigned, Closed) -->
+          <div class="stat-boxes" id="periodStatBoxes">
+            <div class="sbox sbox-total" data-status-filter="all" title="View all jobs in this period">
+              <div class="sbox-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                  <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                </svg>
+              </div>
+              <div class="sbox-content">
+                <div class="sbox-label">Total Jobs</div>
+                <div class="sbox-num" id="statBoxTotal">0</div>
+              </div>
+            </div>
+
+            <div class="sbox sbox-open" data-status-filter="Open" title="View open jobs">
+              <div class="sbox-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+              </div>
+              <div class="sbox-content">
+                <div class="sbox-label">Open</div>
+                <div class="sbox-num" id="statBoxOpen">0</div>
+              </div>
+            </div>
+
+            <div class="sbox sbox-assigned" data-status-filter="Assigned" title="View assigned jobs">
+              <div class="sbox-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <polyline points="16 11 18 13 22 9"/>
+                </svg>
+              </div>
+              <div class="sbox-content">
+                <div class="sbox-label">Assigned</div>
+                <div class="sbox-num" id="statBoxAssigned">0</div>
+              </div>
+            </div>
+
+            <div class="sbox sbox-closed" data-status-filter="Closed" title="View closed jobs">
+              <div class="sbox-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              </div>
+              <div class="sbox-content">
+                <div class="sbox-label">Closed</div>
+                <div class="sbox-num" id="statBoxClosed">0</div>
+              </div>
+            </div>
+          </div>
         </aside>
       </div>
     </section>

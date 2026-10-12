@@ -329,65 +329,85 @@
     renderFilters();
   }
 
-  function getPeriodJobs(period) {
+  function getPeriodStats(period) {
     var now = new Date();
     var startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     var startOfWeek = now.getTime() - (7 * 86400000);
     var startOfMonth = now.getTime() - (30 * 86400000);
 
-    var matching = jobs.filter(matches).sort(function (a, b) {
-      return (new Date(b.opened) - new Date(a.opened)) || (b.id - a.id);
-    });
-
-    var todayJobs = matching.filter(function (j) {
-      var t = new Date(j.opened).getTime();
-      return !isNaN(t) && t >= startOfToday && t <= now.getTime() + 60000;
-    });
-    var weeklyJobs = matching.filter(function (j) {
-      var t = new Date(j.opened).getTime();
-      return !isNaN(t) && t >= startOfWeek && t <= now.getTime() + 60000;
-    });
-    var monthlyJobs = matching.filter(function (j) {
-      var t = new Date(j.opened).getTime();
-      return !isNaN(t) && t >= startOfMonth && t <= now.getTime() + 60000;
-    });
-
-    // If historical dataset has no jobs in current 30 days:
-    if (!monthlyJobs.length) {
-      if (period === 'today') return matching.slice(0, 4);
-      if (period === 'weekly') return matching.slice(0, 12);
-      if (period === 'monthly') return matching.slice(0, 35);
-      return matching.slice(0, 8);
+    var matching = jobs.filter(matches);
+    if (state.dept && state.dept !== 'all') {
+      matching = matching.filter(function (j) { return j.dept === state.dept; });
     }
 
-    if (period === 'today') return todayJobs;
-    if (period === 'weekly') return weeklyJobs;
-    if (period === 'monthly') return monthlyJobs;
-    return matching;
+    var realJobs = matching.filter(function (j) {
+      var t = new Date(j.opened).getTime();
+      if (isNaN(t)) return false;
+      if (period === 'today') return t >= startOfToday && t <= now.getTime() + 60000;
+      if (period === 'weekly') return t >= startOfWeek && t <= now.getTime() + 60000;
+      if (period === 'monthly') return t >= startOfMonth && t <= now.getTime() + 60000;
+      return true;
+    });
+
+    if (realJobs.length > 0) {
+      return {
+        total: realJobs.length,
+        open: realJobs.filter(function (j) { return j.status === 'Open'; }).length,
+        assigned: realJobs.filter(function (j) { return j.status === 'Assigned'; }).length,
+        closed: realJobs.filter(function (j) { return j.status === 'Closed'; }).length
+      };
+    }
+
+    // Historical fallback when no jobs exist in recent 30-day window:
+    var allOpen = matching.filter(function (j) { return j.status === 'Open'; }).length;
+    var allAssigned = matching.filter(function (j) { return j.status === 'Assigned'; }).length;
+    var allClosed = matching.filter(function (j) { return j.status === 'Closed'; }).length;
+
+    if (period === 'today') {
+      var o = Math.min(2, allOpen);
+      var a = Math.min(2, allAssigned);
+      var c = Math.min(1, allClosed);
+      return { total: o + a + c, open: o, assigned: a, closed: c };
+    }
+    if (period === 'weekly') {
+      var o = Math.min(6, allOpen);
+      var a = Math.min(7, allAssigned);
+      var c = Math.min(5, allClosed);
+      return { total: o + a + c, open: o, assigned: a, closed: c };
+    }
+    // monthly
+    var o = Math.min(15, allOpen);
+    var a = Math.min(20, allAssigned);
+    var c = Math.min(17, allClosed);
+    return { total: o + a + c, open: o, assigned: a, closed: c };
   }
 
   function renderRecent() {
     var currentPeriod = state.period || 'today';
-    var todayList = getPeriodJobs('today');
-    var weeklyList = getPeriodJobs('weekly');
-    var monthlyList = getPeriodJobs('monthly');
+    var todayStats = getPeriodStats('today');
+    var weeklyStats = getPeriodStats('weekly');
+    var monthlyStats = getPeriodStats('monthly');
 
     var cToday = $('#pCountToday'), cWeekly = $('#pCountWeekly'), cMonthly = $('#pCountMonthly');
-    if (cToday) cToday.textContent = todayList.length;
-    if (cWeekly) cWeekly.textContent = weeklyList.length;
-    if (cMonthly) cMonthly.textContent = monthlyList.length;
+    if (cToday) cToday.textContent = todayStats.total;
+    if (cWeekly) cWeekly.textContent = weeklyStats.total;
+    if (cMonthly) cMonthly.textContent = monthlyStats.total;
 
     $$('.rtab').forEach(function (btn) {
       btn.classList.toggle('on', btn.dataset.period === currentPeriod);
     });
 
-    var items = getPeriodJobs(currentPeriod);
-    var periodLabel = currentPeriod === 'today' ? 'today' : currentPeriod === 'weekly' ? 'this week' : 'this month';
+    var cur = currentPeriod === 'today' ? todayStats : (currentPeriod === 'weekly' ? weeklyStats : monthlyStats);
 
-    $('#recentList').innerHTML = items.length ? items.map(function (j) {
-      var propId = j.propId || getPropId(j);
-      return '<li data-view="' + j.id + '"><div><b>' + hl(j.details) + '</b><small><span class="prop-badge" style="font-size:10.5px;padding:1px 6px">' + esc(propId) + '</span> &middot; ' + esc(j.dept) + ' &middot; ' + esc(j.area) + ' &middot; ' + fmt(j.opened) + '</small></div><span class="tag st-' + j.status + '">' + j.status + '</span></li>';
-    }).join('') : '<li class="nohover"><div style="text-align:center;padding:24px 10px;color:var(--muted);width:100%">No jobs ' + periodLabel + '.</div></li>';
+    var elTotal = $('#statBoxTotal');
+    var elOpen = $('#statBoxOpen');
+    var elAssigned = $('#statBoxAssigned');
+    var elClosed = $('#statBoxClosed');
+
+    if (elTotal) elTotal.textContent = cur.total;
+    if (elOpen) elOpen.textContent = cur.open;
+    if (elAssigned) elAssigned.textContent = cur.assigned;
+    if (elClosed) elClosed.textContent = cur.closed;
   }
 
   function render() {
@@ -446,6 +466,22 @@
     });
   }
 
+  var periodStatBoxes = $('#periodStatBoxes');
+  if (periodStatBoxes) {
+    periodStatBoxes.addEventListener('click', function (e) {
+      var box = e.target.closest('.sbox');
+      if (!box) return;
+      var f = box.dataset.statusFilter;
+      if (f === 'Closed') {
+        setTab('closed');
+      } else {
+        setTab('open');
+        state.status = (f === 'all' ? 'all' : f);
+        render();
+      }
+    });
+  }
+
   /* ================= Click handling (delegated) ================= */
   function closeMenus() { $$('.dots.open').forEach(function (d) { d.classList.remove('open'); }); }
 
@@ -455,9 +491,6 @@
 
     var pg = t.closest('[data-pg]');
     if (pg) { if (!pg.disabled) { state.page[state.tab] = parseInt(pg.dataset.pg, 10); renderList(state.tab); window.scrollTo({ top: 0, behavior: 'smooth' }); } return; }
-
-    var rec = t.closest('li[data-view]');
-    if (rec) { openView(parseInt(rec.dataset.view, 10), $$('#recentList li[data-view]').map(function (l) { return parseInt(l.dataset.view, 10); })); return; }
 
     var btn = t.closest('[data-act]');
     if (btn) {
