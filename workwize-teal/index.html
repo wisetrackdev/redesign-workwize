@@ -101,6 +101,13 @@
           <button id="clearSearch" class="clear" title="Clear" hidden>&times;</button>
         </div>
         <div class="tools" id="tools" hidden>
+          <button class="chip btn-filter" id="btnFilter" aria-label="Filter" title="Open Filter & Sort">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+            </svg>
+            <span>Filter</span>
+            <span class="filter-dot" id="filterDot" hidden></span>
+          </button>
           <button class="chip" id="btnCopy">Copy</button>
           <button class="chip" id="btnExcel">Excel</button>
           <button class="chip" id="btnPrint">Print</button>
@@ -108,14 +115,6 @@
       </div>
 
       <div class="filters" id="filters" hidden>
-        <div class="chips" id="statusChips"></div>
-        <select id="fltArea" aria-label="Filter by area"></select>
-        <select id="sortBy" aria-label="Sort">
-          <option value="new">Newest first</option>
-          <option value="old">Oldest first</option>
-          <option value="az">Job name A-Z</option>
-          <option value="area">Area A-Z</option>
-        </select>
         <select id="pageSize" aria-label="Rows per page">
           <option value="25" selected>25 / page</option>
           <option value="50">50 / page</option>
@@ -285,6 +284,72 @@
   <footer class="foot">
     &copy; 2023-2026 WorkWize . All Rights Reserved
   </footer>
+
+  <!-- ===== FILTER SIDEBAR DRAWER ===== -->
+  <div class="filter-overlay" id="filterOverlay" hidden></div>
+  <aside class="filter-sidebar" id="filterSidebar" aria-label="Filter Sidebar" hidden>
+    <div class="fs-head">
+      <div class="fs-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        <span>Filter &amp; Sort</span>
+      </div>
+      <button type="button" class="fs-close" id="btnCloseFilter" aria-label="Close filters">&times;</button>
+    </div>
+
+    <div class="fs-body">
+      <!-- Status Filter -->
+      <div class="fs-group" id="fsStatusGroup">
+        <label class="fs-label">Status</label>
+        <div class="chips" id="statusChips">
+          <button data-status="all" class="on">All</button>
+          <button data-status="Open">Open</button>
+          <button data-status="Assigned">Assigned</button>
+        </div>
+      </div>
+
+      <!-- Area Filter -->
+      <div class="fs-group">
+        <label class="fs-label" for="fltArea">Filter by Area</label>
+        <select id="fltArea" aria-label="Filter by area">
+          <option value="all">All areas</option>
+        </select>
+      </div>
+
+      <!-- Issued By Filter -->
+      <div class="fs-group">
+        <label class="fs-label" for="fltIssuedBy">Issued By</label>
+        <select id="fltIssuedBy" aria-label="Filter by issued by">
+          <option value="all">All Issued By</option>
+        </select>
+      </div>
+
+      <!-- Issued To Filter -->
+      <div class="fs-group">
+        <label class="fs-label" for="fltIssuedTo">Issued To</label>
+        <select id="fltIssuedTo" aria-label="Filter by issued to">
+          <option value="all">All Issued To</option>
+        </select>
+      </div>
+
+      <!-- Sort Filter -->
+      <div class="fs-group">
+        <label class="fs-label" for="sortBy">Sort By</label>
+        <select id="sortBy" aria-label="Sort">
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="az">Job name A-Z</option>
+          <option value="area">Area A-Z</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="fs-foot">
+      <button type="button" class="btn s" id="btnClearFilterDrawer">Reset All</button>
+      <button type="button" class="btn p" id="btnApplyFilterDrawer">Apply</button>
+    </div>
+  </aside>
 
   <!-- ===== VIEW DETAILS MODAL ===== -->
   <div class="modal" id="viewModal" hidden>

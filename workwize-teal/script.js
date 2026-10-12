@@ -23,6 +23,8 @@
     q: '',
     status: 'all',
     area: 'all',
+    issuedBy: 'all',
+    issuedTo: 'all',
     sort: 'new',
     pageSize: 25,
     layout: 'list',
@@ -316,7 +318,10 @@
   function listFor(tab, ignoreStatus) {
     var source = (tab === 'closed') ? closedJobs : openJobs;
     var arr = source.filter(function (j) {
-      return matches(j) && (state.area === 'all' || j.area === state.area) &&
+      return matches(j) &&
+        (state.area === 'all' || j.area === state.area) &&
+        (!state.issuedBy || state.issuedBy === 'all' || j.by === state.issuedBy) &&
+        (!state.issuedTo || state.issuedTo === 'all' || j.dept === state.issuedTo) &&
         (ignoreStatus || tab === 'closed' || state.status === 'all' || j.status === state.status);
     });
     var s = state.sort;
@@ -493,7 +498,33 @@
     return '<div>Showing ' + from + ' to ' + to + ' of ' + total + ' entries</div><div class="pg">' + b + '</div>';
   }
 
-  /* ================= Filter Controls ================= */
+  /* ================= Filter Controls & Sidebar ================= */
+  function openFilterSidebar() {
+    var sidebar = $('#filterSidebar');
+    var overlay = $('#filterOverlay');
+    if (!sidebar || !overlay) return;
+    sidebar.hidden = false;
+    overlay.hidden = false;
+    requestAnimationFrame(function () {
+      sidebar.classList.add('open');
+      overlay.classList.add('open');
+    });
+  }
+
+  function closeFilterSidebar() {
+    var sidebar = $('#filterSidebar');
+    var overlay = $('#filterOverlay');
+    if (!sidebar || !overlay) return;
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    setTimeout(function () {
+      if (!sidebar.classList.contains('open')) {
+        sidebar.hidden = true;
+        overlay.hidden = true;
+      }
+    }, 280);
+  }
+
   function renderFilters() {
     var tab = state.tab;
     var chips = '';
@@ -507,6 +538,10 @@
       sc.innerHTML = chips;
       sc.hidden = !chips;
     }
+    var fsStatusGroup = $('#fsStatusGroup');
+    if (fsStatusGroup) {
+      fsStatusGroup.hidden = (tab !== 'open');
+    }
 
     var areas = {};
     var currentList = (tab === 'closed') ? closedJobs : openJobs;
@@ -518,10 +553,61 @@
       }).join('');
     }
 
-    $('#viewGrid').classList.toggle('on', state.layout === 'grid');
-    $('#viewList').classList.toggle('on', state.layout === 'list');
-    var active = state.q || state.area !== 'all' || (tab === 'open' && state.status !== 'all');
-    $('#clearFilters').hidden = !active;
+    // Dynamic Issued By dropdown
+    var issuedByMap = {};
+    currentList.forEach(function (j) {
+      if (j.by && j.by.trim() && j.by !== 'Select Issued By') {
+        issuedByMap[j.by.trim()] = 1;
+      }
+    });
+    var fltIssuedBy = $('#fltIssuedBy');
+    if (fltIssuedBy) {
+      fltIssuedBy.innerHTML = '<option value="all">All Issued By</option>' + Object.keys(issuedByMap).sort().map(function (by) {
+        return '<option value="' + esc(by) + '"' + (state.issuedBy === by ? ' selected' : '') + '>' + esc(by) + '</option>';
+      }).join('');
+    }
+
+    // Dynamic Issued To dropdown
+    var issuedToMap = {};
+    if (cachedTeams && cachedTeams.length) {
+      cachedTeams.forEach(function (t) {
+        if (t.teamName && t.teamName.trim()) {
+          issuedToMap[t.teamName.trim()] = 1;
+        }
+      });
+    }
+    currentList.forEach(function (j) {
+      if (j.dept && j.dept.trim() && j.dept !== 'Department') {
+        issuedToMap[j.dept.trim()] = 1;
+      }
+    });
+    var fltIssuedTo = $('#fltIssuedTo');
+    if (fltIssuedTo) {
+      fltIssuedTo.innerHTML = '<option value="all">All Issued To</option>' + Object.keys(issuedToMap).sort().map(function (dept) {
+        return '<option value="' + esc(dept) + '"' + (state.issuedTo === dept ? ' selected' : '') + '>' + esc(dept) + '</option>';
+      }).join('');
+    }
+
+    var sortBy = $('#sortBy');
+    if (sortBy && state.sort) {
+      sortBy.value = state.sort;
+    }
+
+    var vg = $('#viewGrid'); if (vg) vg.classList.toggle('on', state.layout === 'grid');
+    var vl = $('#viewList'); if (vl) vl.classList.toggle('on', state.layout === 'list');
+    var active = (state.q && state.q.length > 0) ||
+      state.area !== 'all' ||
+      (state.issuedBy && state.issuedBy !== 'all') ||
+      (state.issuedTo && state.issuedTo !== 'all') ||
+      (tab === 'open' && state.status !== 'all') ||
+      (state.sort && state.sort !== 'new');
+    var cf = $('#clearFilters');
+    if (cf) cf.hidden = !active;
+
+    var btnFilter = $('#btnFilter');
+    var filterDot = $('#filterDot');
+    if (btnFilter) btnFilter.classList.toggle('active', !!active);
+    if (filterDot) filterDot.hidden = !active;
   }
 
   function renderList(tab) {
@@ -676,6 +762,9 @@
   async function setTab(tab) {
     state.tab = tab;
     state.status = 'all';
+    state.issuedBy = 'all';
+    state.issuedTo = 'all';
+    closeFilterSidebar();
 
     $$('.tab').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
     ['new', 'open', 'closed'].forEach(function (t) { $('#view-' + t).hidden = t !== tab; });
@@ -1800,9 +1889,17 @@
   function clearAll() {
     state.q = '';
     state.area = 'all';
+    state.issuedBy = 'all';
+    state.issuedTo = 'all';
     state.status = 'all';
+    state.sort = 'new';
     var sInput = $('#search'); if (sInput) sInput.value = '';
     var cs = $('#clearSearch'); if (cs) cs.hidden = true;
+    var fltArea = $('#fltArea'); if (fltArea) fltArea.value = 'all';
+    var fltIssuedBy = $('#fltIssuedBy'); if (fltIssuedBy) fltIssuedBy.value = 'all';
+    var fltIssuedTo = $('#fltIssuedTo'); if (fltIssuedTo) fltIssuedTo.value = 'all';
+    var sortBy = $('#sortBy'); if (sortBy) sortBy.value = 'new';
+    renderFilters();
     renderList(state.tab);
   }
 
@@ -1975,6 +2072,48 @@
       });
     }
 
+    // Filter Sidebar Drawer
+    var btnFilter = $('#btnFilter');
+    if (btnFilter) {
+      btnFilter.addEventListener('click', function () {
+        var sidebar = $('#filterSidebar');
+        if (sidebar && sidebar.classList.contains('open')) {
+          closeFilterSidebar();
+        } else {
+          openFilterSidebar();
+        }
+      });
+    }
+
+    var btnCloseFilter = $('#btnCloseFilter');
+    if (btnCloseFilter) btnCloseFilter.addEventListener('click', closeFilterSidebar);
+
+    var filterOverlay = $('#filterOverlay');
+    if (filterOverlay) filterOverlay.addEventListener('click', closeFilterSidebar);
+
+    var btnApplyFilterDrawer = $('#btnApplyFilterDrawer');
+    if (btnApplyFilterDrawer) {
+      btnApplyFilterDrawer.addEventListener('click', function () {
+        closeFilterSidebar();
+      });
+    }
+
+    var btnClearFilterDrawer = $('#btnClearFilterDrawer');
+    if (btnClearFilterDrawer) {
+      btnClearFilterDrawer.addEventListener('click', function () {
+        clearAll();
+      });
+    }
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        var sidebar = $('#filterSidebar');
+        if (sidebar && sidebar.classList.contains('open')) {
+          closeFilterSidebar();
+        }
+      }
+    });
+
     var cfBtn = $('#clearFilters');
     if (cfBtn) cfBtn.addEventListener('click', clearAll);
 
@@ -1985,6 +2124,7 @@
         var b = e.target.closest('[data-status]');
         if (b) {
           state.status = b.dataset.status;
+          renderFilters();
           renderList(state.tab);
         }
       });
@@ -1995,6 +2135,27 @@
     if (fltArea) {
       fltArea.addEventListener('change', function (e) {
         state.area = e.target.value;
+        renderFilters();
+        renderList(state.tab);
+      });
+    }
+
+    // Issued By filter
+    var fltIssuedBy = $('#fltIssuedBy');
+    if (fltIssuedBy) {
+      fltIssuedBy.addEventListener('change', function (e) {
+        state.issuedBy = e.target.value;
+        renderFilters();
+        renderList(state.tab);
+      });
+    }
+
+    // Issued To filter
+    var fltIssuedTo = $('#fltIssuedTo');
+    if (fltIssuedTo) {
+      fltIssuedTo.addEventListener('change', function (e) {
+        state.issuedTo = e.target.value;
+        renderFilters();
         renderList(state.tab);
       });
     }
@@ -2004,6 +2165,7 @@
     if (sortBy) {
       sortBy.addEventListener('change', function (e) {
         state.sort = e.target.value;
+        renderFilters();
         renderList(state.tab);
       });
     }
