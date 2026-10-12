@@ -33,11 +33,11 @@
           <!-- Top User Info -->
           <div class="pd-header">
             <div class="pd-avatar-wrap">
-              <img src="assets/avatar.png" alt="IT" class="pd-avatar">
+              <img src="assets/avatar.png" alt="IT" class="pd-avatar" id="pdAvatarImg">
             </div>
             <div class="pd-user-info">
-              <div class="pd-name">IT</div>
-              <div class="pd-role">App admin</div>
+              <div class="pd-name" id="pdUserName">IT</div>
+              <div class="pd-role" id="pdUserRole">App admin</div>
             </div>
           </div>
 
@@ -56,23 +56,19 @@
                 <span>Testing</span>
                 <svg class="pd-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
-              <div class="pd-option-item" role="option" data-val="Testing-House Keeping">
-                <span>Testing-House Keeping</span>
-                <svg class="pd-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" hidden><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <div class="pd-option-item" role="option" data-val="Testing-Engineering">
-                <span>Testing-Engineering</span>
-                <svg class="pd-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" hidden><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
-              <div class="pd-option-item" role="option" data-val="Testing-Security">
-                <span>Testing-Security</span>
-                <svg class="pd-check-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" hidden><polyline points="20 6 9 17 4 12"/></svg>
-              </div>
             </div>
           </div>
 
           <!-- Action Items -->
           <div class="pd-menu">
+            <button type="button" class="pd-action-btn" id="pdLoginBtn" hidden>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
+              </svg>
+              <span>Sign In</span>
+            </button>
             <button type="button" class="pd-action-btn" id="pdResetPwdBtn">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -149,9 +145,6 @@
               <label for="fDept">Issued To Dept.</label>
               <select id="fDept" required>
                 <option value="">Select department</option>
-                <option>Testing-Engineering</option>
-                <option>Testing-House Keeping</option>
-                <option>Testing-Security</option>
               </select>
               <small class="err"></small>
             </div>
@@ -163,11 +156,6 @@
               <label for="fArea">Area</label>
               <select id="fArea" required>
                 <option value="">Select area</option>
-                <option>Waste Management</option>
-                <option>Public Area</option>
-                <option>Utility</option>
-                <option>Guest Villa</option>
-                <option>CAPEX</option>
               </select>
               <small class="err"></small>
             </div>
@@ -180,16 +168,28 @@
               <input id="fDetails" type="text" placeholder="Enter job detail" required>
               <small class="err"></small>
             </div>
+            <div class="fld" id="fDeptAssignWrap" hidden>
+              <label for="fDeptAssign">Assign (Dept.)</label>
+              <select id="fDeptAssign"></select>
+            </div>
+            <div class="fld" id="fSupervisorAssignWrap" hidden>
+              <label for="fSupervisorAssign">Assign (Supervisor)</label>
+              <select id="fSupervisorAssign"></select>
+            </div>
+            <div class="fld full" id="fSubTeamWarningWrap" hidden>
+              <small class="err" id="fSubTeamWarning" style="color:var(--danger,#e53e3e);display:block;"></small>
+            </div>
             <div class="fld full">
               <label>Photo (Size Limit: 5MB)</label>
               <label class="drop" id="drop" for="fPhoto">
-                <input id="fPhoto" type="file" accept="image/*" hidden>
+                <input id="fPhoto" type="file" accept=".jpeg, .jpg, .png, .mp4, .mov" multiple hidden>
                 <div id="dropText">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
-                  <span>Click to upload photo &middot; max 5MB</span>
+                  <span>Click to upload photo or video &middot; max 5MB</span>
                 </div>
                 <img id="preview" alt="" hidden>
               </label>
+              <div id="newJobPreviews" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"></div>
               <small class="err" id="photoErr"></small>
             </div>
           </div>
@@ -284,7 +284,6 @@
 
   <footer class="foot">
     &copy; 2023-2026 WorkWize . All Rights Reserved
-    <button class="link" id="resetDemo">Reset demo data</button>
   </footer>
 
   <!-- ===== VIEW DETAILS MODAL ===== -->
@@ -358,11 +357,9 @@
       <div class="job-brief" id="assignBrief"></div>
       <div class="fgrid">
         <div class="fld full">
-          <label for="asDept">Select Team / Department</label>
+          <label for="asDept">Select Sub-Dept. / Sub-Team</label>
           <select id="asDept" required>
-            <option value="Testing-House Keeping">Housekeeping (Testing-House Keeping)</option>
-            <option value="Testing-Engineering">Engineering (Testing-Engineering)</option>
-            <option value="Testing-Security">Security (Testing-Security)</option>
+            <option value="">Select sub-team</option>
           </select>
         </div>
         <div class="fld full">
@@ -450,6 +447,34 @@
     </form>
   </div>
 
+  <!-- ===== LOGIN MODAL ===== -->
+  <div class="modal" id="loginModal" hidden>
+    <form class="dialog small" id="loginForm" novalidate>
+      <div class="dhead">
+        <h3>WorkWize Sign In</h3>
+        <button type="button" class="x" data-close>&times;</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Sign in with your WorkWize account to access and sync live jobs.</p>
+      <div class="fgrid">
+        <div class="fld full">
+          <label for="loginEmail">Email / Username</label>
+          <input type="text" id="loginEmail" placeholder="e.g. user@workwize.com" required autofocus>
+        </div>
+        <div class="fld full">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter password" required>
+        </div>
+        <div class="fld full" id="loginErrorWrap" hidden>
+          <small class="err" id="loginError" style="color:var(--danger,#e53e3e);display:block;"></small>
+        </div>
+      </div>
+      <div class="btns">
+        <button type="button" class="btn s" data-close>Cancel</button>
+        <button type="submit" class="btn p" id="btnLoginSubmit">Sign In</button>
+      </div>
+    </form>
+  </div>
+
   <!-- ===== PHOTO LIGHTBOX ===== -->
   <div class="lightbox" id="lightbox" hidden><img alt=""><button class="x" id="lbClose">&times;</button></div>
   <input type="file" accept="image/*" id="quickPhoto" hidden>
@@ -459,6 +484,8 @@
 
   <script src="assets/xlsx.full.min.js"></script>
   <script src="data.js"></script>
+  <script src="api/config.js"></script>
+  <script src="api/dailyJobApi.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
