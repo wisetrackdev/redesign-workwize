@@ -24,14 +24,14 @@
     status: 'all',
     area: 'all',
     sort: 'new',
-    pageSize: 50,
+    pageSize: 25,
     layout: 'list',
     period: 'today'
   };
 
   var pagination = {
-    open: { total: 0, page: 1, pageSize: 50, totalPages: 1 },
-    closed: { total: 0, page: 1, pageSize: 50, totalPages: 1 }
+    open: { total: 0, page: 1, pageSize: 25, totalPages: 1 },
+    closed: { total: 0, page: 1, pageSize: 25, totalPages: 1 }
   };
 
   var isLoading = false;
@@ -113,8 +113,21 @@
     }
   }
 
+  function isSuperAdmin() {
+    if (!currentUser) return false;
+    var email = String(currentUser.email || currentUser.username || '').toLowerCase();
+    if (email === 'it@workwise.in' || email === 'it@workwize.in' || email.indexOf('it@workwi') === 0) return true;
+    var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
+    return roles.some(function (r) {
+      var u = String(r).toUpperCase();
+      return u === 'SUPERADMIN' || u === 'OPROADMIN';
+    });
+  }
+
   function isAdmin() {
-    if (!currentUser || !currentUser.role) return false;
+    if (!currentUser) return false;
+    var email = String(currentUser.email || currentUser.username || '').toLowerCase();
+    if (email === 'it@workwise.in' || email === 'it@workwize.in' || email.indexOf('it@workwi') === 0) return true;
     var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
     return roles.some(function (r) {
       var u = String(r).toUpperCase();
@@ -142,25 +155,47 @@
 
     var primaryTeamName = getPrimaryTeamName();
     if (byInput) {
-      byInput.value = (currentUser.name || 'User') + ' [' + (currentUser.desg || 'Staff') + ': ' + (primaryTeamName || 'General') + ']';
+      if (isAdmin()) {
+        byInput.value = (currentUser.name || 'IT') + ' [' + (currentUser.desg || 'App admin') + ']';
+      } else {
+        byInput.value = (currentUser.name || 'User') + ' [' + (currentUser.desg || 'Staff') + ': ' + (primaryTeamName || 'General') + ']';
+      }
     }
   }
 
   function getPrimaryTeamName() {
+    if (!userCurrentTeamId) return '';
     if (!cachedUserTeams || !cachedUserTeams.length) {
       if (cachedTeams && cachedTeams.length && userCurrentTeamId) {
         var match = cachedTeams.find(function (t) { return t.teamId === userCurrentTeamId; });
         if (match) return match.teamName;
       }
-      return 'Team';
+      return '';
     }
     var team = cachedUserTeams.find(function (item) { return item.primaryteam === userCurrentTeamId; });
-    return team ? team.primaryteamname : (cachedUserTeams[0] ? cachedUserTeams[0].primaryteamname : 'Team');
+    return team ? team.primaryteamname : (cachedUserTeams[0] ? cachedUserTeams[0].primaryteamname : '');
   }
 
   function updateUserTeamContext() {
-    if (!cachedTeams || !cachedTeams.length) return;
+    userCurrentTeamId = null;
+    userSubTeamData = [];
+
+    // Admin / Superadmin do not belong to a specific operational team
+    if (isAdmin()) {
+      updateHeaderUserInfo();
+      return;
+    }
+
+    if (!cachedTeams || !cachedTeams.length) {
+      updateHeaderUserInfo();
+      return;
+    }
+
     var email = (currentUser && (currentUser.email || currentUser.username)) || '';
+    if (!email) {
+      updateHeaderUserInfo();
+      return;
+    }
 
     var matchedTeam = null;
     for (var i = 0; i < cachedTeams.length; i++) {
@@ -174,10 +209,6 @@
         }
       }
       if (matchedTeam) break;
-    }
-
-    if (!matchedTeam && cachedTeams.length > 0) {
-      matchedTeam = cachedTeams[0];
     }
 
     if (matchedTeam) {
@@ -426,7 +457,7 @@
 
   /* ================= Pager HTML ================= */
   function pagerHTML(total, tab) {
-    var pInfo = pagination[tab] || { page: 1, pageSize: 50, totalPages: 1 };
+    var pInfo = pagination[tab] || { page: 1, pageSize: 25, totalPages: 1 };
     var pages = Math.max(1, pInfo.totalPages || Math.ceil(total / pInfo.pageSize));
     var cur = Math.min(pInfo.page || 1, pages);
     var from = total ? (cur - 1) * pInfo.pageSize + 1 : 0;
@@ -450,11 +481,8 @@
     var tab = state.tab;
     var chips = '';
     if (tab === 'open') {
-      var base = listFor('open', true);
-      var cnt = { all: base.length, Open: 0, Assigned: 0 };
-      base.forEach(function (j) { if (cnt[j.status] !== undefined) cnt[j.status]++; });
       chips = [['all', 'All'], ['Open', 'Open'], ['Assigned', 'Assigned']].map(function (c) {
-        return '<button data-status="' + c[0] + '" class="' + (state.status === c[0] ? 'on' : '') + '">' + c[1] + ' <em>' + cnt[c[0]] + '</em></button>';
+        return '<button data-status="' + c[0] + '" class="' + (state.status === c[0] ? 'on' : '') + '">' + c[1] + '</button>';
       }).join('');
     }
     var sc = $('#statusChips');
@@ -508,7 +536,7 @@
     setLoading(true, 'open');
     try {
       var p = page || pagination.open.page || 1;
-      var ps = pageSize || state.pageSize || 50;
+      var ps = pageSize || state.pageSize || 25;
       var res = await api.getQuickFixJobs({
         propId: currentPropertyId,
         jobList: 'open',
@@ -554,7 +582,7 @@
     setLoading(true, 'closed');
     try {
       var p = page || pagination.closed.page || 1;
-      var ps = pageSize || state.pageSize || 50;
+      var ps = pageSize || state.pageSize || 25;
       var res = await api.getQuickFixJobs({
         propId: currentPropertyId,
         jobList: 'close',
@@ -736,7 +764,15 @@
     var warnWrap = $('#fSubTeamWarningWrap');
     var warnText = $('#fSubTeamWarning');
 
-    // ONLY SHOW IF ASSIGNING TO SAME TEAM:
+    // Admin / Superadmin ALWAYS only sees the 5 input fields (hidden fields NEVER show)
+    if (isAdmin() || !userCurrentTeamId) {
+      if (deptWrap) deptWrap.hidden = true;
+      if (supWrap) supWrap.hidden = true;
+      if (warnWrap) warnWrap.hidden = true;
+      return;
+    }
+
+    // ONLY SHOW IF ASSIGNING TO SAME TEAM for departmental user:
     if (issuedTo && issuedBy && issuedTo === issuedBy) {
       if (deptWrap) deptWrap.hidden = false;
       if (supWrap) supWrap.hidden = false;
@@ -894,7 +930,7 @@
     var teamAssigned = null;
     var supervisorAssigned = null;
 
-    if (issuedTo === issuedBy) {
+    if (!isAdmin() && issuedBy && issuedTo === issuedBy) {
       var da = $('#fDeptAssign');
       var sa = $('#fSupervisorAssign');
       teamAssigned = (da && da.value) ? da.value : null;
@@ -1252,8 +1288,27 @@
     var menu = $('#pdTestingMenu');
     if (!menu) return;
 
+    // Role-based visibility rule from quickfix (qindex.js):
+    // If SUPERADMIN / OPROADMIN (or it@workwise.in): show ALL properties
+    // If other email ID / user: show ONLY their assigned property (currentUser.prop)
+    var visibleProps = props || [];
+    if (!isSuperAdmin()) {
+      var userPropId = (currentUser && currentUser.prop) || null;
+      var matchedProp = null;
+      if (userPropId && Array.isArray(props)) {
+        matchedProp = props.find(function (p) { return p.propId === userPropId; });
+      }
+      if (matchedProp) {
+        visibleProps = [matchedProp];
+      } else if (Array.isArray(props) && props.length > 0) {
+        visibleProps = [props[0]];
+      } else {
+        visibleProps = [];
+      }
+    }
+
     var html = '';
-    props.forEach(function (p) {
+    visibleProps.forEach(function (p) {
       var isAct = p.propId === currentPropertyId;
       html += '<div class="pd-option-item' + (isAct ? ' active' : '') + '" role="option" data-val="' + esc(p.propId) + '" data-name="' + esc(p.propName) + '">' +
         '<span>' + esc(p.propName) + '</span>' +
@@ -1879,7 +1934,6 @@
       var props = await api.getAllProperties();
       if (props && Array.isArray(props) && props.length > 0) {
         allProperties = props;
-        renderPropertySelector(props);
 
         var userProp = currentUser && currentUser.prop;
         var targetProp = null;
@@ -1893,6 +1947,8 @@
         currentPropertyId = targetProp.propId;
         var sv = $('#pdSelectedValue');
         if (sv) sv.textContent = targetProp.propName;
+
+        renderPropertySelector(props);
 
         // Default to Open tab (loads live open jobs on start!)
         await setTab('open');
