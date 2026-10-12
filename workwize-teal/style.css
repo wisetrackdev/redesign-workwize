@@ -276,7 +276,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .issued-to-bar svg{flex-shrink:0;color:var(--primary)}
 
 /* Mandatory columns grid */
-.kv{display:grid;grid-template-columns:92px minmax(0,1fr);gap:6px 10px;font-size:12.5px;margin-bottom:12px}
+.kv{display:grid;grid-template-columns:115px minmax(0,1fr);gap:6px 10px;font-size:12.5px;margin-bottom:12px}
 .kv span{color:var(--muted);font-weight:500}
 .kv b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
 
@@ -297,7 +297,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 
 /* ---------- Compact list rows (mandatory columns) ---------- */
 .cards.list{grid-template-columns:1fr;gap:8px}
-.jrow{display:grid;grid-template-columns:minmax(0,2.6fr) minmax(0,1.3fr) minmax(0,1.2fr) 90px 110px 34px;gap:14px;align-items:center;background:#fff;border-radius:12px;padding:12px 16px;box-shadow:0 1px 4px rgba(31,44,94,.07);border-left:4px solid var(--primary);cursor:pointer;outline:0;transition:.12s}
+.jrow{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.1fr) 80px minmax(0,1.25fr) minmax(0,1.15fr) 95px 34px;gap:12px;align-items:center;background:#fff;border-radius:12px;padding:12px 16px;box-shadow:0 1px 4px rgba(31,44,94,.07);border-left:4px solid var(--primary);cursor:pointer;outline:0;transition:.12s}
 .jrow:hover,.jrow:focus-visible{box-shadow:0 4px 14px rgba(31,44,94,.14);background:#FCFDFF}
 .jrow.Open{border-left-color:var(--amber)}.jrow.Closed{border-left-color:var(--green)}
 .jrow .rt{min-width:0;display:flex;flex-direction:column;gap:2px}
@@ -412,7 +412,10 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .foot .link{margin-left:10px;font-weight:600}
 
 /* ---------- Responsive ---------- */
-@media(max-width:1180px){.jrow{grid-template-columns:minmax(0,2.3fr) minmax(0,1.2fr) minmax(0,1.1fr) 110px 34px}.jrow .rc:nth-of-type(3){display:none}}
+@media(max-width:1240px){
+  .cards.list{overflow-x:auto;padding-bottom:6px}
+  .jrow{min-width:1050px}
+}
 @media(max-width:1100px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}}
 @media(max-width:900px){
   .jrow{grid-template-columns:minmax(0,1fr) auto 34px}

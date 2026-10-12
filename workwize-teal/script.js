@@ -230,14 +230,16 @@
     var issuedToSub = '<div class="issued-to-bar">' + I.dept + ' <span>Issued To:</span> <b>' + hl(j.dept) + '</b></div>';
 
     // 2. Mandatory columns:
-    // Area & Sub-area | Open Date & Time | Photo Before | Status / Assigned To
+    // Area | Sub Area | Open Date & Time | Photo Before | Assigned Sub Dept | Assigned To / Closed by
     var rows =
-      '<span>Area & Sub</span><b title="' + esc(j.area + ' > ' + j.sub) + '">' + hl(j.area) + (j.sub ? ' &rsaquo; ' + hl(j.sub) : '') + '</b>' +
+      '<span>Area</span><b title="' + esc(j.area) + '">' + hl(j.area) + '</b>' +
+      '<span>Sub Area</span><b title="' + esc(j.sub || 'NA') + '">' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</b>' +
       '<span>Opened</span><b>' + fmt(j.opened) + '</b>' +
       '<span>Photo Before</span><div>' + photoBeforePreview(j) + '</div>' +
+      '<span>Assigned Sub Dept</span><b title="' + esc(j.assignDept || 'NA') + '">' + (j.assignDept && j.assignDept !== 'NA' ? hl(j.assignDept) : '<span class="na">NA</span>') + '</b>' +
       (closed
         ? '<span>Closed by</span><b title="' + esc(j.closedBy) + '">' + na(j.closedBy) + ' &middot; ' + fmt(j.closedAt) + '</b>'
-        : '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) + (j.assignDept && j.assignDept !== 'NA' ? ' <small style="color:var(--muted)">(' + esc(j.assignDept) + ')</small>' : '') : '<span class="na">Not assigned</span>') + '</b>');
+        : '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) : '<span class="na">Not assigned</span>') + '</b>');
 
     return '<article class="jcard ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="top">' +
@@ -255,6 +257,10 @@
 
   function rowHTML(j) {
     var propId = j.propId || getPropId(j);
+    var closed = j.status === 'Closed';
+    var assignDeptVal = (j.assignDept && j.assignDept !== 'NA') ? hl(j.assignDept) : '<span class="na">NA</span>';
+    var assignedPerson = (j.assigned && j.assigned !== 'NA') ? j.assigned : (closed && j.closedBy ? j.closedBy : '');
+    var assignedVal = assignedPerson ? hl(assignedPerson) : '<span class="na">Not assigned</span>';
 
     return '<article class="jrow ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="rt">' +
@@ -262,9 +268,12 @@
         '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
         '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
       '</div>' +
-      '<div class="rc"><span>Area &amp; Sub</span>' + hl(j.area) + (j.sub ? ' &rsaquo; ' + hl(j.sub) : '') + '</div>' +
-      '<div class="rc"><span>Opened</span>' + fmt(j.opened) + '</div>' +
+      '<div class="rc" title="' + esc(j.area) + '"><span>Area</span>' + hl(j.area) + '</div>' +
+      '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
+      '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
       '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
+      '<div class="rc" title="' + esc(j.assignDept || 'NA') + '"><span>Assigned Sub Dept</span>' + assignDeptVal + '</div>' +
+      '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assigned To</span>' + assignedVal + '</div>' +
       '<div class="rs"><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
       menuHTML(j) +
     '</article>';
