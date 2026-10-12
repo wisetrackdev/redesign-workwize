@@ -116,7 +116,15 @@
   function isSuperAdmin() {
     if (!currentUser) return false;
     var email = String(currentUser.email || currentUser.username || '').toLowerCase();
-    if (email === 'it@workwise.in' || email === 'it@workwize.in' || email.indexOf('it@workwi') === 0) return true;
+    if (
+      email === 'it@workwise.in' ||
+      email === 'it@workwize.in' ||
+      email === 'it@workwise@gmail.com' ||
+      email === 'it@workwize@gmail.com' ||
+      email.indexOf('it@workwi') === 0
+    ) {
+      return true;
+    }
     var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
     return roles.some(function (r) {
       var u = String(r).toUpperCase();
@@ -126,12 +134,11 @@
 
   function isAdmin() {
     if (!currentUser) return false;
-    var email = String(currentUser.email || currentUser.username || '').toLowerCase();
-    if (email === 'it@workwise.in' || email === 'it@workwize.in' || email.indexOf('it@workwi') === 0) return true;
+    if (isSuperAdmin()) return true;
     var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
     return roles.some(function (r) {
       var u = String(r).toUpperCase();
-      return u === 'ADMIN' || u === 'SUPERADMIN' || u === 'OPROADMIN';
+      return u === 'ADMIN';
     });
   }
 
@@ -155,7 +162,7 @@
 
     var primaryTeamName = getPrimaryTeamName();
     if (byInput) {
-      if (isAdmin()) {
+      if (isSuperAdmin()) {
         byInput.value = (currentUser.name || 'IT') + ' [' + (currentUser.desg || 'App admin') + ']';
       } else {
         byInput.value = (currentUser.name || 'User') + ' [' + (currentUser.desg || 'Staff') + ': ' + (primaryTeamName || 'General') + ']';
@@ -180,8 +187,8 @@
     userCurrentTeamId = null;
     userSubTeamData = [];
 
-    // Admin / Superadmin do not belong to a specific operational team
-    if (isAdmin()) {
+    // ONLY Superadmin / Oproadmin (e.g. it@workwise...) do not belong to a department team
+    if (isSuperAdmin()) {
       updateHeaderUserInfo();
       return;
     }
@@ -192,23 +199,32 @@
     }
 
     var email = (currentUser && (currentUser.email || currentUser.username)) || '';
-    if (!email) {
-      updateHeaderUserInfo();
-      return;
-    }
-
     var matchedTeam = null;
-    for (var i = 0; i < cachedTeams.length; i++) {
-      var t = cachedTeams[i];
-      if (t.members && Array.isArray(t.members)) {
-        for (var m = 0; m < t.members.length; m++) {
-          if (t.members[m].email && t.members[m].email.toLowerCase() === email.toLowerCase()) {
-            matchedTeam = t;
-            break;
+
+    // 1. Check if user email is in team members
+    if (email) {
+      for (var i = 0; i < cachedTeams.length; i++) {
+        var t = cachedTeams[i];
+        if (t.members && Array.isArray(t.members)) {
+          for (var m = 0; m < t.members.length; m++) {
+            if (t.members[m].email && t.members[m].email.toLowerCase() === email.toLowerCase()) {
+              matchedTeam = t;
+              break;
+            }
           }
         }
+        if (matchedTeam) break;
       }
-      if (matchedTeam) break;
+    }
+
+    // 2. Check if cachedUserTeams has primaryteam
+    if (!matchedTeam && cachedUserTeams && cachedUserTeams.length > 0 && cachedUserTeams[0].primaryteam) {
+      matchedTeam = cachedTeams.find(function (t) { return t.teamId === cachedUserTeams[0].primaryteam; });
+    }
+
+    // 3. Fallback to first team for main admin or other staff if not explicitly in members list
+    if (!matchedTeam && cachedTeams && cachedTeams.length > 0) {
+      matchedTeam = cachedTeams[0];
     }
 
     if (matchedTeam) {
@@ -731,6 +747,8 @@
       fDept.innerHTML = deptHtml;
       if (currentVal && cachedTeams.some(function (t) { return t.teamId === currentVal; })) {
         fDept.value = currentVal;
+      } else if (userCurrentTeamId && cachedTeams.some(function (t) { return t.teamId === userCurrentTeamId; })) {
+        fDept.value = userCurrentTeamId;
       }
     }
 
@@ -764,37 +782,63 @@
     var warnWrap = $('#fSubTeamWarningWrap');
     var warnText = $('#fSubTeamWarning');
 
-    // Admin / Superadmin ALWAYS only sees the 5 input fields (hidden fields NEVER show)
-    if (isAdmin() || !userCurrentTeamId) {
+    // ONLY Superadmin / Oproadmin (e.g. it@workwise...) sees strictly 5 fields (hidden fields NEVER show)
+    if (isSuperAdmin()) {
       if (deptWrap) deptWrap.hidden = true;
       if (supWrap) supWrap.hidden = true;
       if (warnWrap) warnWrap.hidden = true;
       return;
     }
 
-    // ONLY SHOW IF ASSIGNING TO SAME TEAM for departmental user:
+    // Normal condition for main Admin (e.g. testing@test) and departmental staff:
+    // When assigning to own team (issuedTo === issuedBy), SHOW the assignment fields!
     if (issuedTo && issuedBy && issuedTo === issuedBy) {
       if (deptWrap) deptWrap.hidden = false;
       if (supWrap) supWrap.hidden = false;
 
-      if (userSubTeamData && userSubTeamData.length > 0) {
+      var subTeams = userSubTeamData;
+      if ((!subTeams || !subTeams.length) && cachedTeams) {
+        var myTeam = cachedTeams.find(function (t) { return t.teamId === issuedTo; });
+        if (myTeam && myTeam.propsubteams && myTeam.propsubteams.length > 0) {
+          subTeams = myTeam.propsubteams;
+        }
+      }
+
+      if (subTeams && subTeams.length > 0) {
         if (warnWrap) warnWrap.hidden = true;
-        var subHtml = userSubTeamData.map(function (st) {
+        var subHtml = subTeams.map(function (st) {
           return '<option value="' + esc(st.subteamId) + '">' + esc(st.subteamName) + '</option>';
         }).join('');
 
         var fDeptAssign = $('#fDeptAssign');
         if (fDeptAssign) {
           fDeptAssign.innerHTML = subHtml;
-          populateNewJobSupervisors(userSubTeamData[0].subteamId);
+          populateNewJobSupervisors(subTeams[0].subteamId);
         }
       } else {
-        if (warnWrap) {
-          warnWrap.hidden = false;
-          if (warnText) warnText.textContent = 'Job cannot be added with assignment as there are no sub teams in this department.';
+        // Fallback: If no sub-teams configured, check if team has members directly
+        var currentTeamObj = cachedTeams ? cachedTeams.find(function (t) { return t.teamId === issuedTo; }) : null;
+        if (currentTeamObj && currentTeamObj.members && currentTeamObj.members.length > 0) {
+          if (warnWrap) warnWrap.hidden = true;
+          var fDeptAssign = $('#fDeptAssign');
+          if (fDeptAssign) fDeptAssign.innerHTML = '<option value="' + esc(currentTeamObj.teamId) + '">' + esc(currentTeamObj.teamName) + '</option>';
+          var fSup = $('#fSupervisorAssign');
+          if (fSup) {
+            var memHtml = '<option value="">-- Select Member / Supervisor --</option>';
+            currentTeamObj.members.forEach(function (m) {
+              var fullName = ((m.firstName || '') + ' ' + (m.lastName || '')).trim() || m.name || m.email;
+              memHtml += '<option value="' + esc(m.email) + '">' + esc(fullName) + ' (' + esc(m.email) + ')</option>';
+            });
+            fSup.innerHTML = memHtml;
+          }
+        } else {
+          if (warnWrap) {
+            warnWrap.hidden = false;
+            if (warnText) warnText.textContent = 'Job cannot be added with assignment as there are no sub teams in this department.';
+          }
+          var da = $('#fDeptAssign'); if (da) da.innerHTML = '<option value="">No sub-teams</option>';
+          var sa = $('#fSupervisorAssign'); if (sa) sa.innerHTML = '<option value="">No members</option>';
         }
-        var da = $('#fDeptAssign'); if (da) da.innerHTML = '<option value="">No sub-teams</option>';
-        var sa = $('#fSupervisorAssign'); if (sa) sa.innerHTML = '<option value="">No members</option>';
       }
     } else {
       // HIDE IF OTHER TEAM
@@ -807,12 +851,17 @@
   function populateNewJobSupervisors(subteamId) {
     var fSup = $('#fSupervisorAssign');
     if (!fSup) return;
-    var st = (userSubTeamData || []).find(function (item) { return item.subteamId === subteamId; });
+    var subTeams = userSubTeamData;
+    if ((!subTeams || !subTeams.length) && cachedTeams && userCurrentTeamId) {
+      var myTeam = cachedTeams.find(function (t) { return t.teamId === userCurrentTeamId; });
+      if (myTeam && myTeam.propsubteams) subTeams = myTeam.propsubteams;
+    }
+    var st = (subTeams || []).find(function (item) { return item.subteamId === subteamId; });
     var membersHtml = '<option value="">-- Select Member / Supervisor --</option>';
 
     if (st && st.subteams && st.subteams.length > 0) {
       st.subteams.forEach(function (m) {
-        var fullName = (m.firstName + ' ' + m.lastName).trim();
+        var fullName = ((m.firstName || '') + ' ' + (m.lastName || '')).trim() || m.name || m.email;
         membersHtml += '<option value="' + esc(m.email) + '">' + esc(fullName) + ' (' + esc(m.email) + ')</option>';
       });
     }
@@ -930,7 +979,7 @@
     var teamAssigned = null;
     var supervisorAssigned = null;
 
-    if (!isAdmin() && issuedBy && issuedTo === issuedBy) {
+    if (!isSuperAdmin() && issuedBy && issuedTo === issuedBy) {
       var da = $('#fDeptAssign');
       var sa = $('#fSupervisorAssign');
       teamAssigned = (da && da.value) ? da.value : null;
