@@ -446,6 +446,7 @@
         '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
         '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
         '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
+        '<div class="rc"><span>Photo After</span>' + photoAfterPreview(j) + '</div>' +
         '<div class="rc" title="' + esc(assignedPerson || 'NA') + '"><span>Closed By</span>' + assignedVal + '</div>' +
         '<div class="rc" title="' + esc(j.remarks || 'NA') + '"><span>Remarks</span>' + closedRemark + '</div>' +
         '<div class="rs"><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
@@ -465,7 +466,7 @@
       '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
       '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
       '<div class="rc" title="' + esc(j.assignDept || 'NA') + '"><span>Assign Sub-Dept.</span>' + assignDeptVal + '</div>' +
-      '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assign Name</span>' + assignedVal + '</div>' +
+      '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assign To</span>' + assignedVal + '</div>' +
       '<div class="rs"><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
       menuHTML(j) +
     '</article>';
@@ -1271,7 +1272,7 @@
       field('Issued To', esc(j.dept)) + field('Issued By', esc(j.by)) +
       field('Area', esc(j.area)) + field('Sub-Area', na(j.sub)) +
       field('Open Date/Time', fmt(j.opened)) + field('Status', '<span class="tag st-' + j.status + '">' + j.status + '</span>') +
-      field('Assign Sub-Dept.', na(j.assignDept)) + field('Assign Name', na(j.assigned)) +
+      field('Assign Sub-Dept.', na(j.assignDept)) + field('Assign To', na(j.assigned)) +
       (closed ? field('Closed By', na(j.closedBy)) + field('Closed Date/Time', fmt(j.closedAt)) : '') +
       // Remarks strictly shown for closed job
       (closed ? field('Remarks', na(j.remarks), true) : '');
@@ -1399,24 +1400,138 @@
     });
   }
 
-  /* ================= Export Handlers ================= */
+  /* ================= Export Handlers & ExcelJS Image Embedding ================= */
+  function fetchImageForExcel(url) {
+    return new Promise(function (resolve) {
+      if (!url || typeof url !== 'string' || url === 'na' || url === 'NA') {
+        return resolve(null);
+      }
+      var trimmed = url.trim();
+      if (!trimmed) return resolve(null);
+
+      // Check if attachment is a video file
+      if (/\.(mp4|mov|webm)$/i.test(trimmed)) {
+        return resolve({ isVideo: true, url: trimmed });
+      }
+
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      var timer = setTimeout(function () {
+        resolve({ failed: true, url: trimmed });
+      }, 6000);
+
+      img.onload = function () {
+        clearTimeout(timer);
+        try {
+          var w = img.naturalWidth || img.width || 100;
+          var h = img.naturalHeight || img.height || 100;
+          var canvas = document.createElement('canvas');
+          var maxDim = 400; // Resize to max 400px for compact, fast Excel file
+          var cw = w;
+          var ch = h;
+          if (cw > maxDim || ch > maxDim) {
+            if (cw > ch) {
+              ch = Math.round((ch * maxDim) / cw);
+              cw = maxDim;
+            } else {
+              cw = Math.round((cw * maxDim) / ch);
+              ch = maxDim;
+            }
+          }
+          canvas.width = cw;
+          canvas.height = ch;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, cw, ch);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          var b64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
+          resolve({
+            base64: b64,
+            ext: 'jpeg',
+            width: w,
+            height: h
+          });
+        } catch (err) {
+          // If canvas was tainted by CORS, check if it's already a data URL
+          if (trimmed.indexOf('data:image/') === 0) {
+            var extM = trimmed.match(/^data:image\/([a-zA-Z0-9]+);base64,/);
+            var ext = (extM && extM[1]) ? extM[1].toLowerCase() : 'jpeg';
+            if (ext === 'jpg') ext = 'jpeg';
+            var b64Raw = trimmed.substring(trimmed.indexOf(',') + 1);
+            return resolve({ base64: b64Raw, ext: ext, width: img.naturalWidth || 70, height: img.naturalHeight || 70 });
+          }
+          resolve({ failed: true, url: trimmed });
+        }
+      };
+
+      img.onerror = function () {
+        clearTimeout(timer);
+        if (trimmed.indexOf('data:image/') === 0) {
+          var extM = trimmed.match(/^data:image\/([a-zA-Z0-9]+);base64,/);
+          var ext = (extM && extM[1]) ? extM[1].toLowerCase() : 'jpeg';
+          if (ext === 'jpg') ext = 'jpeg';
+          var b64Raw = trimmed.substring(trimmed.indexOf(',') + 1);
+          return resolve({ base64: b64Raw, ext: ext, width: 70, height: 70 });
+        }
+        resolve({ failed: true, url: trimmed });
+      };
+
+      img.src = trimmed;
+    });
+  }
+
+  function calcThumbSize(w, h, maxBox) {
+    maxBox = maxBox || 70;
+    if (!w || !h) return { width: maxBox, height: maxBox };
+    var ratio = w / h;
+    if (ratio >= 1) {
+      return { width: maxBox, height: Math.max(20, Math.round(maxBox / ratio)) };
+    } else {
+      return { width: Math.max(20, Math.round(maxBox * ratio)), height: maxBox };
+    }
+  }
+
   function exportRows() {
-    var head = ['Job ID', 'Job Details', 'Issued By', 'Issued To', 'Area', 'Sub-Area', 'Open Date/Time', 'Assign Sub-Dept', 'Assign Name', 'Status'];
-    if (state.tab === 'closed') {
-      head.push('Closed By', 'Closed Date/Time', 'Remarks');
+    var isClosed = state.tab === 'closed';
+    var head = ['Job ID', 'Job Details', 'Issued By', 'Issued To', 'Area', 'Sub-Area', 'Open Date/Time', 'Photo Before'];
+    if (isClosed) {
+      head.push('Photo After', 'Closed By', 'Closed Date/Time', 'Remarks', 'Status');
+    } else {
+      head.push('Assign Sub-Dept', 'Assign To', 'Status');
     }
     var items = listFor(state.tab);
     var rows = items.map(function (j) {
-      var r = [j.propId, j.details, j.by, j.dept, j.area, j.sub, fmt(j.opened), j.assignDept || 'NA', j.assigned || 'NA', j.status];
-      if (state.tab === 'closed') {
-        r.push(j.closedBy || 'Staff', j.closedAt ? fmt(j.closedAt) : '', j.remarks || '');
+      var r = [
+        j.propId,
+        j.details,
+        j.by,
+        j.dept,
+        j.area,
+        j.sub || '',
+        fmt(j.opened),
+        j.photoBefore || 'No Photo'
+      ];
+      if (isClosed) {
+        r.push(
+          j.photoAfter || 'No Photo',
+          j.closedBy || 'Staff',
+          j.closedAt ? fmt(j.closedAt) : '',
+          j.remarks || '',
+          j.status
+        );
+      } else {
+        r.push(
+          j.assignDept || 'NA',
+          j.assigned || 'NA',
+          j.status
+        );
       }
       return r;
     });
     return [head].concat(rows);
   }
 
-  function exportExcel() {
+  function exportExcelFallback() {
     var rows = exportRows();
     var sheetName = state.tab === 'closed' ? 'Closed Jobs' : 'Open Jobs';
     var fileName = 'workwize-' + state.tab + '-jobs.xlsx';
@@ -1445,6 +1560,239 @@
       a.click();
       URL.revokeObjectURL(a.href);
       toast('Exported ' + (rows.length - 1) + ' jobs');
+    }
+  }
+
+  async function exportExcel() {
+    var isClosed = state.tab === 'closed';
+    var items = listFor(state.tab);
+    if (!items || !items.length) {
+      toast('No jobs to export');
+      return;
+    }
+
+    if (!window.ExcelJS) {
+      exportExcelFallback();
+      return;
+    }
+
+    var btn = $('#btnExcel');
+    var origText = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spin" style="display:inline-block;animation:spin 1s linear infinite;">⌛</span> Exporting...';
+    }
+    toast('Generating Excel with photos, please wait...');
+
+    try {
+      var wb = new ExcelJS.Workbook();
+      wb.creator = 'WorkWize';
+      wb.created = new Date();
+
+      var sheetName = isClosed ? 'Closed Jobs' : 'Open Jobs';
+      var ws = wb.addWorksheet(sheetName, {
+        views: [{ showGridLines: true }]
+      });
+
+      // Define worksheet columns
+      var cols = [
+        { header: 'Job ID', key: 'propId', width: 22 },
+        { header: 'Job Details', key: 'details', width: 34 },
+        { header: 'Issued By', key: 'by', width: 26 },
+        { header: 'Issued To', key: 'dept', width: 22 },
+        { header: 'Area', key: 'area', width: 20 },
+        { header: 'Sub-Area', key: 'sub', width: 20 },
+        { header: 'Open Date/Time', key: 'opened', width: 22 },
+        { header: 'Photo Before', key: 'photoBefore', width: 22 }
+      ];
+
+      if (isClosed) {
+        cols.push({ header: 'Photo After', key: 'photoAfter', width: 22 });
+        cols.push({ header: 'Closed By', key: 'closedBy', width: 22 });
+        cols.push({ header: 'Closed Date/Time', key: 'closedAt', width: 22 });
+        cols.push({ header: 'Remarks', key: 'remarks', width: 26 });
+        cols.push({ header: 'Status', key: 'status', width: 14 });
+      } else {
+        cols.push({ header: 'Assign Sub-Dept', key: 'assignDept', width: 22 });
+        cols.push({ header: 'Assign To', key: 'assigned', width: 22 });
+        cols.push({ header: 'Status', key: 'status', width: 14 });
+      }
+
+      ws.columns = cols;
+
+      // Header row styling
+      var headerRow = ws.getRow(1);
+      headerRow.height = 30;
+      headerRow.eachCell(function (cell) {
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF00756A' }
+        };
+        cell.font = {
+          name: 'Segoe UI',
+          size: 11,
+          bold: true,
+          color: { argb: 'FFFFFFFF' }
+        };
+        cell.alignment = {
+          vertical: 'middle',
+          horizontal: 'center',
+          wrapText: true
+        };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF00564E' } },
+          bottom: { style: 'medium', color: { argb: 'FF00433C' } },
+          left: { style: 'thin', color: { argb: 'FF00564E' } },
+          right: { style: 'thin', color: { argb: 'FF00564E' } }
+        };
+      });
+
+      // Pre-fetch all photos in parallel
+      var photoTasks = items.map(function (j) {
+        return Promise.all([
+          fetchImageForExcel(j.photoBefore),
+          isClosed ? fetchImageForExcel(j.photoAfter) : Promise.resolve(null)
+        ]);
+      });
+      var allPhotos = await Promise.all(photoTasks);
+
+      var photoBeforeColIdx = 8; // 1-indexed (Column H)
+      var photoAfterColIdx = isClosed ? 9 : -1; // Column I
+
+      for (var i = 0; i < items.length; i++) {
+        var j = items[i];
+        var rowData = {
+          propId: j.propId,
+          details: j.details,
+          by: j.by,
+          dept: j.dept,
+          area: j.area,
+          sub: j.sub || '',
+          opened: fmt(j.opened),
+          photoBefore: '',
+          status: j.status
+        };
+
+        if (isClosed) {
+          rowData.photoAfter = '';
+          rowData.closedBy = j.closedBy || 'Staff';
+          rowData.closedAt = j.closedAt ? fmt(j.closedAt) : '';
+          rowData.remarks = j.remarks || '';
+        } else {
+          rowData.assignDept = j.assignDept || 'NA';
+          rowData.assigned = j.assigned || 'NA';
+        }
+
+        var row = ws.addRow(rowData);
+        var rowIndex = row.number; // 2, 3, 4...
+        var hasImage = false;
+
+        var resBefore = allPhotos[i] ? allPhotos[i][0] : null;
+        var resAfter = allPhotos[i] ? allPhotos[i][1] : null;
+
+        // Embed or link Photo Before
+        var cellBefore = row.getCell(photoBeforeColIdx);
+        if (resBefore && resBefore.base64) {
+          hasImage = true;
+          try {
+            var imgId = wb.addImage({
+              base64: resBefore.base64,
+              extension: resBefore.ext || 'jpeg'
+            });
+            var sizeB = calcThumbSize(resBefore.width, resBefore.height, 70);
+            ws.addImage(imgId, {
+              tl: { col: photoBeforeColIdx - 1 + 0.12, row: rowIndex - 1 + 0.08 },
+              ext: { width: sizeB.width, height: sizeB.height },
+              editAs: 'oneCell'
+            });
+            cellBefore.value = '';
+          } catch (errImg) {
+            console.warn('Excel image add error:', errImg);
+            cellBefore.value = j.photoBefore ? { text: 'View Photo', hyperlink: j.photoBefore } : 'No Photo';
+          }
+        } else if (resBefore && resBefore.isVideo) {
+          cellBefore.value = { text: 'View Video', hyperlink: resBefore.url };
+          cellBefore.font = { color: { argb: 'FF00756A' }, underline: true };
+        } else if (resBefore && resBefore.failed) {
+          cellBefore.value = { text: 'View Photo', hyperlink: resBefore.url };
+          cellBefore.font = { color: { argb: 'FF00756A' }, underline: true };
+        } else {
+          cellBefore.value = 'No Photo';
+          cellBefore.font = { color: { argb: 'FF94A3B8' }, italic: true };
+        }
+
+        // Embed or link Photo After (Closed tab)
+        if (isClosed) {
+          var cellAfter = row.getCell(photoAfterColIdx);
+          if (resAfter && resAfter.base64) {
+            hasImage = true;
+            try {
+              var imgIdAfter = wb.addImage({
+                base64: resAfter.base64,
+                extension: resAfter.ext || 'jpeg'
+              });
+              var sizeA = calcThumbSize(resAfter.width, resAfter.height, 70);
+              ws.addImage(imgIdAfter, {
+                tl: { col: photoAfterColIdx - 1 + 0.12, row: rowIndex - 1 + 0.08 },
+                ext: { width: sizeA.width, height: sizeA.height },
+                editAs: 'oneCell'
+              });
+              cellAfter.value = '';
+            } catch (errImg) {
+              cellAfter.value = j.photoAfter ? { text: 'View Photo', hyperlink: j.photoAfter } : 'No Photo';
+            }
+          } else if (resAfter && resAfter.isVideo) {
+            cellAfter.value = { text: 'View Video', hyperlink: resAfter.url };
+            cellAfter.font = { color: { argb: 'FF00756A' }, underline: true };
+          } else if (resAfter && resAfter.failed) {
+            cellAfter.value = { text: 'View Photo', hyperlink: resAfter.url };
+            cellAfter.font = { color: { argb: 'FF00756A' }, underline: true };
+          } else {
+            cellAfter.value = 'No Photo';
+            cellAfter.font = { color: { argb: 'FF94A3B8' }, italic: true };
+          }
+        }
+
+        row.height = hasImage ? 65 : 28;
+
+        // Styling data cells
+        row.eachCell({ includeEmpty: true }, function (cell, colNumber) {
+          cell.alignment = {
+            vertical: 'middle',
+            horizontal: (colNumber === 1 || colNumber === 7 || colNumber === photoBeforeColIdx || (isClosed && colNumber === photoAfterColIdx) || (isClosed ? colNumber === 11 || colNumber === 13 : colNumber === 11)) ? 'center' : 'left',
+            wrapText: true
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+            right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+          };
+        });
+      }
+
+      var buffer = await wb.xlsx.writeBuffer();
+      var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      var fileName = 'workwize-' + state.tab + '-jobs.xlsx';
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+
+      toast('Exported ' + items.length + ' jobs with photos to Excel');
+    } catch (err) {
+      console.error('Export Excel with photos failed:', err);
+      toast('Export error, falling back to standard export...');
+      exportExcelFallback();
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origText;
+      }
     }
   }
 

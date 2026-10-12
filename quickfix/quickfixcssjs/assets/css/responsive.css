@@ -1,0 +1,73 @@
+/* =============================================Responsive Css Start ==================================================== */
+@media screen and (max-width: 991px) {
+    .both-btns{
+        width: 52%;
+    }
+}
+
+@media screen and (max-width: 768px) {
+
+    .job-tracker-datatable-heading .all-date-btn{
+        width: 66%;
+        }
+        .footer-bg ul{
+            display: block;
+
+        }
+}
+
+@media screen and (max-width: 600px) {
+    .FormsContainer::before {
+        content: "";
+        position: absolute; 
+        background: url(../images/login/LoginTopLeft1.png);
+        height: 87px;
+        top: 0;
+        right: 0;
+        background-size: cover;
+        width: 99px;
+        background-repeat: no-repeat;
+    }
+    .after-login .create-job a {
+        padding: 7px 7px;
+        font-size: 11px;
+    }
+    .top-banner .top-banner-content {
+        padding: 80px 20px;
+    }
+    .headsdes .navbar-brand img{
+        width: 100px;
+    }
+    div.dt-buttons {
+        margin-left: 87px;
+    }
+    div.dt-buttons .buttons-excel {
+        padding: 12px 21px;
+    }
+    .buttons-collection{
+        padding: 12px 21px !important;
+    }
+    .datatable-section .all-headings {
+        top: 6px;
+    }
+    .all-jobs-table table.dataTable>tbody>tr td.child ul{
+        border-right: 0px;
+        width: 100%;
+    }
+    .both-btns {
+        width: 69%;
+    }
+    .both-btns .btn-greens, .both-btns .btn-blues {
+        padding: 10px 15px;
+        font-size: 15px;
+    }
+    .send-menager-btn .greens-btn {
+        padding: 15px 23px;
+        font-size: 13px;
+    }
+    .comments-content a{
+        position: relative;
+        color: var(--black) !important;
+        font-weight: 600;
+     }
+  }

@@ -304,7 +304,7 @@
         <div class="fld"><label>Sub-Area</label><input id="eSub"></div>
         <div class="fld"><label>Assign Sub-Dept.</label>
           <select id="eSubDept"><option>NA</option><option>Engineering</option><option>Testing-House Keeping</option><option>Security</option></select></div>
-        <div class="fld"><label>Assign Name</label><input id="eAssigned" placeholder="NA"></div>
+        <div class="fld"><label>Assign To</label><input id="eAssigned" placeholder="NA"></div>
         <div class="fld"><label>Status</label>
           <select id="eStatus"><option>Open</option><option>Assigned</option><option>Closed</option></select></div>
         <div class="fld" id="eClosedByWrap" hidden><label>Closed By</label><input id="eClosedBy"></div>
@@ -482,8 +482,8 @@
   <button class="totop" id="toTop" aria-label="Back to top" hidden>&uarr;</button>
   <div class="toast" id="toast" role="status"></div>
 
+  <script src="assets/exceljs.min.js"></script>
   <script src="assets/xlsx.full.min.js"></script>
-  <script src="data.js"></script>
   <script src="api/config.js"></script>
   <script src="api/dailyJobApi.js"></script>
   <script src="script.js"></script>

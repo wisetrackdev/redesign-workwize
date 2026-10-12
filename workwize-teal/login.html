@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkWize | Login</title>
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body.login-body {
+      background: linear-gradient(135deg, #EBF1FD 0%, #DDE6FA 50%, #E8F4E6 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-container {
+      width: 100%;
+      max-width: 440px;
+    }
+    .login-card {
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 12px 36px rgba(64, 88, 166, 0.12), 0 2px 6px rgba(0,0,0,0.04);
+      padding: 36px 32px;
+      border: 1px solid #E3E8F5;
+    }
+    .login-brand {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .login-brand .logo-img {
+      height: 48px;
+      margin-bottom: 12px;
+    }
+    .login-brand h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+    .login-brand p {
+      font-size: 13.5px;
+      color: var(--muted);
+    }
+    .login-fld {
+      margin-bottom: 18px;
+    }
+    .login-fld label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-wrap input {
+      width: 100%;
+      height: 46px;
+      padding: 0 42px 0 14px;
+      border: 1.5px solid var(--line);
+      border-radius: 10px;
+      font-size: 14px;
+      background: #FAFCFF;
+      color: var(--ink);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .input-wrap input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(64, 88, 166, 0.15);
+    }
+    .pwd-toggle {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      display: flex;
+      padding: 4px;
+    }
+    .pwd-toggle:hover {
+      color: var(--primary);
+    }
+    .login-btn {
+      width: 100%;
+      height: 46px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(64, 88, 166, 0.35);
+      transition: background .15s, transform .1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .login-btn:hover {
+      background: var(--primary-dark);
+    }
+    .login-btn:active {
+      transform: scale(0.99);
+    }
+    .login-btn:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .login-error {
+      color: #dc2626;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      margin-top: 14px;
+      min-height: 20px;
+    }
+    .demo-accounts {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px dashed var(--line);
+    }
+    .demo-accounts .demo-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .demo-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .demo-chip {
+      background: #F0F4FD;
+      border: 1px solid #D9E3F8;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .demo-chip:hover {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .login-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body class="login-body">
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-brand">
+        <img src="assets/logo.png" alt="WorkWize" class="logo-img">
+        <h1>Sign In</h1>
+        <p>Enter your credentials to access WorkWize Daily Jobs</p>
+      </div>
+
+      <!-- Active Session Banner -->
+      <div id="alreadyLoggedInBanner" style="display:none; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:12px 14px; margin-bottom:18px; font-size:13px; color:#1E40AF; align-items:center; justify-content:space-between; gap:10px;">
+        <div>
+          <span>Logged in as: <strong id="loggedInUserLabel">IT (App admin)</strong></span>
+        </div>
+        <a href="index.html" style="color:#2563EB; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12.5px;">
+          Go to Jobs &rarr;
+        </a>
+      </div>
+
+      <form id="loginForm" novalidate>
+        <div class="login-fld">
+          <label for="username">Email or Username</label>
+          <div class="input-wrap">
+            <input type="text" id="username" placeholder="e.g. it@workwize.com" required autofocus autocomplete="username">
+          </div>
+        </div>
+
+        <div class="login-fld">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="password" placeholder="Enter your password" required autocomplete="current-password">
+            <button type="button" class="pwd-toggle" id="pwdToggle" aria-label="Toggle password visibility">
+              <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn" id="signInBtn">
+          <span>Sign In</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </button>
+
+        <div class="login-error" id="loginErrors"></div>
+      </form>
+
+      <!-- Quick Demo Account Fill -->
+      <div class="demo-accounts">
+        <div class="demo-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          Quick Demo Accounts (Click to Fill):
+        </div>
+        <div class="demo-chips">
+          <button type="button" class="demo-chip" data-user="it@workwize.com" data-pwd="password123" data-name="IT" data-dept="Testing-Engineering" data-role="ADMIN">
+            IT (App admin)
+          </button>
+          <button type="button" class="demo-chip" data-user="hk_mgr@workwize.com" data-pwd="password123" data-name="HK Manager" data-dept="Testing-House Keeping" data-role="MANAGER">
+            HK Manager
+          </button>
+          <button type="button" class="demo-chip" data-user="sec_officer@workwize.com" data-pwd="password123" data-name="Security Officer" data-dept="Testing-Security" data-role="SUPERVISOR">
+            Security Officer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="login-footer">
+      &copy; 2023-2026 WorkWize . Efficiency Redefined
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    (function () {
+      const applicationdomain = "https://localhost:7151/";
+      const applicationdomain2 = "http://op2.hyprscripts.com/";
+      const loginendpoint = applicationdomain + "api/login";
+
+      const loginForm = document.getElementById('loginForm');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const signInBtn = document.getElementById('signInBtn');
+      const loginErrors = document.getElementById('loginErrors');
+      const pwdToggle = document.getElementById('pwdToggle');
+      const toastEl = document.getElementById('toast');
+
+      function showToast(msg) {
+        if (!toastEl) return;
+        toastEl.textContent = msg;
+        toastEl.classList.add('show');
+        setTimeout(() => toastEl.classList.remove('show'), 2500);
+      }
+
+      // Toggle password visibility
+      if (pwdToggle) {
+        pwdToggle.addEventListener('click', function () {
+          const type = passwordInput.type === 'password' ? 'text' : 'password';
+          passwordInput.type = type;
+        });
+      }
+
+      // Check existing session
+      try {
+        const stored = localStorage.getItem('oproUserData');
+        if (stored) {
+          const u = JSON.parse(stored);
+          if (u && (u.name || u.username)) {
+            const banner = document.getElementById('alreadyLoggedInBanner');
+            const label = document.getElementById('loggedInUserLabel');
+            if (banner && label) {
+              label.textContent = (u.name || u.username) + ' (' + (u.desg || 'Logged in') + ')';
+              banner.style.display = 'flex';
+            }
+          }
+        }
+      } catch (err) {}
+
+      // Quick Demo Chips
+      document.querySelectorAll('.demo-chip').forEach(chip => {
+        chip.addEventListener('click', function () {
+          usernameInput.value = this.dataset.user;
+          passwordInput.value = this.dataset.pwd;
+          usernameInput.focus();
+        });
+      });
+
+      // Simple JWT parser helper
+      function parseJwt(token) {
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          return JSON.parse(jsonPayload);
+        } catch (e) {
+          return null;
+        }
+      }
+
+      // Login form submission
+      loginForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        if (!username || !password) {
+          loginErrors.textContent = 'Please enter both username and password.';
+          return;
+        }
+
+        loginErrors.textContent = '';
+        signInBtn.disabled = true;
+        signInBtn.innerHTML = 'Signing in...';
+
+        const payload = JSON.stringify({
+          Email: username,
+          Password: password,
+          App: 'quickfix'
+        });
+
+        // Try Live API first
+        fetch(loginendpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload
+        })
+        .then(res => {
+          if (!res.ok) throw new Error('API returned status ' + res.status);
+          return res.json();
+        })
+        .then(response => {
+          if (response && response.token) {
+            const jst = parseJwt(response.token) || {};
+            let roles = jst['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || ['ADMIN'];
+            if (!Array.isArray(roles)) roles = [roles];
+
+            const updatedUserData = {
+              username: username,
+              jwt: response.token,
+              name: jst.name || jst.FirstName || (username.split('@')[0].toUpperCase()),
+              email: jst.email || username,
+              role: roles,
+              prop: jst.PrimaryProp || "1",
+              desg: jst.Designation || "App admin",
+              primaryTeam: "Testing-Engineering",
+              access: jst.Access ? (typeof jst.Access === 'string' ? JSON.parse(jst.Access) : jst.Access) : []
+            };
+
+            localStorage.removeItem('oproUserData');
+            localStorage.setItem('oproUserData', JSON.stringify(updatedUserData));
+            showToast('Login successful! Redirecting...');
+            setTimeout(() => { window.location.href = 'index.html'; }, 500);
+          } else {
+            fallbackOfflineLogin(username, password);
+          }
+        })
+        .catch(err => {
+          console.warn('[Login API] Backend offline, using offline authentication mode:', err.message);
+          fallbackOfflineLogin(username, password);
+        });
+      });
+
+      function fallbackOfflineLogin(username, password) {
+        // Detect role & department from entered username
+        let role = ['ADMIN', 'MANAGER'];
+        let desg = 'App admin';
+        let primaryTeam = 'Testing-Engineering';
+        let displayName = 'IT';
+
+        if (username.toLowerCase().includes('hk')) {
+          displayName = 'HK Manager';
+          desg = 'Head-House Keeping';
+          primaryTeam = 'Testing-House Keeping';
+          role = ['MANAGER'];
+        } else if (username.toLowerCase().includes('sec')) {
+          displayName = 'Security Officer';
+          desg = 'Head of Security';
+          primaryTeam = 'Testing-Security';
+          role = ['SUPERVISOR'];
+        } else {
+          displayName = username.split('@')[0].toUpperCase();
+          if (displayName.length > 15) displayName = 'IT';
+        }
+
+        const offlineUserData = {
+          username: username,
+          email: username,
+          jwt: 'mock-jwt-token-' + Date.now(),
+          name: displayName,
+          role: role,
+          prop: "1",
+          desg: desg,
+          primaryTeam: primaryTeam,
+          access: []
+        };
+
+        localStorage.removeItem('oproUserData');
+        localStorage.setItem('oproUserData', JSON.stringify(offlineUserData));
+        showToast('Login successful! Redirecting...');
+        setTimeout(() => { window.location.href = 'index.html'; }, 400);
+      }
+
+    })();
+  </script>
+</body>
+</html>
