@@ -369,7 +369,7 @@
         (!state.issuedTo || state.issuedTo === 'all' || j.dept === state.issuedTo) &&
         matchAssign &&
         matchDate &&
-        (ignoreStatus || tab === 'closed' || state.status === 'all' || j.status === state.status);
+        (ignoreStatus || tab === 'closed' || state.status === 'all' || j.status === state.status || (state.status === 'In-Progress' && (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress')));
     });
     var s = state.sort;
     arr.sort(function (a, b) {
@@ -412,7 +412,12 @@
     return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
   }
 
-  function clsOf(j) { return j.status === 'Closed' ? 'Closed' : j.status === 'Open' ? 'Open' : ''; }
+  function clsOf(j) {
+    if (j.status === 'Closed') return 'Closed';
+    if (j.status === 'Assigned') return 'Assigned';
+    if (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress') return 'InProgress';
+    return j.status === 'Open' ? 'Open' : '';
+  }
 
   /* ================= 3-Dot Actions Menu ================= */
   function menuHTML(j) {
@@ -579,7 +584,8 @@
       if (tab === 'open') {
         fltStatus.innerHTML = '<option value="all"' + (state.status === 'all' ? ' selected' : '') + '>All</option>' +
           '<option value="Open"' + (state.status === 'Open' ? ' selected' : '') + '>Open</option>' +
-          '<option value="Assigned"' + (state.status === 'Assigned' ? ' selected' : '') + '>Assigned</option>';
+          '<option value="Assigned"' + (state.status === 'Assigned' ? ' selected' : '') + '>Assigned</option>' +
+          '<option value="In-Progress"' + (state.status === 'In-Progress' ? ' selected' : '') + '>In Progress</option>';
       } else if (tab === 'closed') {
         fltStatus.innerHTML = '<option value="all"' + (state.status === 'all' ? ' selected' : '') + '>All</option>' +
           '<option value="Closed"' + (state.status === 'Closed' ? ' selected' : '') + '>Closed</option>';
@@ -885,16 +891,21 @@
     var tCount = oCount + cCount;
 
     var assignedCount = openJobs.filter(function (j) { return j.status === 'Assigned'; }).length;
+    var inProgressCount = openJobs.filter(function (j) {
+      return j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress';
+    }).length;
     var openOnlyCount = openJobs.filter(function (j) { return j.status === 'Open'; }).length;
 
     var elTotal = $('#statBoxTotal');
     var elOpen = $('#statBoxOpen');
     var elAssigned = $('#statBoxAssigned');
+    var elInProgress = $('#statBoxInProgress');
     var elClosed = $('#statBoxClosed');
 
     if (elTotal) elTotal.textContent = tCount;
     if (elOpen) elOpen.textContent = openOnlyCount;
     if (elAssigned) elAssigned.textContent = assignedCount;
+    if (elInProgress) elInProgress.textContent = inProgressCount;
     if (elClosed) elClosed.textContent = cCount;
 
     var cToday = $('#pCountToday');
@@ -2380,6 +2391,7 @@
         } else {
           setTab('open').then(function () {
             state.status = (f === 'all' ? 'all' : f);
+            renderFilters();
             renderList('open');
           });
         }
