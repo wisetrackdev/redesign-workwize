@@ -31,7 +31,8 @@
     sort: 'new',
     pageSize: 25,
     layout: 'list',
-    period: 'today'
+    period: 'today',
+    highlightedJobId: null
   };
 
   var pagination = {
@@ -504,9 +505,29 @@
       '</div></div>';
   }
 
+  /* ================= Job Row / Card Highlighting ================= */
+  function isHighlighted(j) {
+    if (!state.highlightedJobId || !j) return false;
+    var hid = String(state.highlightedJobId);
+    return String(j.id) === hid || String(j.jobId) === hid;
+  }
+
+  function highlightJob(id) {
+    if (!id) return;
+    state.highlightedJobId = String(id);
+    $$('.jcard, .jrow').forEach(function (el) {
+      if (String(el.dataset.id) === String(id)) {
+        el.classList.add('highlighted-job');
+      } else {
+        el.classList.remove('highlighted-job');
+      }
+    });
+  }
+
   /* ================= Card / Row Layout (Remark strictly in Closed tab) ================= */
   function cardHTML(j) {
     var closed = (state.tab === 'closed') || j.status === 'Closed';
+    var hlCls = isHighlighted(j) ? ' highlighted-job' : '';
     var issuedToSub = '<div class="issued-to-bar">' + I.dept + ' <span>Issued To:</span> <b>' + hl(j.dept) + '</b></div>';
 
     // Requirement: "closed mai remark only closed ki tab mai show hona chiya"
@@ -522,7 +543,7 @@
         : '<span>Assigned Sub Dept</span><b title="' + esc(j.assignDept || 'NA') + '">' + (j.assignDept && j.assignDept !== 'NA' ? hl(j.assignDept) : '<span class="na">NA</span>') + '</b>' +
           '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) : '<span class="na">Not assigned</span>') + '</b>');
 
-    return '<article class="jcard ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
+    return '<article class="jcard ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="top">' +
         '<div class="left"><span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
         menuHTML(j) +
@@ -538,6 +559,7 @@
 
   function rowHTML(j) {
     var closed = (state.tab === 'closed') || j.status === 'Closed';
+    var hlCls = isHighlighted(j) ? ' highlighted-job' : '';
     var assignDeptVal = (j.assignDept && j.assignDept !== 'NA') ? hl(j.assignDept) : '<span class="na">NA</span>';
     var assignedPerson = (j.assigned && j.assigned !== 'NA') ? j.assigned : (closed && j.closedBy ? j.closedBy : '');
     var assignedVal = assignedPerson ? hl(assignedPerson) : '<span class="na">Not assigned</span>';
@@ -545,7 +567,7 @@
     // Requirement: Remarks ONLY shown in Closed tab!
     if (closed) {
       var closedRemark = (j.remarks && j.remarks !== 'NA') ? hl(j.remarks) : '<span class="na">NA</span>';
-      return '<article class="jrow Closed" data-id="' + j.id + '" tabindex="0">' +
+      return '<article class="jrow Closed' + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
         '<div class="rt">' +
           '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
           '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
@@ -563,7 +585,7 @@
     }
 
     // Open row: remarks column is omitted
-    return '<article class="jrow ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
+    return '<article class="jrow ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="rt">' +
         '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
         '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
@@ -982,6 +1004,7 @@
     state.assignedTo = 'all';
     state.fromDate = '';
     state.toDate = '';
+    state.highlightedJobId = null;
     var fd = $('#fltFromDate'); if (fd) { fd.value = ''; fd.removeAttribute('max'); }
     var td = $('#fltToDate'); if (td) { td.value = ''; td.removeAttribute('min'); }
     closeFilterSidebar();
@@ -1409,6 +1432,7 @@
   /* ================= Assign Modal & Team Permission ================= */
   function openAssign(job) {
     closeView();
+    if (job && job.id) highlightJob(job.id);
     // Permission check: only assigned dept team or Admin can assign members!
     var canAssign = isAdmin() || (userCurrentTeamId && (job.issued_to_team === userCurrentTeamId || job.dept === (currentUser && currentUser.desg)));
     if (!canAssign) {
@@ -1537,6 +1561,7 @@
   /* ================= Close Modal & Status Update ================= */
   function openClose(job) {
     closeView();
+    if (job && job.id) highlightJob(job.id);
     closeTargetJob = job;
     closePhotoFile = null;
     $('#closeId').textContent = job.propId;
@@ -1802,6 +1827,7 @@
 
   function openEdit(job) {
     closeView();
+    if (job && job.id) highlightJob(job.id);
     editTargetJob = job;
     editPhotoBeforeData = undefined;
 
@@ -1970,6 +1996,7 @@
   function openView(id, ids) {
     var j = byId(id);
     if (!j) return;
+    highlightJob(id);
     ctx.ids = ids && ids.indexOf(id) !== -1 ? ids : [id];
     ctx.id = id;
     renderView();
@@ -2631,6 +2658,12 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       return;
+    }
+
+    // Highlight clicked job row or card
+    var clickedJobCard = t.closest('.jcard, .jrow');
+    if (clickedJobCard && clickedJobCard.dataset.id) {
+      highlightJob(clickedJobCard.dataset.id);
     }
 
     // Action button

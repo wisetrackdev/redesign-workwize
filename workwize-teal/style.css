@@ -604,6 +604,17 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .jrow:hover,.jrow:focus-visible{box-shadow:0 4px 14px rgba(31,44,94,.14);background:#FCFDFF}
 .jrow.Open{border-left-color:var(--amber)}
 .jrow.Closed{border-left-color:var(--green);grid-template-columns:minmax(0,2fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.15fr) minmax(0,1.15fr) minmax(0,1.15fr) minmax(0,1.3fr) 95px 34px}
+.jrow.highlighted-job,
+.jcard.highlighted-job{
+  background:#E8F1FD !important;
+  box-shadow:0 0 0 2px #3B82F6, 0 4px 16px rgba(59,130,246,.18) !important;
+  position:relative;
+  z-index:2;
+}
+.jrow.highlighted-job:hover,
+.jcard.highlighted-job:hover{
+  background:#DFEDFC !important;
+}
 .jrow .rt{min-width:0;display:flex;flex-direction:column;gap:2px}
 .jrow .rt .prop-badge{width:fit-content;font-size:11px;padding:2px 7px;margin-bottom:3px;font-weight:700}
 .jrow .rt b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink);line-height:1.3}
