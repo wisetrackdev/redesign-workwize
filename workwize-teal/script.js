@@ -1669,81 +1669,131 @@
     return Object.keys(teamSet).sort();
   }
 
-  function populateEditSubTeams(deptName) {
+  function getEditTeam(deptName) {
+    if (!cachedTeams || !cachedTeams.length) return null;
+    if (!deptName || deptName === 'Issued To Dept.' || deptName.toLowerCase() === 'department') return null;
+
+    var trimmed = String(deptName).trim().toLowerCase();
+
+    // 1. Exact match by teamName, name, or teamId
+    var t = cachedTeams.find(function (item) {
+      var tName = (item.teamName || item.name || '').trim().toLowerCase();
+      var tId = (item.teamId || '').trim().toLowerCase();
+      return tName === trimmed || tId === trimmed;
+    });
+    if (t) return t;
+
+    // 2. By editTargetJob.issued_to_team
+    if (editTargetJob && editTargetJob.issued_to_team) {
+      t = cachedTeams.find(function (item) {
+        return item.teamId === editTargetJob.issued_to_team;
+      });
+      if (t) return t;
+    }
+
+    // 3. Substring / normalized match (e.g. "testing-engineering" contains "engineering")
+    var cleanInput = trimmed.replace(/[^a-z0-9]/g, '');
+    t = cachedTeams.find(function (item) {
+      var cleanName = (item.teamName || item.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+      return cleanName && (cleanInput.indexOf(cleanName) !== -1 || cleanName.indexOf(cleanInput) !== -1);
+    });
+    if (t) return t;
+
+    return null;
+  }
+
+  function getEditSubTeam(team, subDeptName) {
+    if (!team || !team.propsubteams || !team.propsubteams.length) return null;
+    if (!subDeptName || subDeptName === 'Assign Sub-Dept.' || subDeptName === 'NA') return null;
+
+    var target = String(subDeptName).trim().toLowerCase();
+    var cleanTarget = target.replace(/[^a-z0-9]/g, '');
+
+    return team.propsubteams.find(function (st) {
+      var sName = (st.subteamName || st.name || '').trim().toLowerCase();
+      var sId = (st.subteamId || '').trim().toLowerCase();
+      if (sName === target || sId === target) return true;
+      var cleanS = sName.replace(/[^a-z0-9]/g, '');
+      return cleanS && (cleanTarget.indexOf(cleanS) !== -1 || cleanS.indexOf(cleanTarget) !== -1);
+    }) || null;
+  }
+
+  function populateEditSubTeams(deptName, selectedSubDept) {
     var eSubDept = $('#eSubDept');
     if (!eSubDept) return;
-    var subOpts = '<option value="NA">NA</option>';
-    var t = cachedTeams && cachedTeams.find(function (item) {
-      return item.teamName === deptName || item.name === deptName;
-    });
-    if (t && t.propsubteams && t.propsubteams.length > 0) {
-      t.propsubteams.forEach(function (st) {
-        subOpts += '<option value="' + esc(st.subteamName) + '">' + esc(st.subteamName) + '</option>';
+
+    var team = getEditTeam(deptName);
+    var subOpts = '<option value="">Assign Sub-Dept.</option>';
+
+    if (team && team.propsubteams && team.propsubteams.length > 0) {
+      team.propsubteams.forEach(function (st) {
+        var sName = (st.subteamName || st.name || '').trim();
+        if (sName) {
+          subOpts += '<option value="' + esc(sName) + '">' + esc(sName) + '</option>';
+        }
       });
+      subOpts += '<option value="NA">NA</option>';
+    } else {
+      subOpts += '<option value="NA">NA</option>';
     }
+
     eSubDept.innerHTML = subOpts;
+
+    if (selectedSubDept) {
+      eSubDept.value = selectedSubDept;
+      if (eSubDept.value !== selectedSubDept && selectedSubDept !== 'Assign Sub-Dept.') {
+        eSubDept.insertAdjacentHTML('beforeend', '<option value="' + esc(selectedSubDept) + '">' + esc(selectedSubDept) + '</option>');
+        eSubDept.value = selectedSubDept;
+      }
+    } else {
+      eSubDept.value = '';
+    }
   }
 
   function populateEditMembers(deptName, subDeptName, currentSelected) {
     var eAssigned = $('#eAssigned');
     if (!eAssigned) return;
 
+    var team = getEditTeam(deptName);
     var members = [];
     var seen = {};
 
-    var t = cachedTeams && cachedTeams.find(function (item) {
-      return item.teamName === deptName || item.name === deptName;
-    });
-
-    if (t) {
-      if (subDeptName && subDeptName !== 'NA' && t.propsubteams && t.propsubteams.length > 0) {
-        var st = t.propsubteams.find(function (s) { return s.subteamName === subDeptName; });
-        if (st && st.subteams && st.subteams.length > 0) {
-          members = members.concat(st.subteams);
+    if (team) {
+      var subTeam = getEditSubTeam(team, subDeptName);
+      if (subTeam && subTeam.subteams && subTeam.subteams.length > 0) {
+        // Strictly members of this selected sub-department!
+        members = subTeam.subteams;
+      } else if (subDeptName === 'NA' || !team.propsubteams || team.propsubteams.length === 0) {
+        if (team.members && team.members.length > 0) {
+          members = team.members;
         }
-      }
-      if (!members.length && t.propsubteams && t.propsubteams.length > 0) {
-        t.propsubteams.forEach(function (s) {
-          if (s.subteams && s.subteams.length > 0) {
-            members = members.concat(s.subteams);
-          }
-        });
-      }
-      if (t.members && t.members.length > 0) {
-        members = members.concat(t.members);
       }
     }
 
     var mHtml = '<option value="">Assign To</option>';
 
     members.forEach(function (m) {
-      var name = ((m.firstName || '') + ' ' + (m.lastName || '')).trim() || m.name || m.email || '';
-      if (name && !seen[name]) {
-        seen[name] = true;
-        mHtml += '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+      var fullName = ((m.firstName || '') + ' ' + (m.lastName || '')).trim() || m.name || m.email || '';
+      if (fullName && !seen[fullName.toLowerCase()]) {
+        seen[fullName.toLowerCase()] = true;
+        mHtml += '<option value="' + esc(fullName) + '">' + esc(fullName) + '</option>';
       }
     });
 
-    // Also include any members from existing jobs for this department if not already present
-    openJobs.concat(closedJobs).forEach(function (j) {
-      if (j && j.dept === deptName && j.assigned && j.assigned !== 'NA' && j.assigned !== 'Not assigned') {
-        var aName = j.assigned.trim();
-        if (aName && !seen[aName]) {
-          seen[aName] = true;
-          mHtml += '<option value="' + esc(aName) + '">' + esc(aName) + '</option>';
+    // If job already had an assigned person belonging to this job & dept/subteam, preserve if not in seen
+    if (currentSelected && currentSelected !== 'NA' && currentSelected !== 'Not assigned') {
+      var selKey = currentSelected.trim().toLowerCase();
+      if (!seen[selKey]) {
+        if (editTargetJob && (editTargetJob.assigned === currentSelected) && (deptName === editTargetJob.dept) && (!subDeptName || subDeptName === editTargetJob.assignDept)) {
+          seen[selKey] = true;
+          mHtml += '<option value="' + esc(currentSelected) + '">' + esc(currentSelected) + '</option>';
         }
       }
-    });
-
-    // If there is a currentSelected value and it's not yet in the list, add it
-    if (currentSelected && currentSelected !== 'NA' && currentSelected !== 'Not assigned' && !seen[currentSelected]) {
-      seen[currentSelected] = true;
-      mHtml += '<option value="' + esc(currentSelected) + '">' + esc(currentSelected) + '</option>';
     }
 
     eAssigned.innerHTML = mHtml;
 
-    if (currentSelected && seen[currentSelected]) {
+    if (currentSelected && seen[currentSelected.trim().toLowerCase()]) {
       eAssigned.value = currentSelected;
     } else {
       eAssigned.value = '';
@@ -1792,14 +1842,13 @@
 
     $('#eSub').value = job.sub || '';
 
-    populateEditSubTeams(job.dept);
+    var currentSubDept = (job.assignDept && job.assignDept !== 'NA') ? job.assignDept : '';
+    populateEditSubTeams(job.dept, currentSubDept);
     var eSubDept = $('#eSubDept');
-    if (eSubDept && job.assignDept) {
-      eSubDept.value = job.assignDept;
-    }
+    var effectiveSubDept = (eSubDept && eSubDept.value) ? eSubDept.value : currentSubDept;
 
     var currentAssigned = (job.assigned && job.assigned !== 'NA' && job.assigned !== 'Not assigned') ? job.assigned : '';
-    populateEditMembers(job.dept, eSubDept ? eSubDept.value : job.assignDept, currentAssigned);
+    populateEditMembers(job.dept, effectiveSubDept, currentAssigned);
 
     $('#eStatus').value = job.status || 'Open';
 
@@ -1864,8 +1913,18 @@
     if (dept) editTargetJob.dept = dept;
     if (area) editTargetJob.area = area;
     editTargetJob.sub = sub;
-    editTargetJob.assignDept = subDept;
-    editTargetJob.assigned = assigned;
+    editTargetJob.assignDept = subDept || 'NA';
+    editTargetJob.assigned = assigned || '';
+
+    var tObj = getEditTeam(dept);
+    if (tObj && tObj.teamId) {
+      editTargetJob.issued_to_team = tObj.teamId;
+      var stObj = getEditSubTeam(tObj, subDept);
+      if (stObj && stObj.subteamId) {
+        editTargetJob.subteamId = stObj.subteamId;
+      }
+    }
+
     var oldStatus = editTargetJob.status;
     editTargetJob.status = status;
     editTargetJob.remarks = remarks;
