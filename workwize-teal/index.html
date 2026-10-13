@@ -277,6 +277,49 @@
               </div>
             </div>
           </div>
+
+          <!-- Aging of Jobs (> 1 Week Old) -->
+          <div class="aging-section">
+            <div class="aging-header">
+              <div class="aging-title">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span>Aging of Jobs</span>
+              </div>
+              <span class="aging-pill">&gt; 1 Week Old</span>
+            </div>
+
+            <div class="aging-grid" id="agingStatBoxes">
+              <div class="abox abox-open" data-aging-status="Open" title="View Open jobs older than 1 week">
+                <div class="abox-header">
+                  <span class="abox-dot"></span>
+                  <span class="abox-label">Open</span>
+                </div>
+                <div class="abox-num" id="agingOpenCount">0</div>
+                <span class="abox-sub">&gt; 7 days</span>
+              </div>
+
+              <div class="abox abox-assigned" data-aging-status="Assigned" title="View Assigned jobs older than 1 week">
+                <div class="abox-header">
+                  <span class="abox-dot"></span>
+                  <span class="abox-label">Assigned</span>
+                </div>
+                <div class="abox-num" id="agingAssignedCount">0</div>
+                <span class="abox-sub">&gt; 7 days</span>
+              </div>
+
+              <div class="abox abox-inprogress" data-aging-status="In-Progress" title="View In-Progress jobs older than 1 week">
+                <div class="abox-header">
+                  <span class="abox-dot"></span>
+                  <span class="abox-label">In-Progress</span>
+                </div>
+                <div class="abox-num" id="agingInProgressCount">0</div>
+                <span class="abox-sub">&gt; 7 days</span>
+              </div>
+            </div>
+          </div>
         </aside>
       </div>
     </section>

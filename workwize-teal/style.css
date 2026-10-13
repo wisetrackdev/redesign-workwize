@@ -435,6 +435,124 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .sbox-closed .sbox-icon{background:#E3F5DE;color:#2E8A2B}
 .sbox-closed .sbox-num{color:#15803D}
 
+/* Aging of Jobs Section */
+.aging-section{
+  margin-top:18px;
+  padding-top:16px;
+  border-top:1px dashed #D5DCEE;
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+}
+.aging-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.aging-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  font-weight:700;
+  color:var(--ink);
+}
+.aging-title svg{
+  color:#EF4444;
+  flex-shrink:0;
+}
+.aging-pill{
+  font-size:11px;
+  font-weight:700;
+  color:#B91C1C;
+  background:#FEE2E2;
+  padding:3px 8px;
+  border-radius:12px;
+  white-space:nowrap;
+  border:1px solid #FECACA;
+}
+.aging-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+.abox{
+  background:#fff;
+  border:1.5px solid #E2E8F0;
+  border-radius:10px;
+  padding:11px 6px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:3px;
+  cursor:pointer;
+  transition:.15s;
+  min-width:0;
+}
+.abox:hover{
+  transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(31,44,94,.1);
+}
+.abox-header{
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.abox-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  display:inline-block;
+  flex-shrink:0;
+}
+.abox-label{
+  font-size:10.5px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+  color:var(--muted);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.abox-num{
+  font-size:20px;
+  font-weight:800;
+  line-height:1.1;
+  color:var(--ink);
+}
+.abox-sub{
+  font-size:10px;
+  font-weight:600;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.abox-open{
+  border-color:#FDE68A;
+  background:linear-gradient(180deg,#FFFDF5 0%,#fff 100%);
+}
+.abox-open .abox-dot{background:#D97706;}
+.abox-open .abox-num{color:#B45309;}
+.abox-open:hover{border-color:#D97706;}
+
+.abox-assigned{
+  border-color:#DDD6FE;
+  background:linear-gradient(180deg,#F8F7FF 0%,#fff 100%);
+}
+.abox-assigned .abox-dot{background:#6366F1;}
+.abox-assigned .abox-num{color:#4338CA;}
+.abox-assigned:hover{border-color:#6366F1;}
+
+.abox-inprogress{
+  border-color:#BAE6FD;
+  background:linear-gradient(180deg,#F0F9FF 0%,#fff 100%);
+}
+.abox-inprogress .abox-dot{background:#0284C7;}
+.abox-inprogress .abox-num{color:#0369A1;}
+.abox-inprogress:hover{border-color:#0284C7;}
+
 .empty{text-align:center;color:var(--muted);padding:60px 10px;grid-column:1/-1;line-height:1.8}
 .empty .big{font-size:34px;margin-bottom:6px}
 

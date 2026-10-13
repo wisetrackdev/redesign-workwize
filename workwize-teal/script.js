@@ -766,6 +766,7 @@
         if (ob) ob.textContent = total;
 
         renderList('open');
+        renderRecentStats();
       }
     } catch (err) {
       handleApiError(err, 'open');
@@ -812,6 +813,7 @@
         if (cb) cb.textContent = total;
 
         renderList('closed');
+        renderRecentStats();
       }
     } catch (err) {
       handleApiError(err, 'closed');
@@ -914,6 +916,34 @@
     if (cToday) cToday.textContent = tCount;
     if (cWeekly) cWeekly.textContent = tCount;
     if (cMonthly) cMonthly.textContent = tCount;
+
+    // Aging of Jobs (> 1 week old)
+    var now = new Date();
+    var sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    var isWeekOld = function (j) {
+      var opD = parseJobDate(j.opened);
+      return opD ? (now.getTime() - opD.getTime() > sevenDaysMs) : false;
+    };
+
+    var agingOpen = openJobs.filter(function (j) {
+      return j.status === 'Open' && isWeekOld(j);
+    }).length;
+
+    var agingAssigned = openJobs.filter(function (j) {
+      return j.status === 'Assigned' && isWeekOld(j);
+    }).length;
+
+    var agingInProgress = openJobs.filter(function (j) {
+      return (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress') && isWeekOld(j);
+    }).length;
+
+    var elAgingOpen = $('#agingOpenCount');
+    var elAgingAssigned = $('#agingAssignedCount');
+    var elAgingInProgress = $('#agingInProgressCount');
+
+    if (elAgingOpen) elAgingOpen.textContent = agingOpen;
+    if (elAgingAssigned) elAgingAssigned.textContent = agingAssigned;
+    if (elAgingInProgress) elAgingInProgress.textContent = agingInProgress;
 
     $$('.rtab').forEach(function (btn) {
       btn.classList.toggle('on', btn.dataset.period === curPeriod);
@@ -2406,6 +2436,29 @@
           state.period = btn.dataset.period;
           renderRecentStats();
         }
+      });
+    }
+
+    // Aging stat boxes click: filter open jobs older than 7 days
+    var agingStatBoxes = $('#agingStatBoxes');
+    if (agingStatBoxes) {
+      agingStatBoxes.addEventListener('click', function (e) {
+        var box = e.target.closest('.abox');
+        if (!box) return;
+        var status = box.dataset.agingStatus;
+        var weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        var yyyy = weekAgo.getFullYear();
+        var mm = pad(weekAgo.getMonth() + 1);
+        var dd = pad(weekAgo.getDate());
+        var toDateStr = yyyy + '-' + mm + '-' + dd;
+
+        setTab('open').then(function () {
+          state.status = status || 'all';
+          state.fromDate = '';
+          state.toDate = toDateStr;
+          renderFilters();
+          renderList('open');
+        });
       });
     }
 
