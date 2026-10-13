@@ -85,6 +85,43 @@
     return null;
   }
 
+  function pad3(n) {
+    var num = parseInt(n, 10) || 1;
+    return num < 10 ? '00' + num : num < 100 ? '0' + num : '' + num;
+  }
+
+  function getJobDateCode(val) {
+    var d = parseJobDate(val);
+    if (!d) d = new Date();
+    var dd = pad(d.getDate());
+    var mm = pad(d.getMonth() + 1);
+    var yy = String(d.getFullYear()).slice(-2);
+    return dd + mm + yy;
+  }
+
+  function getActivePropertySlug() {
+    var name = '';
+    if (Array.isArray(allProperties) && allProperties.length > 0) {
+      if (currentPropertyId) {
+        var found = allProperties.find(function (p) { return p.propId === currentPropertyId; });
+        if (found && found.propName) name = found.propName;
+      }
+      if (!name && currentUser && currentUser.prop) {
+        var foundUser = allProperties.find(function (p) { return p.propId === currentUser.prop || p.propName === currentUser.prop; });
+        if (foundUser && foundUser.propName) name = foundUser.propName;
+      }
+    }
+    if (!name) {
+      var sv = $('#pdSelectedValue');
+      if (sv && sv.textContent.trim()) name = sv.textContent.trim();
+    }
+    if (!name && currentUser && currentUser.prop) {
+      name = currentUser.prop;
+    }
+    if (!name) name = 'testing';
+    return name.trim().toLowerCase().replace(/\s+/g, '-');
+  }
+
   function span(a, b) {
     var da = new Date(a), db = new Date(b);
     if (isNaN(da.getTime()) || isNaN(db.getTime())) return 'Recently';
@@ -253,7 +290,7 @@
   }
 
   /* ================= API Data Mapping ================= */
-  function mapApiJob(op, index) {
+  function mapApiJob(op, index, jobCustomIdMap) {
     if (!op) return null;
     var photoBefore = '';
     if (op.open_uploads && op.open_uploads.length > 0 && op.open_uploads[0].fileurl) {
@@ -285,10 +322,15 @@
       closedBy = (cfn + ' ' + cln).trim() || assignedName || 'Staff';
     }
 
+    var key = op.jobId || op.id || ('idx_' + index);
+    var customJobId = (jobCustomIdMap && jobCustomIdMap[key])
+      || (getActivePropertySlug() + '-' + getJobDateCode(op.openDate) + '-' + pad3(index != null ? index + 1 : 1));
+
     return {
       id: op.jobId || (index + 1),
       jobId: op.jobId,
-      propId: op.propId || String(op.jobId || (index + 1)),
+      propId: customJobId,
+      customJobId: customJobId,
       details: op.job_detail || '',
       by: op.issued_by_team_details || op.creator_name || 'Staff',
       dept: op.issued_to_team_name || 'Department',
@@ -322,7 +364,7 @@
 
   function matches(j) {
     var w = words(); if (!w.length) return true;
-    var hay = [j.id, j.propId, j.details, j.by, j.dept, j.area, j.sub, j.assigned, j.assignDept, j.status, j.remarks, j.closedBy, fmt(j.opened)].join(' ').toLowerCase();
+    var hay = [j.id, j.jobId, j.propId, currentPropertyId, j.details, j.by, j.dept, j.area, j.sub, j.assigned, j.assignDept, j.status, j.remarks, j.closedBy, fmt(j.opened), fmt(j.closedAt)].join(' ').toLowerCase();
     return w.every(function (x) { return hay.indexOf(x) !== -1; });
   }
 
@@ -373,10 +415,12 @@
     });
     var s = state.sort;
     arr.sort(function (a, b) {
-      if (s === 'old') return (new Date(a.opened) - new Date(b.opened)) || (a.id - b.id);
-      if (s === 'az') return a.details.localeCompare(b.details);
-      if (s === 'area') return a.area.localeCompare(b.area) || a.details.localeCompare(b.details);
-      return (new Date(b.opened) - new Date(a.opened)) || (b.id - a.id);
+      var da = parseJobDate(a.opened) || new Date(0);
+      var db = parseJobDate(b.opened) || new Date(0);
+      if (s === 'old') return (da - db) || String(a.id).localeCompare(String(b.id));
+      if (s === 'az') return (a.details || '').localeCompare(b.details || '');
+      if (s === 'area') return (a.area || '').localeCompare(b.area || '') || (a.details || '').localeCompare(b.details || '');
+      return (db - da) || String(b.id).localeCompare(String(a.id));
     });
     return arr;
   }
@@ -453,7 +497,6 @@
   /* ================= Card / Row Layout (Remark strictly in Closed tab) ================= */
   function cardHTML(j) {
     var closed = (state.tab === 'closed') || j.status === 'Closed';
-    var propId = j.propId;
     var issuedToSub = '<div class="issued-to-bar">' + I.dept + ' <span>Issued To:</span> <b>' + hl(j.dept) + '</b></div>';
 
     // Requirement: "closed mai remark only closed ki tab mai show hona chiya"
@@ -471,7 +514,7 @@
 
     return '<article class="jcard ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="top">' +
-        '<div class="left"><span class="prop-badge" title="Job ID">' + esc(propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
+        '<div class="left"><span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
         menuHTML(j) +
       '</div>' +
       '<h3 title="' + esc(j.details) + '">' + hl(j.details) + '</h3>' +
@@ -484,7 +527,6 @@
   }
 
   function rowHTML(j) {
-    var propId = j.propId;
     var closed = (state.tab === 'closed') || j.status === 'Closed';
     var assignDeptVal = (j.assignDept && j.assignDept !== 'NA') ? hl(j.assignDept) : '<span class="na">NA</span>';
     var assignedPerson = (j.assigned && j.assigned !== 'NA') ? j.assigned : (closed && j.closedBy ? j.closedBy : '');
@@ -495,7 +537,7 @@
       var closedRemark = (j.remarks && j.remarks !== 'NA') ? hl(j.remarks) : '<span class="na">NA</span>';
       return '<article class="jrow Closed" data-id="' + j.id + '" tabindex="0">' +
         '<div class="rt">' +
-          '<span class="prop-badge" title="Job ID">' + esc(propId) + '</span>' +
+          '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
           '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
           '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
         '</div>' +
@@ -513,7 +555,7 @@
     // Open row: remarks column is omitted
     return '<article class="jrow ' + clsOf(j) + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="rt">' +
-        '<span class="prop-badge" title="Job ID">' + esc(propId) + '</span>' +
+        '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
         '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
         '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
       '</div>' +
@@ -708,57 +750,142 @@
     var cont = $('#' + tab + 'Cards');
     if (!cont) return;
 
+    var ps = state.pageSize || (pagination[tab] && pagination[tab].pageSize) || 25;
+    var total = all.length;
+    var pages = Math.max(1, Math.ceil(total / ps));
+    var cur = Math.min(Math.max(1, (pagination[tab] && pagination[tab].page) || 1), pages);
+
+    pagination[tab] = {
+      page: cur,
+      pageSize: ps,
+      totalPages: pages,
+      total: total
+    };
+
+    var start = (cur - 1) * ps;
+    var pageItems = all.slice(start, start + ps);
+
     cont.className = 'cards' + (state.layout === 'list' ? ' list' : '');
-    cont.innerHTML = all.length
-      ? all.map(state.layout === 'list' ? rowHTML : cardHTML).join('')
+    cont.innerHTML = pageItems.length
+      ? pageItems.map(state.layout === 'list' ? rowHTML : cardHTML).join('')
       : '<div class="empty"><div class="big">&#128269;</div>' +
-        (words().length || state.area !== 'all' || state.status !== 'all'
+        (words().length || state.area !== 'all' || state.status !== 'all' || state.issuedBy !== 'all' || state.issuedTo !== 'all' || state.assignedTo !== 'all' || state.fromDate || state.toDate
           ? 'No jobs match your filters.<br><button class="link" data-act="clearAll">Clear filters</button>'
           : 'No ' + tab + ' jobs found for this property.') +
         '</div>';
 
-    var pTotal = (pagination[tab] && pagination[tab].total) || all.length;
     var pager = $('#' + tab + 'Pager');
-    if (pager) pager.innerHTML = all.length ? pagerHTML(pTotal, tab) : '';
+    if (pager) pager.innerHTML = total ? pagerHTML(total, tab) : '';
 
     var rc = $('#resultCount');
-    if (rc) rc.textContent = all.length + (all.length === 1 ? ' job' : ' jobs');
+    if (rc) rc.textContent = total + (total === 1 ? ' job' : ' jobs');
     renderFilters();
   }
 
+  /* ================= Fetch All API Jobs Helper ================= */
+  async function fetchAllJobsFromApi(jobList) {
+    var BATCH_SIZE = 500;
+    var firstRes = await api.getQuickFixJobs({
+      propId: currentPropertyId,
+      jobList: jobList,
+      pageNumber: 1,
+      pageSize: BATCH_SIZE
+    });
+
+    if (!firstRes) return null;
+
+    if (firstRes.teams && firstRes.teams.length > 0) cachedTeams = firstRes.teams;
+    if (firstRes.areas && firstRes.areas.length > 0) cachedAreas = firstRes.areas;
+    if (firstRes.userTeam) cachedUserTeams = firstRes.userTeam;
+    updateUserTeamContext();
+
+    var rawList = ((jobList === 'close' ? firstRes.close : firstRes.open) || []).slice();
+    var totalPagesKey = (jobList === 'close') ? 'totalClosePages' : 'totalOpenPages';
+    var totalPages = (firstRes.pagination && firstRes.pagination[totalPagesKey])
+      ? parseInt(firstRes.pagination[totalPagesKey], 10)
+      : 1;
+
+    if (totalPages > 1) {
+      var pagePromises = [];
+      for (var p = 2; p <= totalPages; p++) {
+        pagePromises.push(
+          api.getQuickFixJobs({
+            propId: currentPropertyId,
+            jobList: jobList,
+            pageNumber: p,
+            pageSize: BATCH_SIZE
+          })
+        );
+      }
+      var moreResponses = await Promise.all(pagePromises);
+      moreResponses.forEach(function (r) {
+        if (!r) return;
+        var list = (jobList === 'close' ? r.close : r.open) || [];
+        rawList = rawList.concat(list);
+      });
+    }
+
+    // Deduplicate by jobId / id
+    var seen = {};
+    var uniqueList = [];
+    rawList.forEach(function (item) {
+      if (!item) return;
+      var key = item.jobId || item.id;
+      if (!key || !seen[key]) {
+        if (key) seen[key] = true;
+        uniqueList.push(item);
+      }
+    });
+
+    // Generate custom daily job ID: [property]-[openDate (DDMMYY)]-[seq (001)]
+    // Example: testing-131026-001
+    var propSlug = getActivePropertySlug();
+
+    // Sort chronologically ascending to assign sequence numbers (001, 002...) in creation order per day
+    var sortedByDate = uniqueList.slice().sort(function (a, b) {
+      var da = parseJobDate(a.openDate) || new Date(0);
+      var db = parseJobDate(b.openDate) || new Date(0);
+      return da - db;
+    });
+
+    var dateCounters = {};
+    var jobCustomIdMap = {};
+    sortedByDate.forEach(function (op, idx) {
+      var key = op.jobId || op.id || ('idx_' + idx);
+      var dateCode = getJobDateCode(op.openDate);
+      dateCounters[dateCode] = (dateCounters[dateCode] || 0) + 1;
+      var seqStr = pad3(dateCounters[dateCode]);
+      jobCustomIdMap[key] = propSlug + '-' + dateCode + '-' + seqStr;
+    });
+
+    var mappedItems = uniqueList.map(function (op, index) {
+      return mapApiJob(op, index, jobCustomIdMap);
+    });
+
+    return {
+      firstRes: firstRes,
+      items: mappedItems,
+      total: (firstRes.pagination && (jobList === 'close' ? firstRes.pagination.totalClose : firstRes.pagination.totalOpen) !== undefined)
+        ? parseInt(jobList === 'close' ? firstRes.pagination.totalClose : firstRes.pagination.totalOpen, 10)
+        : mappedItems.length
+    };
+  }
+
   /* ================= On-Demand Tab-Specific Loading ================= */
-  async function fetchOpenJobs(page, pageSize) {
+  async function fetchOpenJobs() {
     if (!currentPropertyId) return;
     setLoading(true, 'open');
     try {
-      var p = page || pagination.open.page || 1;
-      var ps = pageSize || state.pageSize || 25;
-      var res = await api.getQuickFixJobs({
-        propId: currentPropertyId,
-        jobList: 'open',
-        pageNumber: p,
-        pageSize: ps
-      });
-
+      var res = await fetchAllJobsFromApi('open');
       if (res) {
-        if (res.teams && res.teams.length > 0) cachedTeams = res.teams;
-        if (res.areas && res.areas.length > 0) cachedAreas = res.areas;
-        if (res.userTeam) cachedUserTeams = res.userTeam;
-
-        updateUserTeamContext();
-
-        var openList = (res.open || []).map(mapApiJob);
-        openJobs = openList;
-
-        var total = (res.pagination && res.pagination.totalOpen !== undefined)
-          ? res.pagination.totalOpen
-          : openList.length;
+        openJobs = res.items;
+        var total = res.items.length;
 
         pagination.open = {
           total: total,
-          page: p,
-          pageSize: ps,
-          totalPages: (res.pagination && res.pagination.totalOpenPages) || Math.ceil(total / ps) || 1
+          page: 1,
+          pageSize: state.pageSize || 25,
+          totalPages: Math.max(1, Math.ceil(total / (state.pageSize || 25)))
         };
 
         var ob = $('#openBadge');
@@ -774,38 +901,20 @@
     }
   }
 
-  async function fetchClosedJobs(page, pageSize) {
+  async function fetchClosedJobs() {
     if (!currentPropertyId) return;
     setLoading(true, 'closed');
     try {
-      var p = page || pagination.closed.page || 1;
-      var ps = pageSize || state.pageSize || 25;
-      var res = await api.getQuickFixJobs({
-        propId: currentPropertyId,
-        jobList: 'close',
-        pageNumber: p,
-        pageSize: ps
-      });
-
+      var res = await fetchAllJobsFromApi('close');
       if (res) {
-        if (res.teams && res.teams.length > 0) cachedTeams = res.teams;
-        if (res.areas && res.areas.length > 0) cachedAreas = res.areas;
-        if (res.userTeam) cachedUserTeams = res.userTeam;
-
-        updateUserTeamContext();
-
-        var closedList = (res.close || []).map(mapApiJob);
-        closedJobs = closedList;
-
-        var total = (res.pagination && res.pagination.totalClose !== undefined)
-          ? res.pagination.totalClose
-          : closedList.length;
+        closedJobs = res.items;
+        var total = res.items.length;
 
         pagination.closed = {
           total: total,
-          page: p,
-          pageSize: ps,
-          totalPages: (res.pagination && res.pagination.totalClosePages) || Math.ceil(total / ps) || 1
+          page: 1,
+          pageSize: state.pageSize || 25,
+          totalPages: Math.max(1, Math.ceil(total / (state.pageSize || 25)))
         };
 
         var cb = $('#closedBadge');
@@ -1296,11 +1405,10 @@
     }
 
     assignTargetJob = job;
-    var propId = job.propId;
-    $('#assignId').textContent = propId;
+    $('#assignId').textContent = job.propId;
     $('#assignBrief').innerHTML =
       '<b>' + esc(job.details) + '</b>' +
-      '<small><b>Job ID:</b> ' + esc(propId) + '</small>' +
+      '<small><b>Job ID:</b> ' + esc(job.propId) + '</small>' +
       '<small><b>Issued To Dept:</b> ' + esc(job.dept) + '</small>' +
       '<small><b>Area:</b> ' + esc(job.area) + (job.sub ? ' &rsaquo; ' + esc(job.sub) : '') + '</small>' +
       '<small><b>Status:</b> ' + esc(job.status) + '</small>';
@@ -1395,11 +1503,10 @@
   function openClose(job) {
     closeTargetJob = job;
     closePhotoFile = null;
-    var propId = job.propId;
-    $('#closeId').textContent = propId;
+    $('#closeId').textContent = job.propId;
     $('#closeBrief').innerHTML =
       '<b>' + esc(job.details) + '</b>' +
-      '<small><b>Job ID:</b> ' + esc(propId) + '</small>' +
+      '<small><b>Job ID:</b> ' + esc(job.propId) + '</small>' +
       '<small><b>Issued To Dept:</b> ' + esc(job.dept) + '</small>' +
       '<small><b>Area:</b> ' + esc(job.area) + (job.sub ? ' &rsaquo; ' + esc(job.sub) : '') + '</small>' +
       '<small><b>Opened:</b> ' + fmt(job.opened) + '</small>';
@@ -1550,7 +1657,7 @@
     }
 
     $('#viewDialog').innerHTML =
-      '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips"><span class="prop-badge" style="font-size:12px;padding:3px 9px">' + esc(j.propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span><span class="age">' + age + '</span></div>' +
+      '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips"><span class="prop-badge" style="font-size:12px;padding:3px 9px" title="Job ID">' + esc(j.propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span><span class="age">' + age + '</span></div>' +
       '<div class="vnav"><button data-vnav="-1" title="Previous (&larr;)"' + (pos <= 0 ? ' disabled' : '') + '>&lsaquo;</button><span>' + (pos + 1) + ' of ' + tot + '</span><button data-vnav="1" title="Next (&rarr;)"' + (pos >= tot - 1 ? ' disabled' : '') + '>&rsaquo;</button><button class="vx" data-vclose title="Close (Esc)">&times;</button></div></div>' +
       '<h2>' + esc(j.details) + '</h2><p>Issued To: ' + esc(j.dept) + ' &middot; ' + esc(j.area) + (j.sub ? ' &rsaquo; ' + esc(j.sub) : '') + '</p></div>' +
       '<div class="vbody"><div class="vmain"><h4>Job Information</h4><div class="fv">' + fields + '</div>' +
@@ -1626,15 +1733,25 @@
     });
     menu.innerHTML = html;
 
+    var sv = $('#pdSelectedValue');
+    if (sv) {
+      var activeProp = visibleProps.find(function (p) { return p.propId === currentPropertyId; });
+      if (activeProp) {
+        sv.textContent = activeProp.propName;
+      }
+    }
+
     $$('.pd-option-item', menu).forEach(function (opt) {
-      opt.addEventListener('click', function (e) {
+      opt.addEventListener('click', async function (e) {
         e.stopPropagation();
         var propId = opt.dataset.val;
         var propName = opt.dataset.name;
 
         currentPropertyId = propId;
         var sv = $('#pdSelectedValue');
-        if (sv) sv.textContent = propName;
+        if (sv) {
+          sv.textContent = propName;
+        }
 
         $$('.pd-option-item', menu).forEach(function (it) {
           var act = it === opt;
@@ -1651,10 +1768,23 @@
         }
 
         toast('Switched property to ' + propName);
-        // Reload CURRENT active tab for this property
-        if (state.tab === 'open') fetchOpenJobs(1);
-        else if (state.tab === 'closed') fetchClosedJobs(1);
-        else if (state.tab === 'new') initNewJobForm();
+
+        // Reset pagination for both tabs
+        if (pagination.open) pagination.open.page = 1;
+        if (pagination.closed) pagination.closed.page = 1;
+
+        // Fetch fresh jobs and data from API for the newly selected property
+        if (state.tab === 'open') {
+          await fetchOpenJobs();
+          fetchClosedJobs().catch(function () {});
+        } else if (state.tab === 'closed') {
+          await fetchClosedJobs();
+          fetchOpenJobs().catch(function () {});
+        } else if (state.tab === 'new') {
+          await fetchOpenJobs();
+          fetchClosedJobs().catch(function () {});
+          initNewJobForm();
+        }
       });
     });
   }
@@ -2066,6 +2196,7 @@
     state.fromDate = '';
     state.toDate = '';
     state.sort = 'new';
+    if (pagination[state.tab]) pagination[state.tab].page = 1;
     var sInput = $('#search'); if (sInput) sInput.value = '';
     var cs = $('#clearSearch'); if (cs) cs.hidden = true;
     var fltStatus = $('#fltStatus'); if (fltStatus) fltStatus.value = 'all';
@@ -2094,8 +2225,10 @@
     if (pg && !pg.disabled) {
       var newPage = parseInt(pg.dataset.pg, 10);
       if (newPage > 0) {
-        if (state.tab === 'open') fetchOpenJobs(newPage);
-        else if (state.tab === 'closed') fetchClosedJobs(newPage);
+        if (pagination[state.tab]) {
+          pagination[state.tab].page = newPage;
+        }
+        renderList(state.tab);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       return;
@@ -2232,6 +2365,7 @@
     if (sInput) {
       sInput.addEventListener('input', function (e) {
         state.q = e.target.value.trim();
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         var cs = $('#clearSearch');
         if (cs) cs.hidden = !state.q;
         renderList(state.tab);
@@ -2243,6 +2377,7 @@
       csBtn.addEventListener('click', function () {
         if (sInput) sInput.value = '';
         state.q = '';
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         this.hidden = true;
         renderList(state.tab);
         if (sInput) sInput.focus();
@@ -2275,6 +2410,7 @@
         var toEl = $('#fltToDate');
         if (fromEl) state.fromDate = fromEl.value || '';
         if (toEl) state.toDate = toEl.value || '';
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
         closeFilterSidebar();
@@ -2305,6 +2441,7 @@
     if (fltStatus) {
       fltStatus.addEventListener('change', function (e) {
         state.status = e.target.value;
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
       });
@@ -2317,6 +2454,7 @@
         var b = e.target.closest('[data-status]');
         if (b) {
           state.status = b.dataset.status;
+          if (pagination[state.tab]) pagination[state.tab].page = 1;
           renderFilters();
           renderList(state.tab);
         }
@@ -2328,6 +2466,7 @@
     if (fltArea) {
       fltArea.addEventListener('change', function (e) {
         state.area = e.target.value;
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
       });
@@ -2338,6 +2477,7 @@
     if (fltIssuedBy) {
       fltIssuedBy.addEventListener('change', function (e) {
         state.issuedBy = e.target.value;
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
       });
@@ -2348,6 +2488,7 @@
     if (fltIssuedTo) {
       fltIssuedTo.addEventListener('change', function (e) {
         state.issuedTo = e.target.value;
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
       });
@@ -2358,6 +2499,7 @@
     if (fltAssignTo) {
       fltAssignTo.addEventListener('change', function (e) {
         state.assignedTo = e.target.value;
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
       });
@@ -2373,6 +2515,7 @@
           var toEl = $('#fltToDate');
           if (toEl) toEl.value = state.toDate;
         }
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
       });
@@ -2387,6 +2530,7 @@
           var fromEl = $('#fltFromDate');
           if (fromEl) fromEl.value = state.fromDate;
         }
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
       });
@@ -2397,6 +2541,7 @@
     if (sortBy) {
       sortBy.addEventListener('change', function (e) {
         state.sort = e.target.value;
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         renderList(state.tab);
       });
@@ -2407,8 +2552,8 @@
     if (pageSize) {
       pageSize.addEventListener('change', function (e) {
         state.pageSize = parseInt(e.target.value, 10);
-        if (state.tab === 'open') fetchOpenJobs(1, state.pageSize);
-        else if (state.tab === 'closed') fetchClosedJobs(1, state.pageSize);
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
+        renderList(state.tab);
       });
     }
 
@@ -2795,8 +2940,9 @@
 
     // Fallback if not authenticated or offline:
     // Create default property and allow user to sign in
-    allProperties = [{ propId: 'Testing', propName: 'Testing' }];
-    currentPropertyId = 'Testing';
+    var fallbackPropId = (currentUser && currentUser.prop) || 'Testing';
+    allProperties = [{ propId: fallbackPropId, propName: 'Testing' }];
+    currentPropertyId = fallbackPropId;
     renderPropertySelector(allProperties);
     setTab('open');
   }
