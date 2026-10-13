@@ -306,22 +306,44 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
   letter-spacing:.6px;
   color:var(--muted);
 }
-.fs-group select{
+.fs-group select,
+.fs-group input[type="date"]{
   width:100%;
   height:42px;
   border:1.5px solid var(--line);
   border-radius:10px;
   padding:0 12px;
   background:#fff;
-  font-size:13.5px;
+  font-family:inherit;
+  font-size:13px;
   font-weight:600;
   color:var(--ink);
   outline:none;
+  box-sizing:border-box;
   transition:border-color .15s,box-shadow .15s;
 }
-.fs-group select:focus{
+.fs-group select:focus,
+.fs-group input[type="date"]:focus{
   border-color:var(--primary);
   box-shadow:0 0 0 3px rgba(0,117,106,.15);
+}
+.fs-date-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.fs-date-col{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  min-width:0;
+}
+.fs-sublabel{
+  font-size:11px;
+  font-weight:600;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.4px;
 }
 .fs-group .chips{
   width:100%;

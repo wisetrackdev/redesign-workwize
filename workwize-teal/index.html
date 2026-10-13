@@ -301,12 +301,12 @@
     <div class="fs-body">
       <!-- Status Filter -->
       <div class="fs-group" id="fsStatusGroup">
-        <label class="fs-label">Status</label>
-        <div class="chips" id="statusChips">
-          <button data-status="all" class="on">All</button>
-          <button data-status="Open">Open</button>
-          <button data-status="Assigned">Assigned</button>
-        </div>
+        <label class="fs-label" for="fltStatus">Status</label>
+        <select id="fltStatus" aria-label="Filter by status">
+          <option value="all">All</option>
+          <option value="Open">Open</option>
+          <option value="Assigned">Assigned</option>
+        </select>
       </div>
 
       <!-- Area Filter -->
@@ -329,8 +329,31 @@
       <div class="fs-group">
         <label class="fs-label" for="fltIssuedTo">Issued To</label>
         <select id="fltIssuedTo" aria-label="Filter by issued to">
-          <option value="all">All Issued To</option>
+          <option value="all">All Jobs</option>
         </select>
+      </div>
+
+      <!-- Assign To Filter -->
+      <div class="fs-group" id="fsAssignToGroup">
+        <label class="fs-label" for="fltAssignTo">Assign To</label>
+        <select id="fltAssignTo" aria-label="Filter by assign to">
+          <option value="all">All Assign To</option>
+        </select>
+      </div>
+
+      <!-- Date Range Filter -->
+      <div class="fs-group" id="fsDateRangeGroup">
+        <label class="fs-label">Date Range</label>
+        <div class="fs-date-grid">
+          <div class="fs-date-col">
+            <span class="fs-sublabel">From Date</span>
+            <input type="date" id="fltFromDate" class="fs-date-input" aria-label="From Date">
+          </div>
+          <div class="fs-date-col">
+            <span class="fs-sublabel">To Date</span>
+            <input type="date" id="fltToDate" class="fs-date-input" aria-label="To Date">
+          </div>
+        </div>
       </div>
 
       <!-- Sort Filter -->

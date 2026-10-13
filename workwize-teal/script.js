@@ -25,6 +25,9 @@
     area: 'all',
     issuedBy: 'all',
     issuedTo: 'all',
+    assignedTo: 'all',
+    fromDate: '',
+    toDate: '',
     sort: 'new',
     pageSize: 25,
     layout: 'list',
@@ -68,6 +71,18 @@
       return String(iso);
     }
     return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function parseJobDate(val) {
+    if (!val || val === 'NA' || val === 'na') return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    var d = new Date(val);
+    if (!isNaN(d.getTime())) return d;
+    var m = String(val).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+    if (m) {
+      return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
+    }
+    return null;
   }
 
   function span(a, b) {
@@ -318,10 +333,42 @@
   function listFor(tab, ignoreStatus) {
     var source = (tab === 'closed') ? closedJobs : openJobs;
     var arr = source.filter(function (j) {
+      var matchAssign = true;
+      if (state.assignedTo && state.assignedTo !== 'all') {
+        if (state.assignedTo === '__unassigned__') {
+          matchAssign = !j.assigned || j.assigned === 'NA' || j.assigned === 'Not assigned';
+        } else {
+          matchAssign = j.assigned === state.assignedTo;
+        }
+      }
+
+      var matchDate = true;
+      if (state.fromDate || state.toDate) {
+        var fromD = state.fromDate ? new Date(state.fromDate + 'T00:00:00') : null;
+        var toD = state.toDate ? new Date(state.toDate + 'T23:59:59.999') : null;
+        var opD = parseJobDate(j.opened);
+        var clD = j.closedAt ? parseJobDate(j.closedAt) : null;
+
+        if (tab === 'closed') {
+          var opMatch = !!(opD && (!fromD || opD >= fromD) && (!toD || opD <= toD));
+          var clMatch = !!(clD && (!fromD || clD >= fromD) && (!toD || clD <= toD));
+          matchDate = opMatch || clMatch;
+        } else {
+          if (!opD) {
+            matchDate = false;
+          } else {
+            if (fromD && opD < fromD) matchDate = false;
+            if (toD && opD > toD) matchDate = false;
+          }
+        }
+      }
+
       return matches(j) &&
         (state.area === 'all' || j.area === state.area) &&
         (!state.issuedBy || state.issuedBy === 'all' || j.by === state.issuedBy) &&
         (!state.issuedTo || state.issuedTo === 'all' || j.dept === state.issuedTo) &&
+        matchAssign &&
+        matchDate &&
         (ignoreStatus || tab === 'closed' || state.status === 'all' || j.status === state.status);
     });
     var s = state.sort;
@@ -527,16 +574,17 @@
 
   function renderFilters() {
     var tab = state.tab;
-    var chips = '';
-    if (tab === 'open') {
-      chips = [['all', 'All'], ['Open', 'Open'], ['Assigned', 'Assigned']].map(function (c) {
-        return '<button data-status="' + c[0] + '" class="' + (state.status === c[0] ? 'on' : '') + '">' + c[1] + '</button>';
-      }).join('');
-    }
-    var sc = $('#statusChips');
-    if (sc) {
-      sc.innerHTML = chips;
-      sc.hidden = !chips;
+    var fltStatus = $('#fltStatus');
+    if (fltStatus) {
+      if (tab === 'open') {
+        fltStatus.innerHTML = '<option value="all"' + (state.status === 'all' ? ' selected' : '') + '>All</option>' +
+          '<option value="Open"' + (state.status === 'Open' ? ' selected' : '') + '>Open</option>' +
+          '<option value="Assigned"' + (state.status === 'Assigned' ? ' selected' : '') + '>Assigned</option>';
+      } else if (tab === 'closed') {
+        fltStatus.innerHTML = '<option value="all"' + (state.status === 'all' ? ' selected' : '') + '>All</option>' +
+          '<option value="Closed"' + (state.status === 'Closed' ? ' selected' : '') + '>Closed</option>';
+      }
+      fltStatus.value = state.status || 'all';
     }
     var fsStatusGroup = $('#fsStatusGroup');
     if (fsStatusGroup) {
@@ -567,7 +615,7 @@
       }).join('');
     }
 
-    // Dynamic Issued To dropdown
+    // Dynamic Issued To dropdown ("All Jobs" as default)
     var issuedToMap = {};
     if (cachedTeams && cachedTeams.length) {
       cachedTeams.forEach(function (t) {
@@ -583,14 +631,51 @@
     });
     var fltIssuedTo = $('#fltIssuedTo');
     if (fltIssuedTo) {
-      fltIssuedTo.innerHTML = '<option value="all">All Issued To</option>' + Object.keys(issuedToMap).sort().map(function (dept) {
+      fltIssuedTo.innerHTML = '<option value="all">All Jobs</option>' + Object.keys(issuedToMap).sort().map(function (dept) {
         return '<option value="' + esc(dept) + '"' + (state.issuedTo === dept ? ' selected' : '') + '>' + esc(dept) + '</option>';
       }).join('');
+    }
+
+    // Dynamic Assign To dropdown
+    var assignToMap = {};
+    var hasUnassigned = false;
+    currentList.forEach(function (j) {
+      if (j.assigned && j.assigned.trim() && j.assigned !== 'NA' && j.assigned !== 'Not assigned') {
+        assignToMap[j.assigned.trim()] = 1;
+      } else {
+        hasUnassigned = true;
+      }
+    });
+    var fltAssignTo = $('#fltAssignTo');
+    if (fltAssignTo) {
+      var unassignedOpt = hasUnassigned ? '<option value="__unassigned__"' + (state.assignedTo === '__unassigned__' ? ' selected' : '') + '>Not Assigned</option>' : '';
+      fltAssignTo.innerHTML = '<option value="all">All Assign To</option>' +
+        unassignedOpt +
+        Object.keys(assignToMap).sort().map(function (person) {
+          return '<option value="' + esc(person) + '"' + (state.assignedTo === person ? ' selected' : '') + '>' + esc(person) + '</option>';
+        }).join('');
     }
 
     var sortBy = $('#sortBy');
     if (sortBy && state.sort) {
       sortBy.value = state.sort;
+    }
+
+    var fltFromDate = $('#fltFromDate');
+    if (fltFromDate) {
+      if (fltFromDate.value !== (state.fromDate || '')) {
+        fltFromDate.value = state.fromDate || '';
+      }
+      if (state.toDate) fltFromDate.max = state.toDate;
+      else fltFromDate.removeAttribute('max');
+    }
+    var fltToDate = $('#fltToDate');
+    if (fltToDate) {
+      if (fltToDate.value !== (state.toDate || '')) {
+        fltToDate.value = state.toDate || '';
+      }
+      if (state.fromDate) fltToDate.min = state.fromDate;
+      else fltToDate.removeAttribute('min');
     }
 
     var vg = $('#viewGrid'); if (vg) vg.classList.toggle('on', state.layout === 'grid');
@@ -599,7 +684,10 @@
       state.area !== 'all' ||
       (state.issuedBy && state.issuedBy !== 'all') ||
       (state.issuedTo && state.issuedTo !== 'all') ||
+      (state.assignedTo && state.assignedTo !== 'all') ||
       (tab === 'open' && state.status !== 'all') ||
+      (state.fromDate && state.fromDate.length > 0) ||
+      (state.toDate && state.toDate.length > 0) ||
       (state.sort && state.sort !== 'new');
     var cf = $('#clearFilters');
     if (cf) cf.hidden = !active;
@@ -764,6 +852,11 @@
     state.status = 'all';
     state.issuedBy = 'all';
     state.issuedTo = 'all';
+    state.assignedTo = 'all';
+    state.fromDate = '';
+    state.toDate = '';
+    var fd = $('#fltFromDate'); if (fd) { fd.value = ''; fd.removeAttribute('max'); }
+    var td = $('#fltToDate'); if (td) { td.value = ''; td.removeAttribute('min'); }
     closeFilterSidebar();
 
     $$('.tab').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
@@ -1891,13 +1984,20 @@
     state.area = 'all';
     state.issuedBy = 'all';
     state.issuedTo = 'all';
+    state.assignedTo = 'all';
     state.status = 'all';
+    state.fromDate = '';
+    state.toDate = '';
     state.sort = 'new';
     var sInput = $('#search'); if (sInput) sInput.value = '';
     var cs = $('#clearSearch'); if (cs) cs.hidden = true;
+    var fltStatus = $('#fltStatus'); if (fltStatus) fltStatus.value = 'all';
     var fltArea = $('#fltArea'); if (fltArea) fltArea.value = 'all';
     var fltIssuedBy = $('#fltIssuedBy'); if (fltIssuedBy) fltIssuedBy.value = 'all';
     var fltIssuedTo = $('#fltIssuedTo'); if (fltIssuedTo) fltIssuedTo.value = 'all';
+    var fltAssignTo = $('#fltAssignTo'); if (fltAssignTo) fltAssignTo.value = 'all';
+    var fltFromDate = $('#fltFromDate'); if (fltFromDate) { fltFromDate.value = ''; fltFromDate.removeAttribute('max'); }
+    var fltToDate = $('#fltToDate'); if (fltToDate) { fltToDate.value = ''; fltToDate.removeAttribute('min'); }
     var sortBy = $('#sortBy'); if (sortBy) sortBy.value = 'new';
     renderFilters();
     renderList(state.tab);
@@ -2094,6 +2194,12 @@
     var btnApplyFilterDrawer = $('#btnApplyFilterDrawer');
     if (btnApplyFilterDrawer) {
       btnApplyFilterDrawer.addEventListener('click', function () {
+        var fromEl = $('#fltFromDate');
+        var toEl = $('#fltToDate');
+        if (fromEl) state.fromDate = fromEl.value || '';
+        if (toEl) state.toDate = toEl.value || '';
+        renderFilters();
+        renderList(state.tab);
         closeFilterSidebar();
       });
     }
@@ -2117,7 +2223,17 @@
     var cfBtn = $('#clearFilters');
     if (cfBtn) cfBtn.addEventListener('click', clearAll);
 
-    // Status chips
+    // Status filter
+    var fltStatus = $('#fltStatus');
+    if (fltStatus) {
+      fltStatus.addEventListener('change', function (e) {
+        state.status = e.target.value;
+        renderFilters();
+        renderList(state.tab);
+      });
+    }
+
+    // Status chips fallback (if present)
     var statusChips = $('#statusChips');
     if (statusChips) {
       statusChips.addEventListener('click', function (e) {
@@ -2155,6 +2271,45 @@
     if (fltIssuedTo) {
       fltIssuedTo.addEventListener('change', function (e) {
         state.issuedTo = e.target.value;
+        renderFilters();
+        renderList(state.tab);
+      });
+    }
+
+    // Assign To filter
+    var fltAssignTo = $('#fltAssignTo');
+    if (fltAssignTo) {
+      fltAssignTo.addEventListener('change', function (e) {
+        state.assignedTo = e.target.value;
+        renderFilters();
+        renderList(state.tab);
+      });
+    }
+
+    // Date Range filters
+    var fltFromDate = $('#fltFromDate');
+    if (fltFromDate) {
+      fltFromDate.addEventListener('change', function (e) {
+        state.fromDate = e.target.value;
+        if (state.fromDate && state.toDate && state.fromDate > state.toDate) {
+          state.toDate = state.fromDate;
+          var toEl = $('#fltToDate');
+          if (toEl) toEl.value = state.toDate;
+        }
+        renderFilters();
+        renderList(state.tab);
+      });
+    }
+
+    var fltToDate = $('#fltToDate');
+    if (fltToDate) {
+      fltToDate.addEventListener('change', function (e) {
+        state.toDate = e.target.value;
+        if (state.fromDate && state.toDate && state.toDate < state.fromDate) {
+          state.fromDate = state.toDate;
+          var fromEl = $('#fltFromDate');
+          if (fromEl) fromEl.value = state.fromDate;
+        }
         renderFilters();
         renderList(state.tab);
       });
