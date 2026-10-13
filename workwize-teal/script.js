@@ -841,20 +841,21 @@
     // Example: testing-131026-001
     var propSlug = getActivePropertySlug();
 
-    // Sort chronologically ascending to assign sequence numbers (001, 002...) in creation order per day
+    // Sort chronologically ascending to assign continuous sequence numbers (001, 002... 005, 006...) across all dates
     var sortedByDate = uniqueList.slice().sort(function (a, b) {
       var da = parseJobDate(a.openDate) || new Date(0);
       var db = parseJobDate(b.openDate) || new Date(0);
-      return da - db;
+      if (da - db !== 0) return da - db;
+      var ida = String(a.jobId || a.id || '');
+      var idb = String(b.jobId || b.id || '');
+      return ida.localeCompare(idb);
     });
 
-    var dateCounters = {};
     var jobCustomIdMap = {};
     sortedByDate.forEach(function (op, idx) {
       var key = op.jobId || op.id || ('idx_' + idx);
       var dateCode = getJobDateCode(op.openDate);
-      dateCounters[dateCode] = (dateCounters[dateCode] || 0) + 1;
-      var seqStr = pad3(dateCounters[dateCode]);
+      var seqStr = pad3(idx + 1);
       jobCustomIdMap[key] = propSlug + '-' + dateCode + '-' + seqStr;
     });
 
