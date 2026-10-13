@@ -218,7 +218,7 @@
                 </svg>
               </div>
               <div class="sbox-content">
-                <div class="sbox-label">Total Jobs</div>
+                <div class="sbox-label">Total New Jobs</div>
                 <div class="sbox-num" id="statBoxTotal">0</div>
               </div>
             </div>
@@ -444,38 +444,32 @@
       <div class="fgrid">
         <div class="fld full"><label>Job Details</label><input id="eDetails" required></div>
         <div class="fld"><label>Issued To Dept.</label>
-          <select id="eDept"><option>Testing-Engineering</option><option>Testing-House Keeping</option><option>Testing-Security</option></select></div>
+          <select id="eDept"><option value="">Issued To Dept.</option></select></div>
         <div class="fld"><label>Area</label>
-          <select id="eArea"><option>Waste Management</option><option>Public Area</option><option>Utility</option><option>Guest Villa</option><option>CAPEX</option></select></div>
+          <select id="eArea"><option value="">Area</option></select></div>
         <div class="fld"><label>Sub-Area</label><input id="eSub"></div>
         <div class="fld"><label>Assign Sub-Dept.</label>
-          <select id="eSubDept"><option>NA</option><option>Engineering</option><option>Testing-House Keeping</option><option>Security</option></select></div>
+          <select id="eSubDept"></select></div>
         <div class="fld"><label>Assign To</label><input id="eAssigned" placeholder="NA"></div>
         <div class="fld"><label>Status</label>
           <select id="eStatus"><option>Open</option><option>Assigned</option><option>Closed</option></select></div>
         <div class="fld" id="eClosedByWrap" hidden><label>Closed By</label><input id="eClosedBy"></div>
         <div class="fld full"><label>Remarks</label><input id="eRemarks" placeholder="NA"></div>
 
-        <div class="fld">
+        <div class="fld full">
           <label>Photo Before</label>
-          <div class="pp" data-which="Before">
-            <img alt="" hidden><span class="none">No photo</span>
-            <div class="ppb"><button type="button" class="mini" data-pick>Choose</button><button type="button" class="mini danger" data-remove>Remove</button></div>
-            <input type="file" accept="image/*" hidden>
-          </div>
-        </div>
-        <div class="fld">
-          <label>Photo After</label>
-          <div class="pp" data-which="After">
-            <img alt="" hidden><span class="none">No photo</span>
-            <div class="ppb"><button type="button" class="mini" data-pick>Choose</button><button type="button" class="mini danger" data-remove>Remove</button></div>
-            <input type="file" accept="image/*" hidden>
+          <div class="pp" id="ePhotoBeforeWrap" data-which="Before">
+            <img id="ePhotoBeforeImg" alt="" hidden><span class="none" id="ePhotoBeforeNone">No photo</span>
+            <div class="ppb">
+              <button type="button" class="mini" id="ePhotoBeforePick">Choose</button>
+              <button type="button" class="mini danger" id="ePhotoBeforeDel" hidden>Remove</button>
+            </div>
+            <input type="file" id="ePhotoBeforeInput" accept="image/*" hidden>
           </div>
         </div>
       </div>
       <small class="err" id="editPhotoErr"></small>
       <div class="btns">
-        <button type="button" class="btn s" data-close>Cancel</button>
         <button type="submit" class="btn p">Save Changes</button>
       </div>
     </form>
@@ -585,7 +579,6 @@
         </div>
       </div>
       <div class="btns">
-        <button type="button" class="btn s" data-close>Cancel</button>
         <button type="submit" class="btn g">Confirm &amp; Close Job</button>
       </div>
     </form>

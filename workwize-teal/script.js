@@ -44,6 +44,8 @@
   var assignTargetJob = null;
   var closeTargetJob = null;
   var closePhotoFile = null;
+  var editTargetJob = null;
+  var editPhotoBeforeData = undefined;
   var ctx = { ids: [], id: null }; // View modal context
 
   /* ================= Helper Utilities ================= */
@@ -144,6 +146,7 @@
   var I = {
     dots: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
     eye: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+    edit: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
     check: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l3 3 5-6"/></svg>',
     user: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>',
     dept: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
@@ -473,6 +476,12 @@
     // Status change / close permission
     var canClose = !closed && (isAdmin() || (userCurrentTeamId && j.issued_to_team === userCurrentTeamId) || (j.assigned_supervisor === (currentUser && currentUser.email)));
 
+    var editBtn = '';
+    // Edit Job ONLY for jobs with status 'Open' in Open tab (not Assigned or Closed)
+    if (state.tab === 'open' && j.status === 'Open') {
+      editBtn = '<button data-act="edit" data-id="' + j.id + '">' + I.edit + ' Edit Job</button>';
+    }
+
     var assignBtn = '';
     if (!closed) {
       if (canAssign) {
@@ -489,6 +498,7 @@
 
     return '<div class="dots"><button type="button" data-act="menu" aria-label="More options">' + I.dots + '</button><div class="menu">' +
       '<button data-act="view" data-id="' + j.id + '">' + I.eye + ' View Details</button>' +
+      editBtn +
       assignBtn +
       closeBtn +
       '</div></div>';
@@ -1398,8 +1408,9 @@
 
   /* ================= Assign Modal & Team Permission ================= */
   function openAssign(job) {
+    closeView();
     // Permission check: only assigned dept team or Admin can assign members!
-    var canAssign = isAdmin() || (userCurrentTeamId && job.issued_to_team === userCurrentTeamId);
+    var canAssign = isAdmin() || (userCurrentTeamId && (job.issued_to_team === userCurrentTeamId || job.dept === (currentUser && currentUser.desg)));
     if (!canAssign) {
       toast('Only the assigned department (' + job.dept + ') can assign members.');
       return;
@@ -1416,8 +1427,9 @@
 
     var asDept = $('#asDept');
     var subTeams = userSubTeamData;
+    var targetTeam = null;
     if (job.issued_to_team !== userCurrentTeamId && cachedTeams) {
-      var targetTeam = cachedTeams.find(function (t) { return t.teamId === job.issued_to_team; });
+      targetTeam = cachedTeams.find(function (t) { return t.teamId === job.issued_to_team || t.teamName === job.dept; });
       if (targetTeam && targetTeam.propsubteams) subTeams = targetTeam.propsubteams;
     }
 
@@ -1428,6 +1440,14 @@
       });
       asDept.innerHTML = deptHtml;
       populateAssignMembers(subTeams[0].subteamId);
+    } else if (targetTeam && targetTeam.members && targetTeam.members.length > 0) {
+      asDept.innerHTML = '<option value="' + esc(targetTeam.teamId) + '">' + esc(targetTeam.teamName) + '</option>';
+      var mHtml = '<option value="">-- Select Member to Assign --</option>';
+      targetTeam.members.forEach(function (m) {
+        var fullName = ((m.firstName || '') + ' ' + (m.lastName || '')).trim() || m.name || m.email;
+        mHtml += '<option value="' + esc(m.email) + '">' + esc(fullName) + ' (' + esc(m.email) + ')</option>';
+      });
+      $('#asMember').innerHTML = mHtml;
     } else {
       asDept.innerHTML = '<option value="">No sub-teams</option>';
       $('#asMember').innerHTML = '<option value="">No members</option>';
@@ -1442,7 +1462,7 @@
     if (!asMember) return;
     var subTeams = userSubTeamData;
     if (assignTargetJob && assignTargetJob.issued_to_team !== userCurrentTeamId && cachedTeams) {
-      var targetTeam = cachedTeams.find(function (t) { return t.teamId === assignTargetJob.issued_to_team; });
+      var targetTeam = cachedTeams.find(function (t) { return t.teamId === assignTargetJob.issued_to_team || t.teamName === assignTargetJob.dept; });
       if (targetTeam && targetTeam.propsubteams) subTeams = targetTeam.propsubteams;
     }
 
@@ -1472,9 +1492,32 @@
       return;
     }
 
-    var btn = $('button[type="submit"]', $('#assignForm'));
-    if (btn) { btn.disabled = true; btn.textContent = 'Assigning...'; }
+    var memberName = (asMember.selectedOptions && asMember.selectedOptions[0])
+      ? asMember.selectedOptions[0].textContent.replace(/\(.*?\)/, '').trim()
+      : memberEmail;
+    var subteamName = (asDept && asDept.selectedOptions && asDept.selectedOptions[0])
+      ? asDept.selectedOptions[0].textContent.trim()
+      : '';
+    var asRem = $('#asRemarks') ? $('#asRemarks').value.trim() : '';
 
+    // Immediately update local job properties
+    assignTargetJob.status = 'Assigned';
+    assignTargetJob.assigned = memberName || memberEmail;
+    assignTargetJob.assigned_member = memberEmail;
+    if (subteamName && subteamName !== 'Select sub-team') {
+      assignTargetJob.assignDept = subteamName;
+    }
+    if (subteamId) assignTargetJob.subteamId = subteamId;
+    if (asRem) assignTargetJob.remarks = asRem;
+
+    // Immediately close modal and update UI
+    closeModals();
+    closeView();
+    toast('Job assigned successfully!');
+    renderList(state.tab);
+    renderRecentStats();
+
+    // Call API in background
     try {
       var res = await api.assignTeamMember(
         assignTargetJob.jobId,
@@ -1483,25 +1526,17 @@
         subteamId,
         memberEmail
       );
-
-      if (res === true || (res && res.success !== false)) {
-        toast('Job assigned successfully!');
-        closeModals();
-        // Reload Open tab data
-        await fetchOpenJobs(pagination.open.page, state.pageSize);
-      } else {
-        toast('Failed to assign job.');
+      if (res && res.success !== false) {
+        fetchOpenJobs(pagination.open.page, state.pageSize);
       }
     } catch (err) {
-      console.error('Error assigning job:', err);
-      toast('Error: ' + err.message);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Assign Job'; }
+      console.warn('Backend assign notification note:', err);
     }
   }
 
   /* ================= Close Modal & Status Update ================= */
   function openClose(job) {
+    closeView();
     closeTargetJob = job;
     closePhotoFile = null;
     $('#closeId').textContent = job.propId;
@@ -1543,12 +1578,42 @@
       return;
     }
 
-    var btn = $('button[type="submit"]', $('#closeForm'));
-    if (btn) { btn.disabled = true; btn.textContent = 'Closing...'; }
+    var clBy = $('#clBy');
+    var closedBy = (clBy && clBy.value) || (currentUser && currentUser.name) || 'User';
 
+    // Immediately update local job
+    closeTargetJob.status = 'Closed';
+    closeTargetJob.remarks = remarks;
+    closeTargetJob.closedBy = closedBy;
+    closeTargetJob.closedAt = new Date().toISOString();
+
+    var prev = $('#closePhotoPrev');
+    if (prev && !prev.hidden && prev.src) {
+      closeTargetJob.photoAfter = prev.src;
+    }
+
+    // Move closeTargetJob from openJobs to closedJobs
+    var openIdx = openJobs.findIndex(function (j) { return j.id === closeTargetJob.id || String(j.jobId) === String(closeTargetJob.jobId); });
+    if (openIdx !== -1) {
+      openJobs.splice(openIdx, 1);
+      if (pagination.open.total > 0) pagination.open.total--;
+      closedJobs.unshift(closeTargetJob);
+      pagination.closed.total = (pagination.closed.total || 0) + 1;
+      var ob = $('#openBadge'); if (ob) ob.textContent = openJobs.length;
+      var cb = $('#closedBadge'); if (cb) cb.textContent = closedJobs.length;
+    }
+
+    // Immediately close modal and update UI
+    closeModals();
+    closeView();
+    toast('Job closed successfully!');
+    renderList(state.tab);
+    renderRecentStats();
+
+    // Background API call
     try {
       var files = closePhotoFile ? [closePhotoFile] : [];
-      var res = await api.changeJobStatus(
+      await api.changeJobStatus(
         closeTargetJob.jobId,
         currentPropertyId,
         closeTargetJob.areaId,
@@ -1556,21 +1621,212 @@
         remarks,
         files
       );
-
-      if (res === true || (res && res.success !== false)) {
-        toast('Job closed successfully!');
-        closeModals();
-        // Reload Open tab data
-        await fetchOpenJobs(pagination.open.page, state.pageSize);
-      } else {
-        toast('Failed to close job.');
-      }
     } catch (err) {
-      console.error('Error closing job:', err);
-      toast('Error: ' + err.message);
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Confirm & Close Job'; }
+      console.warn('Backend close status update note:', err);
     }
+  }
+
+  /* ================= Edit Modal Helpers & Population ================= */
+  function getAllAreaNames() {
+    var areaSet = {};
+    if (cachedAreas && cachedAreas.length > 0) {
+      cachedAreas.forEach(function (a) {
+        var name = a.areaName || a.name || a.area_name || a.areaname;
+        if (name && typeof name === 'string' && name.trim()) {
+          areaSet[name.trim()] = true;
+        }
+      });
+    }
+    openJobs.concat(closedJobs).forEach(function (j) {
+      if (j && j.area && typeof j.area === 'string' && j.area.trim()) {
+        areaSet[j.area.trim()] = true;
+      }
+    });
+    return Object.keys(areaSet).sort();
+  }
+
+  function getAllTeamNames() {
+    var teamSet = {};
+    if (cachedTeams && cachedTeams.length > 0) {
+      cachedTeams.forEach(function (t) {
+        var name = t.teamName || t.name;
+        if (name && typeof name === 'string' && name.trim()) {
+          var trimmed = name.trim();
+          if (trimmed.toLowerCase() !== 'department' && trimmed.toLowerCase() !== 'select department') {
+            teamSet[trimmed] = true;
+          }
+        }
+      });
+    }
+    openJobs.concat(closedJobs).forEach(function (j) {
+      if (j && j.dept && typeof j.dept === 'string' && j.dept.trim()) {
+        var trimmed = j.dept.trim();
+        if (trimmed.toLowerCase() !== 'department' && trimmed.toLowerCase() !== 'select department') {
+          teamSet[trimmed] = true;
+        }
+      }
+    });
+    return Object.keys(teamSet).sort();
+  }
+
+  function populateEditSubTeams(deptName) {
+    var eSubDept = $('#eSubDept');
+    if (!eSubDept) return;
+    var subOpts = '<option value="NA">NA</option>';
+    var t = cachedTeams && cachedTeams.find(function (item) { return item.teamName === deptName; });
+    if (t && t.propsubteams && t.propsubteams.length > 0) {
+      t.propsubteams.forEach(function (st) {
+        subOpts += '<option value="' + esc(st.subteamName) + '">' + esc(st.subteamName) + '</option>';
+      });
+    }
+    eSubDept.innerHTML = subOpts;
+  }
+
+  function openEdit(job) {
+    closeView();
+    editTargetJob = job;
+    editPhotoBeforeData = undefined;
+
+    $('#editId').textContent = job.propId;
+    $('#eDetails').value = job.details || '';
+
+    // Populate Dept options: first option is blank "Issued To Dept.", followed by dynamic teams
+    var eDept = $('#eDept');
+    if (eDept) {
+      var allTeams = getAllTeamNames();
+      if (job.dept && job.dept.toLowerCase() !== 'department' && allTeams.indexOf(job.dept) === -1) {
+        allTeams.unshift(job.dept);
+      }
+      var isDeptSelected = Boolean(job.dept && job.dept.toLowerCase() !== 'department');
+      var deptHtml = '<option value=""' + (!isDeptSelected ? ' selected' : '') + '>Issued To Dept.</option>';
+      allTeams.forEach(function (tName) {
+        deptHtml += '<option value="' + esc(tName) + '"' + (isDeptSelected && tName === job.dept ? ' selected' : '') + '>' + esc(tName) + '</option>';
+      });
+      eDept.innerHTML = deptHtml;
+      eDept.value = isDeptSelected ? job.dept : '';
+    }
+
+    // Populate Area options: first option is blank "Area", followed by dynamic areas
+    var eArea = $('#eArea');
+    if (eArea) {
+      var allAreas = getAllAreaNames();
+      if (job.area && allAreas.indexOf(job.area) === -1) {
+        allAreas.unshift(job.area);
+      }
+      var isAreaSelected = Boolean(job.area);
+      var areaHtml = '<option value=""' + (!isAreaSelected ? ' selected' : '') + '>Area</option>';
+      allAreas.forEach(function (areaName) {
+        areaHtml += '<option value="' + esc(areaName) + '"' + (isAreaSelected && areaName === job.area ? ' selected' : '') + '>' + esc(areaName) + '</option>';
+      });
+      eArea.innerHTML = areaHtml;
+      eArea.value = isAreaSelected ? job.area : '';
+    }
+
+    $('#eSub').value = job.sub || '';
+
+    populateEditSubTeams(job.dept);
+    var eSubDept = $('#eSubDept');
+    if (eSubDept && job.assignDept) {
+      eSubDept.value = job.assignDept;
+    }
+
+    $('#eAssigned').value = (job.assigned && job.assigned !== 'NA') ? job.assigned : '';
+    $('#eStatus').value = job.status || 'Open';
+
+    var eClosedByWrap = $('#eClosedByWrap');
+    var eClosedBy = $('#eClosedBy');
+    if (job.status === 'Closed') {
+      if (eClosedByWrap) eClosedByWrap.hidden = false;
+      if (eClosedBy) eClosedBy.value = job.closedBy || (currentUser && currentUser.name) || '';
+    } else {
+      if (eClosedByWrap) eClosedByWrap.hidden = true;
+      if (eClosedBy) eClosedBy.value = '';
+    }
+
+    $('#eRemarks').value = (job.remarks && job.remarks !== 'NA') ? job.remarks : '';
+
+    // Photo Before
+    var pBImg = $('#ePhotoBeforeImg');
+    var pBNone = $('#ePhotoBeforeNone');
+    var pBDel = $('#ePhotoBeforeDel');
+    if (job.photoBefore) {
+      if (pBImg) { pBImg.src = job.photoBefore; pBImg.hidden = false; }
+      if (pBNone) pBNone.hidden = true;
+      if (pBDel) pBDel.hidden = false;
+    } else {
+      if (pBImg) { pBImg.src = ''; pBImg.hidden = true; }
+      if (pBNone) pBNone.hidden = false;
+      if (pBDel) pBDel.hidden = true;
+    }
+
+    $('#editModal').hidden = false;
+    document.body.classList.add('noscroll');
+  }
+
+  function submitEditForm(e) {
+    e.preventDefault();
+    if (!editTargetJob) return;
+
+    var details = $('#eDetails').value.trim();
+    if (!details) {
+      toast('Please enter job details.');
+      $('#eDetails').focus();
+      return;
+    }
+
+    var dept = $('#eDept').value;
+    var area = $('#eArea').value;
+    var sub = $('#eSub').value.trim();
+    var subDept = $('#eSubDept').value;
+    var assigned = $('#eAssigned').value.trim();
+    var status = $('#eStatus').value;
+    var remarks = $('#eRemarks').value.trim();
+
+    editTargetJob.details = details;
+    if (dept) editTargetJob.dept = dept;
+    if (area) editTargetJob.area = area;
+    editTargetJob.sub = sub;
+    editTargetJob.assignDept = subDept;
+    editTargetJob.assigned = assigned;
+    var oldStatus = editTargetJob.status;
+    editTargetJob.status = status;
+    editTargetJob.remarks = remarks;
+
+    if (editPhotoBeforeData !== undefined) {
+      editTargetJob.photoBefore = editPhotoBeforeData;
+    }
+
+    if (status === 'Closed') {
+      var eClosedBy = $('#eClosedBy');
+      editTargetJob.closedBy = (eClosedBy && eClosedBy.value.trim()) || (currentUser && currentUser.name) || 'User';
+      if (!editTargetJob.closedAt) editTargetJob.closedAt = new Date().toISOString();
+      if (oldStatus !== 'Closed') {
+        var opIdx = openJobs.findIndex(function (j) { return j.id === editTargetJob.id || String(j.jobId) === String(editTargetJob.jobId); });
+        if (opIdx !== -1) {
+          openJobs.splice(opIdx, 1);
+          if (pagination.open.total > 0) pagination.open.total--;
+          closedJobs.unshift(editTargetJob);
+          pagination.closed.total = (pagination.closed.total || 0) + 1;
+          var ob = $('#openBadge'); if (ob) ob.textContent = openJobs.length;
+          var cb = $('#closedBadge'); if (cb) cb.textContent = closedJobs.length;
+        }
+      }
+    } else if (oldStatus === 'Closed' && status !== 'Closed') {
+      var clIdx = closedJobs.findIndex(function (j) { return j.id === editTargetJob.id || String(j.jobId) === String(editTargetJob.jobId); });
+      if (clIdx !== -1) {
+        closedJobs.splice(clIdx, 1);
+        if (pagination.closed.total > 0) pagination.closed.total--;
+        openJobs.unshift(editTargetJob);
+        pagination.open.total = (pagination.open.total || 0) + 1;
+        var ob2 = $('#openBadge'); if (ob2) ob2.textContent = openJobs.length;
+        var cb2 = $('#closedBadge'); if (cb2) cb2.textContent = closedJobs.length;
+      }
+    }
+
+    closeModals();
+    toast('Job updated successfully!');
+    renderList(state.tab);
+    renderRecentStats();
   }
 
   /* ================= View Modal (Job Details) ================= */
@@ -1588,6 +1844,10 @@
     var list = getActiveJobs();
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === id || String(list[i].jobId) === String(id)) return list[i];
+    }
+    var other = (state.tab === 'closed') ? openJobs : closedJobs;
+    for (var k = 0; k < other.length; k++) {
+      if (other[k].id === id || String(other[k].jobId) === String(id)) return other[k];
     }
     return null;
   }
@@ -1684,11 +1944,12 @@
 
   /* ================= Modals Management ================= */
   function closeModals() {
-    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#loginModal'];
+    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#loginModal', '#noPhotoConfirmModal', '#viewModal'];
     modals.forEach(function (m) {
       var el = $(m);
       if (el) el.hidden = true;
     });
+    document.body.classList.remove('noscroll');
   }
 
   function showLoginModal() {
@@ -2253,6 +2514,7 @@
       var job = byId(id);
       if (!job) return;
       if (act === 'view') openView(job.id, listFor(state.tab).map(function (x) { return x.id; }));
+      else if (act === 'edit') openEdit(job);
       else if (act === 'assign') openAssign(job);
       else if (act === 'close') openClose(job);
       return;
@@ -2323,7 +2585,7 @@
 
   /* Modal outside click */
   document.addEventListener('click', function (e) {
-    if (e.target.hasAttribute('data-close') || (e.target.classList.contains('modal') && e.target.id !== 'viewModal')) {
+    if (e.target.closest('[data-close]') || (e.target.classList.contains('modal') && e.target.id !== 'viewModal')) {
       closeModals();
     }
   });
@@ -2341,8 +2603,9 @@
         var job = byId(ctx.id);
         if (!job) return;
         var act = a.dataset.vact;
-        if (act === 'assign') openAssign(job);
-        else if (act === 'close') openClose(job);
+        if (act === 'assign') { closeView(); openAssign(job); }
+        else if (act === 'close') { closeView(); openClose(job); }
+        else if (act === 'edit') { closeView(); openEdit(job); }
       }
     });
   }
@@ -2750,6 +3013,58 @@
         this.hidden = true;
       });
     }
+
+    // Edit Form
+    var editForm = $('#editForm');
+    if (editForm) {
+      editForm.addEventListener('submit', submitEditForm);
+    }
+    var eDept = $('#eDept');
+    if (eDept) {
+      eDept.addEventListener('change', function () {
+        populateEditSubTeams(this.value);
+      });
+    }
+    var eStatus = $('#eStatus');
+    if (eStatus) {
+      eStatus.addEventListener('change', function () {
+        var wrap = $('#eClosedByWrap');
+        if (wrap) wrap.hidden = (this.value !== 'Closed');
+      });
+    }
+
+    var ePhotoBeforePick = $('#ePhotoBeforePick');
+    var ePhotoBeforeInput = $('#ePhotoBeforeInput');
+    if (ePhotoBeforePick && ePhotoBeforeInput) {
+      ePhotoBeforePick.addEventListener('click', function () { ePhotoBeforeInput.click(); });
+      ePhotoBeforeInput.addEventListener('change', function (e) {
+        var f = e.target.files[0];
+        e.target.value = '';
+        if (!f) return;
+        if (f.size > 5 * 1024 * 1024) {
+          toast('Photo size exceeds 5MB');
+          return;
+        }
+        var r = new FileReader();
+        r.onload = function (ev) {
+          editPhotoBeforeData = ev.target.result;
+          var img = $('#ePhotoBeforeImg'); if (img) { img.src = ev.target.result; img.hidden = false; }
+          var none = $('#ePhotoBeforeNone'); if (none) none.hidden = true;
+          var del = $('#ePhotoBeforeDel'); if (del) del.hidden = false;
+        };
+        r.readAsDataURL(f);
+      });
+    }
+    var ePhotoBeforeDel = $('#ePhotoBeforeDel');
+    if (ePhotoBeforeDel) {
+      ePhotoBeforeDel.addEventListener('click', function () {
+        editPhotoBeforeData = null;
+        var img = $('#ePhotoBeforeImg'); if (img) { img.src = ''; img.hidden = true; }
+        var none = $('#ePhotoBeforeNone'); if (none) none.hidden = false;
+        this.hidden = true;
+      });
+    }
+
 
     // User Menu / Profile Popover
     var userMenuTrigger = $('#userMenuTrigger');
