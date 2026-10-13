@@ -1673,13 +1673,81 @@
     var eSubDept = $('#eSubDept');
     if (!eSubDept) return;
     var subOpts = '<option value="NA">NA</option>';
-    var t = cachedTeams && cachedTeams.find(function (item) { return item.teamName === deptName; });
+    var t = cachedTeams && cachedTeams.find(function (item) {
+      return item.teamName === deptName || item.name === deptName;
+    });
     if (t && t.propsubteams && t.propsubteams.length > 0) {
       t.propsubteams.forEach(function (st) {
         subOpts += '<option value="' + esc(st.subteamName) + '">' + esc(st.subteamName) + '</option>';
       });
     }
     eSubDept.innerHTML = subOpts;
+  }
+
+  function populateEditMembers(deptName, subDeptName, currentSelected) {
+    var eAssigned = $('#eAssigned');
+    if (!eAssigned) return;
+
+    var members = [];
+    var seen = {};
+
+    var t = cachedTeams && cachedTeams.find(function (item) {
+      return item.teamName === deptName || item.name === deptName;
+    });
+
+    if (t) {
+      if (subDeptName && subDeptName !== 'NA' && t.propsubteams && t.propsubteams.length > 0) {
+        var st = t.propsubteams.find(function (s) { return s.subteamName === subDeptName; });
+        if (st && st.subteams && st.subteams.length > 0) {
+          members = members.concat(st.subteams);
+        }
+      }
+      if (!members.length && t.propsubteams && t.propsubteams.length > 0) {
+        t.propsubteams.forEach(function (s) {
+          if (s.subteams && s.subteams.length > 0) {
+            members = members.concat(s.subteams);
+          }
+        });
+      }
+      if (t.members && t.members.length > 0) {
+        members = members.concat(t.members);
+      }
+    }
+
+    var mHtml = '<option value="">Assign To</option>';
+
+    members.forEach(function (m) {
+      var name = ((m.firstName || '') + ' ' + (m.lastName || '')).trim() || m.name || m.email || '';
+      if (name && !seen[name]) {
+        seen[name] = true;
+        mHtml += '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+      }
+    });
+
+    // Also include any members from existing jobs for this department if not already present
+    openJobs.concat(closedJobs).forEach(function (j) {
+      if (j && j.dept === deptName && j.assigned && j.assigned !== 'NA' && j.assigned !== 'Not assigned') {
+        var aName = j.assigned.trim();
+        if (aName && !seen[aName]) {
+          seen[aName] = true;
+          mHtml += '<option value="' + esc(aName) + '">' + esc(aName) + '</option>';
+        }
+      }
+    });
+
+    // If there is a currentSelected value and it's not yet in the list, add it
+    if (currentSelected && currentSelected !== 'NA' && currentSelected !== 'Not assigned' && !seen[currentSelected]) {
+      seen[currentSelected] = true;
+      mHtml += '<option value="' + esc(currentSelected) + '">' + esc(currentSelected) + '</option>';
+    }
+
+    eAssigned.innerHTML = mHtml;
+
+    if (currentSelected && seen[currentSelected]) {
+      eAssigned.value = currentSelected;
+    } else {
+      eAssigned.value = '';
+    }
   }
 
   function openEdit(job) {
@@ -1730,7 +1798,9 @@
       eSubDept.value = job.assignDept;
     }
 
-    $('#eAssigned').value = (job.assigned && job.assigned !== 'NA') ? job.assigned : '';
+    var currentAssigned = (job.assigned && job.assigned !== 'NA' && job.assigned !== 'Not assigned') ? job.assigned : '';
+    populateEditMembers(job.dept, eSubDept ? eSubDept.value : job.assignDept, currentAssigned);
+
     $('#eStatus').value = job.status || 'Open';
 
     var eClosedByWrap = $('#eClosedByWrap');
@@ -1781,6 +1851,14 @@
     var assigned = $('#eAssigned').value.trim();
     var status = $('#eStatus').value;
     var remarks = $('#eRemarks').value.trim();
+
+    if (status !== 'Closed') {
+      if (assigned && status === 'Open') {
+        status = 'Assigned';
+      } else if (!assigned && status === 'Assigned') {
+        status = 'Open';
+      }
+    }
 
     editTargetJob.details = details;
     if (dept) editTargetJob.dept = dept;
@@ -3023,6 +3101,26 @@
     if (eDept) {
       eDept.addEventListener('change', function () {
         populateEditSubTeams(this.value);
+        populateEditMembers(this.value, $('#eSubDept') ? $('#eSubDept').value : '');
+      });
+    }
+    var eSubDept = $('#eSubDept');
+    if (eSubDept) {
+      eSubDept.addEventListener('change', function () {
+        populateEditMembers($('#eDept') ? $('#eDept').value : '', this.value);
+      });
+    }
+    var eAssigned = $('#eAssigned');
+    if (eAssigned) {
+      eAssigned.addEventListener('change', function () {
+        var eStatus = $('#eStatus');
+        if (eStatus && eStatus.value !== 'Closed') {
+          if (this.value && eStatus.value === 'Open') {
+            eStatus.value = 'Assigned';
+          } else if (!this.value && eStatus.value === 'Assigned') {
+            eStatus.value = 'Open';
+          }
+        }
       });
     }
     var eStatus = $('#eStatus');
