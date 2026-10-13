@@ -502,8 +502,7 @@
         '<div class="rc" title="' + esc(j.area) + '"><span>Area</span>' + hl(j.area) + '</div>' +
         '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
         '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
-        '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
-        '<div class="rc"><span>Photo After</span>' + photoAfterPreview(j) + '</div>' +
+        '<div class="rc" title="' + esc(fmt(j.closedAt)) + '"><span>Closed</span>' + (j.closedAt ? fmt(j.closedAt) : '<span class="na">NA</span>') + '</div>' +
         '<div class="rc" title="' + esc(assignedPerson || 'NA') + '"><span>Closed By</span>' + assignedVal + '</div>' +
         '<div class="rc" title="' + esc(j.remarks || 'NA') + '"><span>Remarks</span>' + closedRemark + '</div>' +
         '<div class="rs"><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
@@ -1174,14 +1173,31 @@
   }
 
   /* Submit Daily Job */
+  var pendingNoPhotoCallback = null;
+  function showNoPhotoConfirmModal(onConfirm) {
+    pendingNoPhotoCallback = onConfirm;
+    var modal = $('#noPhotoModal');
+    if (modal) {
+      modal.hidden = false;
+      document.body.classList.add('noscroll');
+    }
+  }
+
+  function closeNoPhotoConfirmModal() {
+    pendingNoPhotoCallback = null;
+    var modal = $('#noPhotoModal');
+    if (modal) {
+      modal.hidden = true;
+      document.body.classList.remove('noscroll');
+    }
+  }
+
   async function submitNewJob(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     var fDept = $('#fDept');
     var fArea = $('#fArea');
     var fSub = $('#fSub');
     var fDetails = $('#fDetails');
-    var fBy = $('#fBy');
-    var submitBtn = $('button[type="submit"]', $('#jobForm'));
 
     var ok = true;
     function checkField(el, msg) {
@@ -1197,6 +1213,26 @@
     checkField(fArea, 'Please select area');
     checkField(fDetails, 'Please enter job details');
     if (!ok) return;
+
+    // If NO photo is selected, prompt confirmation alert modal
+    if (!newJobSelectedFiles || newJobSelectedFiles.length === 0) {
+      showNoPhotoConfirmModal(function () {
+        executeSubmitJob();
+      });
+      return;
+    }
+
+    // Photo attached: directly submit without alert
+    executeSubmitJob();
+  }
+
+  async function executeSubmitJob() {
+    var fDept = $('#fDept');
+    var fArea = $('#fArea');
+    var fSub = $('#fSub');
+    var fDetails = $('#fDetails');
+    var fBy = $('#fBy');
+    var submitBtn = $('button[type="submit"]', $('#jobForm'));
 
     var issuedTo = fDept.value;
     var issuedBy = userCurrentTeamId;
@@ -2469,6 +2505,22 @@
     }
     var btnCancel = $('#btnCancel');
     if (btnCancel) btnCancel.addEventListener('click', resetNewJobForm);
+
+    var btnConfirmNoPhoto = $('#btnConfirmNoPhoto');
+    if (btnConfirmNoPhoto) {
+      btnConfirmNoPhoto.addEventListener('click', function () {
+        var cb = pendingNoPhotoCallback;
+        closeNoPhotoConfirmModal();
+        if (cb) cb();
+      });
+    }
+
+    var btnCancelNoPhoto = $('#btnCancelNoPhoto');
+    if (btnCancelNoPhoto) {
+      btnCancelNoPhoto.addEventListener('click', function () {
+        closeNoPhotoConfirmModal();
+      });
+    }
 
     var fDept = $('#fDept');
     if (fDept) {
