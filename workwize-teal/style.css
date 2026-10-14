@@ -374,7 +374,9 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .view{padding-top:8px}
 .card{background:#fff;border-radius:16px;padding:28px;box-shadow:0 2px 8px rgba(31,44,94,.08)}
 .card h2{font-size:18px;margin-bottom:18px}
-.split{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+.split{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:stretch}
+.split > .card{display:flex;flex-direction:column;height:100%}
+#jobForm .btns{margin-top:auto}
 .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px 22px}
 .fld.full{grid-column:1/-1}
 .fld>label{display:block;font-size:12px;font-weight:700;color:var(--primary);margin-bottom:6px}
@@ -437,7 +439,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 
 /* Aging of Jobs Section */
 .aging-section{
-  margin-top:18px;
+  margin-top:auto;
   padding-top:16px;
   border-top:1px dashed #D5DCEE;
   display:flex;
@@ -732,7 +734,13 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
   .jrow{min-width:1050px}
   .jrow.Closed{min-width:1120px}
 }
-@media(max-width:1100px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.split{grid-template-columns:1fr}}
+@media(max-width:1100px){
+  .cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .split{grid-template-columns:1fr}
+  .split > .card{height:auto}
+  #jobForm .btns{margin-top:22px}
+  .aging-section{margin-top:18px}
+}
 @media(max-width:900px){
   .jrow{grid-template-columns:minmax(0,1fr) auto 34px}
   .jrow .rc{display:none}
