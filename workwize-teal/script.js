@@ -18,6 +18,49 @@
   var closedJobs = [];
   var activeJobsList = [];
 
+  // Persistent Job ID / Serial Number map to ensure a job's serial never changes between Open and Closed tabs
+  var globalJobCustomIdMap = {};
+
+  function loadJobCustomIdMap() {
+    globalJobCustomIdMap = {};
+    try {
+      var k = 'workwize_job_prop_ids_' + (currentPropertyId || 'default');
+      var raw = localStorage.getItem(k);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          var serialCount = {};
+          var hasDuplicates = false;
+          Object.keys(parsed).forEach(function (key) {
+            var val = parsed[key];
+            if (val && typeof val === 'string') {
+              var m = val.match(/-(\d+)$/);
+              if (m) {
+                var s = m[1];
+                if (serialCount[s]) {
+                  hasDuplicates = true;
+                }
+                serialCount[s] = (serialCount[s] || 0) + 1;
+              }
+            }
+          });
+          if (hasDuplicates) {
+            try { localStorage.removeItem(k); } catch (e) {}
+          } else {
+            Object.assign(globalJobCustomIdMap, parsed);
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  function saveJobCustomIdMap() {
+    try {
+      var k = 'workwize_job_prop_ids_' + (currentPropertyId || 'default');
+      localStorage.setItem(k, JSON.stringify(globalJobCustomIdMap));
+    } catch (e) {}
+  }
+
   var state = {
     tab: 'open',
     q: '',
@@ -165,15 +208,19 @@
     return parts.dd + parts.mm + parts.yy;
   }
 
-  function getActivePropertySlug() {
+  function getActivePropertyName() {
     var name = '';
     if (Array.isArray(allProperties) && allProperties.length > 0) {
       if (currentPropertyId) {
-        var found = allProperties.find(function (p) { return p.propId === currentPropertyId; });
+        var found = allProperties.find(function (p) {
+          return String(p.propId) === String(currentPropertyId) || String(p.id) === String(currentPropertyId);
+        });
         if (found && found.propName) name = found.propName;
       }
       if (!name && currentUser && currentUser.prop) {
-        var foundUser = allProperties.find(function (p) { return p.propId === currentUser.prop || p.propName === currentUser.prop; });
+        var foundUser = allProperties.find(function (p) {
+          return String(p.propId) === String(currentUser.prop) || String(p.propName) === String(currentUser.prop);
+        });
         if (foundUser && foundUser.propName) name = foundUser.propName;
       }
     }
@@ -184,8 +231,26 @@
     if (!name && currentUser && currentUser.prop) {
       name = currentUser.prop;
     }
-    if (!name) name = 'testing';
-    return name.trim().toLowerCase().replace(/\s+/g, '-');
+    if (!name) name = 'Testing';
+    return name.trim().replace(/\s+/g, '-');
+  }
+
+  function getActivePropertySlug() {
+    return getActivePropertyName();
+  }
+
+  function parseFormattedPropId(str) {
+    if (!str || typeof str !== 'string') return null;
+    var trimmed = str.trim();
+    var m = trimmed.match(/^(.+)-(\d{6})-(\d+)$/);
+    if (!m) return null;
+    return {
+      raw: trimmed,
+      prefix: m[1],
+      dateCode: m[2],
+      serial: parseInt(m[3], 10),
+      serialStr: m[3]
+    };
   }
 
   function span(a, b) {
@@ -389,9 +454,34 @@
       closedBy = (cfn + ' ' + cln).trim() || assignedName || 'Staff';
     }
 
-    var key = op.jobId || op.id || ('idx_' + index);
-    var customJobId = (jobCustomIdMap && jobCustomIdMap[key])
-      || (getActivePropertySlug() + '-' + getJobDateCode(op.openDate) + '-' + pad3(index != null ? index + 1 : 1));
+    var key = op.jobId != null ? String(op.jobId) : (op.id != null ? String(op.id) : ('idx_' + index));
+    var activePrefix = getActivePropertyName();
+
+    var existingId = (jobCustomIdMap && jobCustomIdMap[key])
+      || (globalJobCustomIdMap && (
+           (op.jobId != null && globalJobCustomIdMap[String(op.jobId)])
+        || (op.id != null && globalJobCustomIdMap[String(op.id)])
+        || globalJobCustomIdMap[key]
+      ));
+
+    var customJobId = '';
+    var parsedExisting = parseFormattedPropId(existingId);
+    if (parsedExisting) {
+      customJobId = activePrefix + '-' + parsedExisting.dateCode + '-' + pad3(parsedExisting.serial);
+    } else {
+      var parsedOp = parseFormattedPropId(op.propId);
+      if (parsedOp) {
+        customJobId = activePrefix + '-' + parsedOp.dateCode + '-' + pad3(parsedOp.serial);
+      } else {
+        customJobId = activePrefix + '-' + getJobDateCode(op.openDate) + '-' + pad3(index != null ? index + 1 : 1);
+      }
+    }
+
+    if (customJobId) {
+      if (key) globalJobCustomIdMap[key] = customJobId;
+      if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = customJobId;
+      if (op.id != null) globalJobCustomIdMap[String(op.id)] = customJobId;
+    }
 
     return {
       id: op.jobId || (index + 1),
@@ -925,34 +1015,86 @@
     var uniqueList = [];
     rawList.forEach(function (item) {
       if (!item) return;
-      var key = item.jobId || item.id;
+      var key = item.jobId != null ? String(item.jobId) : (item.id != null ? String(item.id) : null);
       if (!key || !seen[key]) {
         if (key) seen[key] = true;
         uniqueList.push(item);
       }
     });
 
-    // Generate custom daily job ID: [property]-[openDate (DDMMYY)]-[seq (001)]
-    // Example: testing-131026-001
-    var propSlug = getActivePropertySlug();
+    // Generate custom daily job ID: [PropertyPrefix]-[openDate (DDMMYY)]-[seq (001)]
+    // Example: Testing-141026-001
+    var activePropName = getActivePropertyName();
 
-    // Sort chronologically ascending to assign continuous sequence numbers (001, 002... 005, 006...) across all dates
+    // 1. Populate globalJobCustomIdMap with existing propIds from memory
+    openJobs.concat(closedJobs).forEach(function (j) {
+      if (j && j.propId) {
+        var parsed = parseFormattedPropId(j.propId);
+        if (parsed) {
+          var idStr = activePropName + '-' + parsed.dateCode + '-' + pad3(parsed.serial);
+          if (j.id != null) globalJobCustomIdMap[String(j.id)] = idStr;
+          if (j.jobId != null) globalJobCustomIdMap[String(j.jobId)] = idStr;
+        }
+      }
+    });
+
+    // 2. Pre-seed any formatted propIds already provided in raw API / mock items
+    uniqueList.forEach(function (op) {
+      if (op && op.propId) {
+        var parsed = parseFormattedPropId(op.propId);
+        if (parsed) {
+          var idStr = activePropName + '-' + parsed.dateCode + '-' + pad3(parsed.serial);
+          if (op.id != null) globalJobCustomIdMap[String(op.id)] = idStr;
+          if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = idStr;
+        }
+      }
+    });
+
+    // 3. Find highest continuous sequence number currently used
+    var maxSeq = 0;
+    Object.keys(globalJobCustomIdMap).forEach(function (k) {
+      var val = globalJobCustomIdMap[k];
+      var parsed = parseFormattedPropId(val);
+      if (parsed && parsed.serial > maxSeq) {
+        maxSeq = parsed.serial;
+      }
+    });
+
+    // 4. Sort chronologically ascending to assign continuous sequence numbers (001, 002... 005, 006...)
     var sortedByDate = uniqueList.slice().sort(function (a, b) {
       var da = parseJobDate(a.openDate) || new Date(0);
       var db = parseJobDate(b.openDate) || new Date(0);
       if (da - db !== 0) return da - db;
-      var ida = String(a.jobId || a.id || '');
-      var idb = String(b.jobId || b.id || '');
+      var ida = String(a.jobId != null ? a.jobId : (a.id != null ? a.id : ''));
+      var idb = String(b.jobId != null ? b.jobId : (b.id != null ? b.id : ''));
       return ida.localeCompare(idb);
     });
 
     var jobCustomIdMap = {};
     sortedByDate.forEach(function (op, idx) {
-      var key = op.jobId || op.id || ('idx_' + idx);
-      var dateCode = getJobDateCode(op.openDate);
-      var seqStr = pad3(idx + 1);
-      jobCustomIdMap[key] = propSlug + '-' + dateCode + '-' + seqStr;
+      var key = op.jobId != null ? String(op.jobId) : (op.id != null ? String(op.id) : ('idx_' + idx));
+      var existingId = (op.jobId != null && globalJobCustomIdMap[String(op.jobId)])
+        || (op.id != null && globalJobCustomIdMap[String(op.id)])
+        || globalJobCustomIdMap[key];
+
+      var parsedExisting = parseFormattedPropId(existingId);
+      if (parsedExisting) {
+        var refreshedId = activePropName + '-' + parsedExisting.dateCode + '-' + pad3(parsedExisting.serial);
+        jobCustomIdMap[key] = refreshedId;
+        globalJobCustomIdMap[key] = refreshedId;
+        if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = refreshedId;
+        if (op.id != null) globalJobCustomIdMap[String(op.id)] = refreshedId;
+      } else {
+        maxSeq++;
+        var dateCode = getJobDateCode(op.openDate);
+        var newId = activePropName + '-' + dateCode + '-' + pad3(maxSeq);
+        jobCustomIdMap[key] = newId;
+        globalJobCustomIdMap[key] = newId;
+        if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = newId;
+        if (op.id != null) globalJobCustomIdMap[String(op.id)] = newId;
+      }
     });
+    saveJobCustomIdMap();
 
     var mappedItems = uniqueList.map(function (op, index) {
       return mapApiJob(op, index, jobCustomIdMap);
@@ -1378,12 +1520,19 @@
     handleDeptSelectionChange();
   }
 
-  /* Submit Daily Job */
+  /* Submit Daily Job & Confirmation Dialog */
   var pendingNoPhotoCallback = null;
-  function showNoPhotoConfirmModal(onConfirm) {
+  function showNoPhotoConfirmModal(onConfirm, promptTitle, promptDesc, confirmBtnText) {
     pendingNoPhotoCallback = onConfirm;
     var modal = $('#noPhotoModal');
     if (modal) {
+      var pTitle = $('#noPhotoPrompt');
+      if (pTitle) pTitle.textContent = promptTitle || 'Do you want to continue without job image?';
+      var pDesc = $('#noPhotoDesc');
+      if (pDesc) pDesc.textContent = promptDesc || 'You have not attached any photo or video for this job.';
+      var cBtn = $('#btnConfirmNoPhoto');
+      if (cBtn) cBtn.textContent = confirmBtnText || 'Continue & Save';
+
       modal.hidden = false;
       document.body.classList.add('noscroll');
     }
@@ -1394,7 +1543,10 @@
     var modal = $('#noPhotoModal');
     if (modal) {
       modal.hidden = true;
-      document.body.classList.remove('noscroll');
+      var otherModalsOpen = $$('.modal:not([hidden])').some(function (el) { return el.id !== 'noPhotoModal'; });
+      if (!otherModalsOpen) {
+        document.body.classList.remove('noscroll');
+      }
     }
   }
 
@@ -1666,6 +1818,27 @@
       return;
     }
 
+    var prev = $('#closePhotoPrev');
+    var hasPhoto = Boolean(closePhotoFile || (prev && !prev.hidden && prev.src));
+
+    if (!hasPhoto) {
+      showNoPhotoConfirmModal(
+        function () {
+          executeSubmitCloseJob(remarks);
+        },
+        'Are you sure without image close this job?',
+        'You have not attached any completion photo for this job.',
+        'Confirm & Close'
+      );
+      return;
+    }
+
+    await executeSubmitCloseJob(remarks);
+  }
+
+  async function executeSubmitCloseJob(remarks) {
+    if (!closeTargetJob) return;
+
     var clBy = $('#clBy');
     var closedBy = (clBy && clBy.value) || (currentUser && currentUser.name) || 'User';
 
@@ -1678,6 +1851,20 @@
     var prev = $('#closePhotoPrev');
     if (prev && !prev.hidden && prev.src) {
       closeTargetJob.photoAfter = prev.src;
+    }
+
+    // Permanently remember this job's exact propId (serial) so it never changes in Closed tab
+    if (closeTargetJob.propId) {
+      var parsed = parseFormattedPropId(closeTargetJob.propId);
+      var canonicalPropId = parsed
+        ? (getActivePropertyName() + '-' + parsed.dateCode + '-' + pad3(parsed.serial))
+        : closeTargetJob.propId;
+      closeTargetJob.propId = canonicalPropId;
+      closeTargetJob.customJobId = canonicalPropId;
+      if (closeTargetJob.id != null) globalJobCustomIdMap[String(closeTargetJob.id)] = canonicalPropId;
+      if (closeTargetJob.jobId != null) globalJobCustomIdMap[String(closeTargetJob.jobId)] = canonicalPropId;
+      if (closeTargetJob.raw && closeTargetJob.raw.jobId != null) globalJobCustomIdMap[String(closeTargetJob.raw.jobId)] = canonicalPropId;
+      saveJobCustomIdMap();
     }
 
     // Move closeTargetJob from openJobs to closedJobs
@@ -2108,6 +2295,17 @@
       var eClosedBy = $('#eClosedBy');
       editTargetJob.closedBy = (eClosedBy && eClosedBy.value.trim()) || (currentUser && currentUser.name) || 'User';
       if (!editTargetJob.closedAt) editTargetJob.closedAt = new Date().toISOString();
+      if (editTargetJob.propId) {
+        var parsed = parseFormattedPropId(editTargetJob.propId);
+        var canonicalPropId = parsed
+          ? (getActivePropertyName() + '-' + parsed.dateCode + '-' + pad3(parsed.serial))
+          : editTargetJob.propId;
+        editTargetJob.propId = canonicalPropId;
+        editTargetJob.customJobId = canonicalPropId;
+        if (editTargetJob.id != null) globalJobCustomIdMap[String(editTargetJob.id)] = canonicalPropId;
+        if (editTargetJob.jobId != null) globalJobCustomIdMap[String(editTargetJob.jobId)] = canonicalPropId;
+        saveJobCustomIdMap();
+      }
       if (oldStatus !== 'Closed') {
         var opIdx = openJobs.findIndex(function (j) { return j.id === editTargetJob.id || String(j.jobId) === String(editTargetJob.jobId); });
         if (opIdx !== -1) {
@@ -2253,7 +2451,7 @@
 
   /* ================= Modals Management ================= */
   function closeModals() {
-    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#loginModal', '#noPhotoConfirmModal', '#viewModal'];
+    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#loginModal', '#noPhotoConfirmModal', '#noPhotoModal', '#viewModal'];
     modals.forEach(function (m) {
       var el = $(m);
       if (el) el.hidden = true;
@@ -2319,6 +2517,7 @@
         var propName = opt.dataset.name;
 
         currentPropertyId = propId;
+        loadJobCustomIdMap();
         var sv = $('#pdSelectedValue');
         if (sv) {
           sv.textContent = propName;
@@ -2900,6 +3099,10 @@
 
   /* Modal outside click */
   document.addEventListener('click', function (e) {
+    if (e.target.id === 'noPhotoModal') {
+      closeNoPhotoConfirmModal();
+      return;
+    }
     if (e.target.closest('[data-close]') || (e.target.classList.contains('modal') && e.target.id !== 'viewModal')) {
       closeModals();
     }
@@ -3246,6 +3449,13 @@
       });
     }
 
+    var btnXNoPhoto = $('#btnXNoPhoto');
+    if (btnXNoPhoto) {
+      btnXNoPhoto.addEventListener('click', function () {
+        closeNoPhotoConfirmModal();
+      });
+    }
+
     var fDept = $('#fDept');
     if (fDept) {
       fDept.addEventListener('change', handleDeptSelectionChange);
@@ -3571,6 +3781,7 @@
         }
 
         currentPropertyId = targetProp.propId;
+        loadJobCustomIdMap();
         var sv = $('#pdSelectedValue');
         if (sv) sv.textContent = targetProp.propName;
 
@@ -3593,6 +3804,7 @@
     var fallbackPropId = (currentUser && currentUser.prop) || 'Testing';
     allProperties = [{ propId: fallbackPropId, propName: 'Testing' }];
     currentPropertyId = fallbackPropId;
+    loadJobCustomIdMap();
     renderPropertySelector(allProperties);
     setTab('open');
   }

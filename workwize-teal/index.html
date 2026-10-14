@@ -500,12 +500,12 @@
           </svg>
           No Image Attached
         </h3>
-        <button type="button" class="x" data-close>&times;</button>
+        <button type="button" class="x" id="btnXNoPhoto">&times;</button>
       </div>
-      <p style="font-size:14px;color:var(--ink);margin:0 0 8px;font-weight:600;">Do you want to continue without job image?</p>
-      <p style="font-size:12.5px;color:var(--muted);margin:0 0 18px;">You have not attached any photo or video for this job.</p>
+      <p style="font-size:14px;color:var(--ink);margin:0 0 8px;font-weight:600;" id="noPhotoPrompt">Do you want to continue without job image?</p>
+      <p style="font-size:12.5px;color:var(--muted);margin:0 0 18px;" id="noPhotoDesc">You have not attached any photo or video for this job.</p>
       <div class="btns">
-        <button type="button" class="btn s" data-close id="btnCancelNoPhoto">Cancel / Add Photo</button>
+        <button type="button" class="btn s" id="btnCancelNoPhoto">Cancel / Add Photo</button>
         <button type="button" class="btn p" id="btnConfirmNoPhoto">Continue &amp; Save</button>
       </div>
     </div>
