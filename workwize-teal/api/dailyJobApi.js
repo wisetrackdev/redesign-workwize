@@ -233,14 +233,26 @@
         var role = payload ? payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] : ['STAFF'];
         if (!Array.isArray(role)) role = [role];
 
+        var fullName = '';
+        if (payload) {
+          if (payload.FirstName) {
+            fullName = (payload.FirstName + (payload.LastName ? (' ' + payload.LastName) : '')).trim();
+          } else if (payload.name) {
+            fullName = payload.name;
+          } else if (payload.unique_name) {
+            fullName = payload.unique_name;
+          }
+        }
+        if (!fullName) fullName = email.split('@')[0];
+
         var updatedUserData = {
           username: email,
           jwt: jwt,
-          name: payload ? (payload.unique_name || payload.name || email.split('@')[0]) : email,
-          email: email,
+          name: fullName,
+          email: (payload && (payload.Email || payload.email)) || email,
           role: role,
-          prop: payload ? payload.PrimaryProp : null,
-          desg: payload ? payload.Designation : 'Staff',
+          prop: payload ? (payload.PrimaryProp || payload.prop) : null,
+          desg: payload ? (payload.Designation || payload.desg) : 'Staff',
           access: payload && payload.Access ? (typeof payload.Access === 'string' ? JSON.parse(payload.Access) : payload.Access) : {}
         };
 
