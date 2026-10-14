@@ -1888,6 +1888,76 @@
     }
   }
 
+  function isUserDepartment(deptName) {
+    if (isSuperAdmin()) return false;
+    if (!deptName || deptName === 'Issued To Dept.' || deptName.toLowerCase() === 'department') return false;
+
+    var selectedTeam = getEditTeam(deptName);
+    var issuedTo = selectedTeam ? selectedTeam.teamId : null;
+    var issuedBy = userCurrentTeamId;
+
+    if (issuedTo && issuedBy && issuedTo === issuedBy) {
+      return true;
+    }
+
+    var myTeam = cachedTeams ? cachedTeams.find(function (t) { return t.teamId === userCurrentTeamId; }) : null;
+    var myTeamName = myTeam ? (myTeam.teamName || myTeam.name || '') : '';
+    var userDesg = (currentUser && currentUser.desg) || '';
+
+    var cleanSelected = String(deptName).trim().toLowerCase();
+    if (myTeamName && cleanSelected === myTeamName.trim().toLowerCase()) return true;
+    if (userDesg && cleanSelected === userDesg.trim().toLowerCase()) return true;
+
+    if (selectedTeam) {
+      var selName = (selectedTeam.teamName || selectedTeam.name || '').trim().toLowerCase();
+      if (myTeamName && selName === myTeamName.trim().toLowerCase()) return true;
+      if (userDesg && selName === userDesg.trim().toLowerCase()) return true;
+    }
+
+    return false;
+  }
+
+  function handleEditDeptChange(deptVal, initialSubDept, initialAssigned) {
+    var subWrap = $('#eSubDeptWrap');
+    var assignWrap = $('#eAssignedWrap');
+    var statusWrap = $('#eStatusWrap');
+    var closedByWrap = $('#eClosedByWrap');
+
+    var canAssignOrChangeStatus = isUserDepartment(deptVal);
+
+    if (canAssignOrChangeStatus) {
+      if (subWrap) subWrap.hidden = false;
+      if (assignWrap) assignWrap.hidden = false;
+      if (statusWrap) statusWrap.hidden = false;
+
+      var curSub = initialSubDept;
+      if (curSub === undefined) {
+        var eSubDept = $('#eSubDept');
+        curSub = eSubDept ? eSubDept.value : '';
+      }
+      populateEditSubTeams(deptVal, curSub);
+
+      var effSubDept = ($('#eSubDept') && $('#eSubDept').value) ? $('#eSubDept').value : (curSub || '');
+
+      var curAssigned = initialAssigned;
+      if (curAssigned === undefined) {
+        var eAssigned = $('#eAssigned');
+        curAssigned = eAssigned ? eAssigned.value : '';
+      }
+      populateEditMembers(deptVal, effSubDept, curAssigned);
+
+      var eStatus = $('#eStatus');
+      if (closedByWrap) {
+        closedByWrap.hidden = (!eStatus || eStatus.value !== 'Closed');
+      }
+    } else {
+      if (subWrap) subWrap.hidden = true;
+      if (assignWrap) assignWrap.hidden = true;
+      if (statusWrap) statusWrap.hidden = true;
+      if (closedByWrap) closedByWrap.hidden = true;
+    }
+  }
+
   function openEdit(job) {
     closeView();
     if (job && job.id) highlightJob(job.id);
@@ -1931,25 +2001,14 @@
 
     $('#eSub').value = job.sub || '';
 
-    var currentSubDept = (job.assignDept && job.assignDept !== 'NA') ? job.assignDept : '';
-    populateEditSubTeams(job.dept, currentSubDept);
-    var eSubDept = $('#eSubDept');
-    var effectiveSubDept = (eSubDept && eSubDept.value) ? eSubDept.value : currentSubDept;
-
-    var currentAssigned = (job.assigned && job.assigned !== 'NA' && job.assigned !== 'Not assigned') ? job.assigned : '';
-    populateEditMembers(job.dept, effectiveSubDept, currentAssigned);
-
     $('#eStatus').value = job.status || 'Open';
-
-    var eClosedByWrap = $('#eClosedByWrap');
     var eClosedBy = $('#eClosedBy');
-    if (job.status === 'Closed') {
-      if (eClosedByWrap) eClosedByWrap.hidden = false;
-      if (eClosedBy) eClosedBy.value = job.closedBy || (currentUser && currentUser.name) || '';
-    } else {
-      if (eClosedByWrap) eClosedByWrap.hidden = true;
-      if (eClosedBy) eClosedBy.value = '';
-    }
+    if (eClosedBy) eClosedBy.value = (job.status === 'Closed') ? (job.closedBy || (currentUser && currentUser.name) || '') : '';
+
+    var currentSubDept = (job.assignDept && job.assignDept !== 'NA') ? job.assignDept : '';
+    var currentAssigned = (job.assigned && job.assigned !== 'NA' && job.assigned !== 'Not assigned') ? job.assigned : '';
+
+    handleEditDeptChange(eDept ? eDept.value : job.dept, currentSubDept, currentAssigned);
 
     $('#eRemarks').value = (job.remarks && job.remarks !== 'NA') ? job.remarks : '';
 
@@ -1982,47 +2041,70 @@
       return;
     }
 
-    var dept = $('#eDept').value;
-    var area = $('#eArea').value;
-    var sub = $('#eSub').value.trim();
-    var subDept = $('#eSubDept').value;
-    var assigned = $('#eAssigned').value.trim();
-    var status = $('#eStatus').value;
-    var remarks = $('#eRemarks').value.trim();
+    var dept = $('#eDept') ? $('#eDept').value : '';
+    var area = $('#eArea') ? $('#eArea').value : '';
+    var sub = $('#eSub') ? $('#eSub').value.trim() : '';
+    var remarks = $('#eRemarks') ? $('#eRemarks').value.trim() : '';
 
-    if (status !== 'Closed') {
-      if (assigned && status === 'Open') {
-        status = 'Assigned';
-      } else if (!assigned && status === 'Assigned') {
-        status = 'Open';
-      }
-    }
+    var canAssignOrChangeStatus = isUserDepartment(dept);
 
+    var oldDept = editTargetJob.dept;
     editTargetJob.details = details;
     if (dept) editTargetJob.dept = dept;
     if (area) editTargetJob.area = area;
     editTargetJob.sub = sub;
-    editTargetJob.assignDept = subDept || 'NA';
-    editTargetJob.assigned = assigned || '';
+    editTargetJob.remarks = remarks;
 
-    var tObj = getEditTeam(dept);
-    if (tObj && tObj.teamId) {
-      editTargetJob.issued_to_team = tObj.teamId;
-      var stObj = getEditSubTeam(tObj, subDept);
-      if (stObj && stObj.subteamId) {
-        editTargetJob.subteamId = stObj.subteamId;
+    var oldStatus = editTargetJob.status;
+    var newStatus = oldStatus;
+
+    if (canAssignOrChangeStatus) {
+      var subDept = $('#eSubDept') ? $('#eSubDept').value : '';
+      var assigned = $('#eAssigned') ? $('#eAssigned').value.trim() : '';
+      var status = $('#eStatus') ? $('#eStatus').value : (oldStatus || 'Open');
+
+      if (status !== 'Closed') {
+        if (assigned && status === 'Open') {
+          status = 'Assigned';
+        } else if (!assigned && status === 'Assigned') {
+          status = 'Open';
+        }
+      }
+
+      newStatus = status;
+      editTargetJob.assignDept = subDept || 'NA';
+      editTargetJob.assigned = assigned || '';
+
+      var tObj = getEditTeam(dept);
+      if (tObj && tObj.teamId) {
+        editTargetJob.issued_to_team = tObj.teamId;
+        var stObj = getEditSubTeam(tObj, subDept);
+        if (stObj && stObj.subteamId) {
+          editTargetJob.subteamId = stObj.subteamId;
+        } else {
+          editTargetJob.subteamId = null;
+        }
+      }
+    } else {
+      var tObjOther = getEditTeam(dept);
+      if (tObjOther && tObjOther.teamId) {
+        editTargetJob.issued_to_team = tObjOther.teamId;
+      }
+      if (dept && oldDept && dept !== oldDept) {
+        editTargetJob.assignDept = 'NA';
+        editTargetJob.assigned = '';
+        editTargetJob.subteamId = null;
+        newStatus = 'Open';
       }
     }
 
-    var oldStatus = editTargetJob.status;
-    editTargetJob.status = status;
-    editTargetJob.remarks = remarks;
+    editTargetJob.status = newStatus;
 
     if (editPhotoBeforeData !== undefined) {
       editTargetJob.photoBefore = editPhotoBeforeData;
     }
 
-    if (status === 'Closed') {
+    if (newStatus === 'Closed') {
       var eClosedBy = $('#eClosedBy');
       editTargetJob.closedBy = (eClosedBy && eClosedBy.value.trim()) || (currentUser && currentUser.name) || 'User';
       if (!editTargetJob.closedAt) editTargetJob.closedAt = new Date().toISOString();
@@ -2037,7 +2119,7 @@
           var cb = $('#closedBadge'); if (cb) cb.textContent = closedJobs.length;
         }
       }
-    } else if (oldStatus === 'Closed' && status !== 'Closed') {
+    } else if (oldStatus === 'Closed' && newStatus !== 'Closed') {
       var clIdx = closedJobs.findIndex(function (j) { return j.id === editTargetJob.id || String(j.jobId) === String(editTargetJob.jobId); });
       if (clIdx !== -1) {
         closedJobs.splice(clIdx, 1);
@@ -3255,8 +3337,7 @@
     var eDept = $('#eDept');
     if (eDept) {
       eDept.addEventListener('change', function () {
-        populateEditSubTeams(this.value);
-        populateEditMembers(this.value, $('#eSubDept') ? $('#eSubDept').value : '');
+        handleEditDeptChange(this.value);
       });
     }
     var eSubDept = $('#eSubDept');
