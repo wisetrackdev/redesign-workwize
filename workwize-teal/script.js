@@ -63,29 +63,95 @@
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
 
-  function fmt(iso) {
-    if (!iso || iso === 'NA' || iso === 'na') return 'NA';
-    var d = new Date(iso);
-    if (isNaN(d.getTime())) {
-      var m = String(iso).match(/(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s*(\d{1,2}):(\d{1,2})/);
-      if (m) {
-        return pad(parseInt(m[1], 10)) + '/' + pad(parseInt(m[2], 10)) + '/' + m[3] + ', ' + pad(parseInt(m[4], 10)) + ':' + pad(parseInt(m[5], 10));
-      }
-      return String(iso);
+  /* ================= Maldives Time (MVT: UTC+5) Helpers =================
+   * Standard Time in Maldives is UTC+05:00 (no DST).
+   * India Standard Time (IST) is UTC+05:30.
+   * Maldives Time is always exactly 30 minutes behind India Time (IST - 30 minutes).
+   * Backend server (api.workwize.in) stores and returns timestamps in UTC (e.g. '2026-10-14T04:44:15').
+   * All Open & Closed times, regardless of where the form is filled or client timezone,
+   * are displayed according to Maldives Time.
+   */
+  function toMaldivesDate(val) {
+    if (!val || val === 'NA' || val === 'na') return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    var s = String(val).trim();
+    if (!s || s.startsWith('0001-01-01') || s.startsWith('0001')) return null;
+
+    // ISO string with timezone indicator (e.g., 'Z', '+05:30', '-04:00')
+    if (/Z|[+-]\d{2}(:?\d{2})?$/i.test(s)) {
+      var dZ = new Date(s);
+      return isNaN(dZ.getTime()) ? null : dZ;
     }
-    return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ', ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+
+    // Unzoned ISO format: 'YYYY-MM-DDTHH:mm:ss' or 'YYYY-MM-DD HH:mm:ss'
+    // Stored and returned by backend server (api.workwize.in) in UTC
+    var isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (isoMatch) {
+      var sec = isoMatch[6] || '00';
+      var utcIso = isoMatch[1] + '-' + isoMatch[2] + '-' + isoMatch[3] + 'T' + isoMatch[4] + ':' + isoMatch[5] + ':' + sec + 'Z';
+      var dIso = new Date(utcIso);
+      if (!isNaN(dIso.getTime())) return dIso;
+    }
+
+    // DD/MM/YYYY or DD-MM-YYYY HH:mm(:ss)
+    var dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,?\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+    if (dmyMatch) {
+      var y = dmyMatch[3];
+      var m = pad(parseInt(dmyMatch[2], 10));
+      var dd = pad(parseInt(dmyMatch[1], 10));
+      var hr = pad(parseInt(dmyMatch[4] || 0, 10));
+      var min = pad(parseInt(dmyMatch[5] || 0, 10));
+      var sc = pad(parseInt(dmyMatch[6] || 0, 10));
+      var utcDmy = y + '-' + m + '-' + dd + 'T' + hr + ':' + min + ':' + sc + 'Z';
+      var dDmy = new Date(utcDmy);
+      if (!isNaN(dDmy.getTime())) return dDmy;
+    }
+
+    var fb = new Date(s);
+    return isNaN(fb.getTime()) ? null : fb;
+  }
+
+  function toMaldivesParts(val) {
+    var d = toMaldivesDate(val);
+    if (!d) return null;
+    // Shift by UTC+5 hours (300 minutes) to read exact Maldives time components via UTC methods
+    var mvt = new Date(d.getTime() + (5 * 60 * 60 * 1000));
+    var dd = pad(mvt.getUTCDate());
+    var mm = pad(mvt.getUTCMonth() + 1);
+    var yyyy = mvt.getUTCFullYear();
+    var yy = String(yyyy).slice(-2);
+    var hh = pad(mvt.getUTCHours());
+    var min = pad(mvt.getUTCMinutes());
+    var ss = pad(mvt.getUTCSeconds());
+    return {
+      d: mvt,
+      day: dd,
+      month: mm,
+      year: yyyy,
+      dd: dd,
+      mm: mm,
+      yy: yy,
+      yyyy: yyyy,
+      hours: hh,
+      minutes: min,
+      seconds: ss,
+      time: hh + ':' + min,
+      date: dd + '/' + mm + '/' + yyyy,
+      ymd: yyyy + '-' + mm + '-' + dd,
+      full: dd + '/' + mm + '/' + yyyy + ', ' + hh + ':' + min
+    };
+  }
+
+  function fmt(iso) {
+    if (!iso || iso === 'NA' || iso === 'na' || String(iso).startsWith('0001')) return 'NA';
+    var parts = toMaldivesParts(iso);
+    if (parts) return parts.full;
+    return String(iso);
   }
 
   function parseJobDate(val) {
     if (!val || val === 'NA' || val === 'na') return null;
-    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
-    var d = new Date(val);
-    if (!isNaN(d.getTime())) return d;
-    var m = String(val).match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (m) {
-      return new Date(parseInt(m[3], 10), parseInt(m[2], 10) - 1, parseInt(m[1], 10));
-    }
-    return null;
+    return toMaldivesDate(val);
   }
 
   function pad3(n) {
@@ -94,12 +160,9 @@
   }
 
   function getJobDateCode(val) {
-    var d = parseJobDate(val);
-    if (!d) d = new Date();
-    var dd = pad(d.getDate());
-    var mm = pad(d.getMonth() + 1);
-    var yy = String(d.getFullYear()).slice(-2);
-    return dd + mm + yy;
+    var parts = toMaldivesParts(val || new Date());
+    if (!parts) parts = toMaldivesParts(new Date());
+    return parts.dd + parts.mm + parts.yy;
   }
 
   function getActivePropertySlug() {
@@ -126,7 +189,7 @@
   }
 
   function span(a, b) {
-    var da = new Date(a), db = new Date(b);
+    var da = toMaldivesDate(a) || new Date(a), db = toMaldivesDate(b) || new Date(b);
     if (isNaN(da.getTime()) || isNaN(db.getTime())) return 'Recently';
     var m = Math.max(0, Math.round((db - da) / 60000));
     if (m < 60) return m + ' min';
@@ -390,21 +453,21 @@
 
       var matchDate = true;
       if (state.fromDate || state.toDate) {
-        var fromD = state.fromDate ? new Date(state.fromDate + 'T00:00:00') : null;
-        var toD = state.toDate ? new Date(state.toDate + 'T23:59:59.999') : null;
-        var opD = parseJobDate(j.opened);
-        var clD = j.closedAt ? parseJobDate(j.closedAt) : null;
+        var opParts = toMaldivesParts(j.opened);
+        var clParts = j.closedAt ? toMaldivesParts(j.closedAt) : null;
+        var opYmd = opParts ? opParts.ymd : '';
+        var clYmd = clParts ? clParts.ymd : '';
 
         if (tab === 'closed') {
-          var opMatch = !!(opD && (!fromD || opD >= fromD) && (!toD || opD <= toD));
-          var clMatch = !!(clD && (!fromD || clD >= fromD) && (!toD || clD <= toD));
+          var opMatch = !!(opYmd && (!state.fromDate || opYmd >= state.fromDate) && (!state.toDate || opYmd <= state.toDate));
+          var clMatch = !!(clYmd && (!state.fromDate || clYmd >= state.fromDate) && (!state.toDate || clYmd <= state.toDate));
           matchDate = opMatch || clMatch;
         } else {
-          if (!opD) {
+          if (!opYmd) {
             matchDate = false;
           } else {
-            if (fromD && opD < fromD) matchDate = false;
-            if (toD && opD > toD) matchDate = false;
+            if (state.fromDate && opYmd < state.fromDate) matchDate = false;
+            if (state.toDate && opYmd > state.toDate) matchDate = false;
           }
         }
       }
