@@ -1890,7 +1890,7 @@
       closedJobs.unshift(closeTargetJob);
       pagination.closed.total = (pagination.closed.total || 0) + 1;
       var ob = $('#openBadge'); if (ob) ob.textContent = openJobs.length;
-      var cb = $('#closedBadge'); if (cb) cb.textContent = closedJobs.length;
+      var cb = $('#closedBadge'); if (cb && cb.textContent) cb.textContent = closedJobs.length;
     }
 
     // Immediately close modal and update UI
@@ -2329,7 +2329,7 @@
           closedJobs.unshift(editTargetJob);
           pagination.closed.total = (pagination.closed.total || 0) + 1;
           var ob = $('#openBadge'); if (ob) ob.textContent = openJobs.length;
-          var cb = $('#closedBadge'); if (cb) cb.textContent = closedJobs.length;
+          var cb = $('#closedBadge'); if (cb && cb.textContent) cb.textContent = closedJobs.length;
         }
       }
     } else if (oldStatus === 'Closed' && newStatus !== 'Closed') {
@@ -2340,7 +2340,7 @@
         openJobs.unshift(editTargetJob);
         pagination.open.total = (pagination.open.total || 0) + 1;
         var ob2 = $('#openBadge'); if (ob2) ob2.textContent = openJobs.length;
-        var cb2 = $('#closedBadge'); if (cb2) cb2.textContent = closedJobs.length;
+        var cb2 = $('#closedBadge'); if (cb2 && cb2.textContent) cb2.textContent = closedJobs.length;
       }
     }
 
@@ -2555,14 +2555,18 @@
 
         // Fetch fresh jobs and data from API for the newly selected property
         if (state.tab === 'open') {
+          var cb = $('#closedBadge');
+          if (cb) cb.textContent = '';
+          closedJobs = [];
           await fetchOpenJobs();
-          fetchClosedJobs().catch(function () {});
         } else if (state.tab === 'closed') {
           await fetchClosedJobs();
           fetchOpenJobs().catch(function () {});
         } else if (state.tab === 'new') {
+          var cb2 = $('#closedBadge');
+          if (cb2) cb2.textContent = '';
+          closedJobs = [];
           await fetchOpenJobs();
-          fetchClosedJobs().catch(function () {});
           initNewJobForm();
         }
       });
