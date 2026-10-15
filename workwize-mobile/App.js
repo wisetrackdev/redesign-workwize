@@ -251,22 +251,6 @@ export default function App() {
     fetchJobs(currentPropertyId);
   };
 
-  const handleGuestLogin = () => {
-    const guestUser = {
-      name: 'Testing',
-      email: 'hk_mgr@workwize.in',
-      desg: 'Head-House Keeping',
-      prop: currentPropertyId || 'Testing',
-      role: ['MANAGER'],
-      primaryTeam: 'Testing-House Keeping',
-      dept: 'Testing-House Keeping',
-      access: { QuickFix: 'Full', DailyJobs: 'Full' },
-    };
-    setCurrentUser(guestUser);
-    setIsLoggedIn(true);
-    fetchJobs(currentPropertyId);
-  };
-
   const handleLogout = async () => {
     await clearStoredUserData();
     setCurrentUser(null);
@@ -542,15 +526,11 @@ export default function App() {
     setJobs((prev) => prev.filter((j) => String(j.id) !== String(job.id)));
   };
 
-  // If user is not logged in, show the WorkWize Login Screen
   if (!isLoggedIn) {
     return (
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" backgroundColor="#EBF1FD" />
-        <LoginScreen
-          onLoginSuccess={handleLoginSuccess}
-          onGuestLogin={handleGuestLogin}
-        />
+        <LoginScreen onLoginSuccess={handleLoginSuccess} />
       </SafeAreaView>
     );
   }

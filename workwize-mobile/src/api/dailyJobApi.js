@@ -265,7 +265,7 @@ async function apiFetch(endpoint, options = {}) {
   const url = endpoint.startsWith('http') ? endpoint : BASE_URL + endpoint;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  const timeoutId = setTimeout(() => controller.abort(), 25000);
   options.signal = controller.signal;
 
   try {
@@ -298,6 +298,12 @@ async function apiFetch(endpoint, options = {}) {
     }
   } catch (err) {
     clearTimeout(timeoutId);
+    if (err.name === 'AbortError') {
+      throw new Error('Server connection timed out. Please check your internet connection.');
+    }
+    if (err.message && err.message.toLowerCase().includes('network request failed')) {
+      throw new Error('Network error. Unable to connect to https://api.workwize.in/.');
+    }
     throw err;
   }
 }

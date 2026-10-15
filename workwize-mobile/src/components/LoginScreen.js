@@ -15,36 +15,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 
-export default function LoginScreen({ onLoginSuccess, onGuestLogin }) {
-  const [username, setUsername] = useState('it@workwize.in');
-  const [password, setPassword] = useState('password123');
+export default function LoginScreen({ onLoginSuccess }) {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-
-  const demoAccounts = [
-    {
-      name: 'IT (App admin)',
-      user: 'it@workwize.in',
-      pwd: 'password123',
-    },
-    {
-      name: 'HK Manager',
-      user: 'hk_mgr@workwize.in',
-      pwd: 'password123',
-    },
-    {
-      name: 'Security Officer',
-      user: 'sec_officer@workwize.in',
-      pwd: 'password123',
-    },
-  ];
-
-  const handleFillDemo = (acc) => {
-    setUsername(acc.user);
-    setPassword(acc.pwd);
-    setErrorMsg('');
-  };
 
   const handleSignIn = async () => {
     if (!username.trim() || !password.trim()) {
@@ -171,47 +147,6 @@ export default function LoginScreen({ onLoginSuccess, onGuestLogin }) {
                 )}
               </TouchableOpacity>
             </View>
-
-            {/* Quick Demo Accounts (Exact match to login.html .demo-accounts) */}
-            <View style={styles.demoSection}>
-              <View style={styles.demoTitleRow}>
-                <Feather name="users" size={14} color={Colors.muted} />
-                <Text style={styles.demoTitle}>QUICK DEMO ACCOUNTS (CLICK TO FILL):</Text>
-              </View>
-
-              <View style={styles.demoChips}>
-                {demoAccounts.map((acc) => (
-                  <TouchableOpacity
-                    key={acc.user}
-                    style={[
-                      styles.demoChip,
-                      username === acc.user && styles.demoChipActive,
-                    ]}
-                    onPress={() => handleFillDemo(acc)}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.demoChipText,
-                        username === acc.user && styles.demoChipTextActive,
-                      ]}
-                    >
-                      {acc.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Direct Guest / Offline Access Button */}
-            <TouchableOpacity
-              style={styles.guestAccessBtn}
-              onPress={onGuestLogin}
-              activeOpacity={0.8}
-            >
-              <Feather name="zap" size={14} color={Colors.primary} />
-              <Text style={styles.guestAccessText}>Enter Dashboard as Demo / Guest</Text>
-            </TouchableOpacity>
           </View>
 
           {/* Footer Info */}
@@ -343,66 +278,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.3,
-  },
-  demoSection: {
-    marginTop: 18,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: Colors.line,
-  },
-  demoTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
-  },
-  demoTitle: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: Colors.muted,
-    letterSpacing: 0.5,
-  },
-  demoChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  demoChip: {
-    backgroundColor: '#F0F4FD',
-    borderWidth: 1,
-    borderColor: '#D9E3F8',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-  demoChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  demoChipText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: Colors.primary,
-  },
-  demoChipTextActive: {
-    color: '#FFFFFF',
-  },
-  guestAccessBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 14,
-    paddingVertical: 11,
-    borderRadius: 8,
-    backgroundColor: '#E8ECF8',
-    borderWidth: 1,
-    borderColor: '#D5DCEE',
-  },
-  guestAccessText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: Colors.primary,
   },
   footer: {
     alignItems: 'center',

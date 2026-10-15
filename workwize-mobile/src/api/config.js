@@ -7,6 +7,29 @@ export const API_CONFIG = {
   APP_CODE: 'quickfix',
 };
 
+const b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+
+function decodeBase64(input) {
+  if (typeof atob === 'function') {
+    try {
+      return atob(input);
+    } catch (e) {}
+  }
+  let str = String(input).replace(/=+$/, '');
+  let output = '';
+  if (str.length % 4 === 1) return '';
+  for (
+    let bc = 0, bs, buffer, idx = 0;
+    (buffer = str.charAt(idx++));
+    ~buffer && ((bs = bc % 4 ? bs * 64 + buffer : buffer), bc++ % 4)
+      ? (output += String.fromCharCode(255 & (bs >> ((-2 * bc) & 6))))
+      : 0
+  ) {
+    buffer = b64chars.indexOf(buffer);
+  }
+  return output;
+}
+
 /**
  * Decode JWT token without external libraries
  */
@@ -15,10 +38,15 @@ export function decodeJwtPayload(token) {
   try {
     const parts = token.split('.');
     if (parts.length < 2) return null;
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    let base64Url = parts[1];
+    let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    const decoded = decodeBase64(base64);
+    if (!decoded) return null;
     const jsonPayload = decodeURIComponent(
-      atob(base64)
+      decoded
         .split('')
         .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
         .join('')
