@@ -396,6 +396,44 @@ async function apiFetch(endpoint, options = {}) {
   }
 }
 
+/**
+ * Safely append image file to FormData across modern Expo (WinterCG) and React Native fetch
+ */
+async function appendImageToFormData(form, fieldName, photoUri, defaultName = 'job_photo.jpg') {
+  if (!photoUri) return;
+  const filename = photoUri.split('/').pop() || defaultName;
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+  // 1. Try modern expo-file-system File class (Blob compatible with modern Expo WinterCG fetch)
+  try {
+    const FileSystem = require('expo-file-system');
+    if (FileSystem && FileSystem.File) {
+      form.append(fieldName, new FileSystem.File(photoUri));
+      return;
+    }
+  } catch (e) {}
+
+  // 2. Try fetching as Blob
+  try {
+    const res = await fetch(photoUri);
+    if (res && typeof res.blob === 'function') {
+      const blob = await res.blob();
+      if (blob) {
+        form.append(fieldName, blob, filename);
+        return;
+      }
+    }
+  } catch (e) {}
+
+  // 3. Fallback to legacy React Native object format
+  form.append(fieldName, {
+    uri: photoUri,
+    name: filename,
+    type,
+  });
+}
+
 export const DailyJobApi = {
   /**
    * Get all properties
@@ -561,44 +599,6 @@ export const DailyJobApi = {
       isLive: false,
     };
   },
-
-/**
- * Safely append image file to FormData across modern Expo (WinterCG) and React Native fetch
- */
-async function appendImageToFormData(form, fieldName, photoUri, defaultName = 'job_photo.jpg') {
-  if (!photoUri) return;
-  const filename = photoUri.split('/').pop() || defaultName;
-  const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : `image/jpeg`;
-
-  // 1. Try modern expo-file-system File class (Blob compatible with modern Expo WinterCG fetch)
-  try {
-    const FileSystem = require('expo-file-system');
-    if (FileSystem && FileSystem.File) {
-      form.append(fieldName, new FileSystem.File(photoUri));
-      return;
-    }
-  } catch (e) {}
-
-  // 2. Try fetching as Blob
-  try {
-    const res = await fetch(photoUri);
-    if (res && typeof res.blob === 'function') {
-      const blob = await res.blob();
-      if (blob) {
-        form.append(fieldName, blob, filename);
-        return;
-      }
-    }
-  } catch (e) {}
-
-  // 3. Fallback to legacy React Native object format
-  form.append(fieldName, {
-    uri: photoUri,
-    name: filename,
-    type,
-  });
-}
 
   /**
    * Add New Job
