@@ -256,8 +256,8 @@ async function apiFetch(endpoint, options = {}) {
   const headers = options.headers || {};
   const jwt = await getStoredJwt();
 
-  // Only attach JWT if it's a real token, not empty or guest demo token
-  if (jwt && !jwt.startsWith('demo-') && !headers['Authorization']) {
+  // Only attach JWT if it's a real token, not empty or guest demo token, and not calling login
+  if (jwt && !jwt.startsWith('demo-') && !headers['Authorization'] && !endpoint.includes('login')) {
     headers['Authorization'] = 'Bearer ' + jwt;
   }
   options.headers = headers;
@@ -575,15 +575,23 @@ export const DailyJobApi = {
    * Matches quickfix login.html / app_quickfix.js: POST /api/login
    */
   login: async function (email, password, app = 'quickfix') {
-    const res = await apiFetch('api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        Email: email,
-        Password: password,
-        App: app,
-      }),
-    });
+    let res;
+    try {
+      res = await apiFetch('api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          Email: email.trim(),
+          Password: password.trim(),
+          App: app,
+        }),
+      });
+    } catch (err) {
+      if (err.message === 'UNAUTHORIZED' || String(err.message).includes('401')) {
+        throw new Error('Invalid email/username or password. Please try again.');
+      }
+      throw err;
+    }
 
     if (res && res.token) {
       const jwt = res.token;
@@ -604,10 +612,10 @@ export const DailyJobApi = {
       if (!fullName) fullName = email.split('@')[0];
 
       const updatedUserData = {
-        username: email,
+        username: email.trim(),
         jwt: jwt,
         name: fullName,
-        email: (payload && (payload.Email || payload.email)) || email,
+        email: (payload && (payload.Email || payload.email)) || email.trim(),
         role: role,
         prop: payload ? (payload.PrimaryProp || payload.prop) : null,
         desg: payload ? (payload.Designation || payload.desg) : 'Staff',
@@ -618,7 +626,7 @@ export const DailyJobApi = {
       return updatedUserData;
     }
 
-    throw new Error('Invalid email or password.');
+    throw new Error('Invalid email/username or password. Please try again.');
   },
 
   /**

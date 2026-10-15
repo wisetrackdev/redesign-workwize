@@ -7,12 +7,12 @@ import {
   TouchableOpacity,
   FlatList,
   RefreshControl,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   StatusBar,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from './src/theme/colors';
 import Header from './src/components/Header';
@@ -96,19 +96,14 @@ export default function App() {
   // Check stored user & load properties on startup
   useEffect(() => {
     (async () => {
-      let storedUser = null;
       try {
-        storedUser = await getStoredUserData();
-        if (storedUser && storedUser.jwt) {
-          setCurrentUser(storedUser);
-          setIsLoggedIn(true);
-
+        const storedUser = await getStoredUserData();
+        if (storedUser && storedUser.jwt && !storedUser.jwt.startsWith('demo-')) {
           try {
             const props = await DailyJobApi.getAllProperties();
             if (Array.isArray(props) && props.length > 0) {
               setAllProperties(props);
 
-              // If regular user, default to their assigned property (currentUser.prop)
               const targetPropId =
                 storedUser?.prop && props.some((p) => String(p.propId) === String(storedUser.prop))
                   ? storedUser.prop
@@ -116,13 +111,22 @@ export default function App() {
 
               setCurrentPropertyId(targetPropId);
             }
+            setCurrentUser(storedUser);
+            setIsLoggedIn(true);
           } catch (err) {
-            if (err.message === 'UNAUTHORIZED' || String(err.message).includes('401')) {
-              await handleLogout();
-            }
+            console.log('Stored session expired or unauthorized. Showing Login screen.');
+            await clearStoredUserData();
+            setCurrentUser(null);
+            setIsLoggedIn(false);
           }
+        } else {
+          await clearStoredUserData();
+          setCurrentUser(null);
+          setIsLoggedIn(false);
         }
-      } catch (e) {}
+      } catch (e) {
+        setIsLoggedIn(false);
+      }
     })();
   }, []);
 
@@ -212,12 +216,12 @@ export default function App() {
     [currentPropertyId, currentPropertyName]
   );
 
-  // Load jobs when property changes or on initial mount
+  // Load jobs when user is logged in and property changes
   useEffect(() => {
-    if (currentPropertyId) {
+    if (isLoggedIn && currentPropertyId) {
       fetchJobs(currentPropertyId);
     }
-  }, [currentPropertyId]);
+  }, [isLoggedIn, currentPropertyId]);
 
   // Login Handlers
   const handleLoginSuccess = async (username, password) => {
