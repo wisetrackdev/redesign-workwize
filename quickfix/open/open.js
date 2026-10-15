@@ -80,7 +80,7 @@ function PopulateOpenJobCards() {
             (assigned_supervisor === userEmail) {
             tt = ` <a href="#" onclick="ChangeJobStatus('${currentstatus}', '${jobId}','${propId}','${areaId}','${assigned_supervisor}')">${currentstatus}</a>`
         }
-        else if (UserRoles.includes('ADMIN')) {
+        else if (UserRoles.includes('ADMIN') || UserRoles.includes('SUPERADMIN') || UserRoles.includes('OPROADMIN')) {
             tt = ` <a href="#" onclick="ChangeJobStatus('${currentstatus}', '${jobId}','${propId}','${areaId}','${assigned_supervisor}')">${currentstatus}</a>`
         }
         else {
@@ -307,7 +307,7 @@ render: function (data, type, row) {
                         (assigned_supervisor === userEmail) {
                         tt = ` <a href="#" onclick="ChangeJobStatus('${currentstatus}', '${jobId}','${propId}','${areaId}','${assigned_supervisor}')">${currentstatus}</a>`
                     }
-                    else if (UserRoles.includes('ADMIN')) {
+                    else if (UserRoles.includes('ADMIN') || UserRoles.includes('SUPERADMIN') || UserRoles.includes('OPROADMIN')) {
                         tt = ` <a href="#" onclick="ChangeJobStatus('${currentstatus}', '${jobId}','${propId}','${areaId}','${assigned_supervisor}')">${currentstatus}</a>`
                     }
                     else {
@@ -441,7 +441,7 @@ function SearchOpenJobs() {
                 (assigned_supervisor === userEmail) {
                 tt = ` <a href="#" onclick="ChangeJobStatus('${currentstatus}', '${jobId}','${propId}','${areaId}','${assigned_supervisor}')">${currentstatus}</a>`
             }
-            else if (UserRoles.includes('ADMIN')) {
+            else if (UserRoles.includes('ADMIN') || UserRoles.includes('SUPERADMIN') || UserRoles.includes('OPROADMIN')) {
                 tt = ` <a href="#" onclick="ChangeJobStatus('${currentstatus}', '${jobId}','${propId}','${areaId}','${assigned_supervisor}')">${currentstatus}</a>`
             }
             else {

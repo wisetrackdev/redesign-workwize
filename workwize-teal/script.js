@@ -323,9 +323,29 @@
     if (isSuperAdmin()) return true;
     var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
     return roles.some(function (r) {
-      var u = String(r).toUpperCase();
-      return u === 'ADMIN';
+      if (!r) return false;
+      var u = String(r).toUpperCase().trim();
+      return u === 'ADMIN' || u.indexOf('ADMIN') !== -1;
     });
+  }
+
+  function isManager() {
+    if (!currentUser) return false;
+    var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
+    var hasManagerRole = roles.some(function (r) {
+      if (!r) return false;
+      var u = String(r).toUpperCase().trim();
+      return u === 'MANAGER' || u.indexOf('MANAGER') !== -1;
+    });
+    if (hasManagerRole) return true;
+
+    if (currentUser.desg && typeof currentUser.desg === 'string') {
+      var d = currentUser.desg.toUpperCase();
+      if (d.indexOf('MANAGER') !== -1 || d.indexOf('HEAD') !== -1) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function updateHeaderUserInfo() {
@@ -408,9 +428,24 @@
       matchedTeam = cachedTeams.find(function (t) { return t.teamId === cachedUserTeams[0].primaryteam; });
     }
 
-    // 3. Fallback to first team for main admin or other staff if not explicitly in members list
-    if (!matchedTeam && cachedTeams && cachedTeams.length > 0) {
-      matchedTeam = cachedTeams[0];
+    // 3. Match from currentUser object properties (primaryTeam, teamId, desg)
+    if (!matchedTeam && currentUser) {
+      if (currentUser.primaryTeam) {
+        matchedTeam = cachedTeams.find(function (t) {
+          return t.teamId === currentUser.primaryTeam || t.teamName === currentUser.primaryTeam;
+        });
+      }
+      if (!matchedTeam && currentUser.teamId) {
+        matchedTeam = cachedTeams.find(function (t) {
+          return t.teamId === currentUser.teamId;
+        });
+      }
+      if (!matchedTeam && currentUser.desg) {
+        var desgClean = String(currentUser.desg).replace(/^head\s*-?\s*/i, '').toLowerCase().trim();
+        matchedTeam = cachedTeams.find(function (t) {
+          return t.teamName && t.teamName.toLowerCase().indexOf(desgClean) !== -1;
+        });
+      }
     }
 
     if (matchedTeam) {
@@ -490,6 +525,7 @@
       customJobId: customJobId,
       details: op.job_detail || '',
       by: op.issued_by_team_details || op.creator_name || 'Staff',
+      issued_by_team_details: op.issued_by_team_details || op.creator_name || 'Staff',
       dept: op.issued_to_team_name || 'Department',
       area: op.area_name || 'General',
       sub: op.subarea || '',
@@ -565,8 +601,18 @@
       var matchIssuedBy = true;
       if (state.issuedBy && state.issuedBy !== 'all') {
         var selBy = state.issuedBy.trim();
-        var jBy = (j.by && typeof j.by === 'string') ? j.by.replace(/\s+/g, ' ').trim() : (j.by || '').trim();
-        matchIssuedBy = (jBy === selBy || (j.by && j.by.trim() === selBy));
+        var jBy = (j.by || '').trim();
+        var jDetails = (j.issued_by_team_details || '').trim();
+        var jRaw = (j.raw && j.raw.issued_by_team_details ? j.raw.issued_by_team_details : '').trim();
+        matchIssuedBy = (
+          jBy === selBy ||
+          jDetails === selBy ||
+          jRaw === selBy ||
+          jBy.replace(/\s+/g, ' ') === selBy.replace(/\s+/g, ' ') ||
+          jDetails.replace(/\s+/g, ' ') === selBy.replace(/\s+/g, ' ') ||
+          jBy.toLowerCase() === selBy.toLowerCase() ||
+          jDetails.toLowerCase() === selBy.toLowerCase()
+        );
       }
 
       return matches(j) &&
@@ -627,15 +673,67 @@
     return j.status === 'Open' ? 'Open' : '';
   }
 
+  /* ================= Team & Role Permissions ================= */
+  // Checks if the logged-in user belongs to the department/team to whom this job was issued
+  function isJobIssuedToUserTeam(j) {
+    if (!j || !userCurrentTeamId) return false;
+    if (j.issued_to_team && String(j.issued_to_team) === String(userCurrentTeamId)) {
+      return true;
+    }
+    if (cachedTeams && j.dept) {
+      var userTeam = cachedTeams.find(function (t) { return t.teamId === userCurrentTeamId; });
+      if (userTeam && (userTeam.teamName === j.dept || userTeam.name === j.dept)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // QuickFix condition: only assigned team (or Admin) can assign team members
+  function canAssignJob(j) {
+    if (!j) return false;
+    var closed = (j.status === 'Closed') || (state.tab === 'closed');
+    if (closed) return false;
+    if (isAdmin()) return true;
+    return isJobIssuedToUserTeam(j);
+  }
+
+  // QuickFix condition: who can close / change status of a job
+  // 1. ADMIN, SUPERADMIN, OPROADMIN can close any job
+  // 2. MANAGER of the team to whom the job was issued ((issued_to_team === UserCurrentTeamId) && UserRoles.includes('MANAGER'))
+  // 3. Supervisor assigned to this specific job (assigned_supervisor === userEmail)
+  function canCloseJob(j) {
+    if (!j) return false;
+    var closed = (j.status === 'Closed') || (state.tab === 'closed');
+    if (closed) return false;
+
+    // Admin / SuperAdmin can close any job
+    if (isAdmin()) return true;
+
+    // Assigned supervisor can close their assigned job
+    var userEmail = String((currentUser && (currentUser.email || currentUser.username)) || '').toLowerCase().trim();
+    var assignedSup = String(j.assigned_supervisor || '').toLowerCase().trim();
+    if (userEmail && assignedSup && assignedSup === userEmail) {
+      return true;
+    }
+
+    // Manager of the team to whom the job was issued can close it
+    if (isJobIssuedToUserTeam(j) && isManager()) {
+      return true;
+    }
+
+    return false;
+  }
+
   /* ================= 3-Dot Actions Menu ================= */
   function menuHTML(j) {
-    var closed = j.status === 'Closed';
+    var closed = (j.status === 'Closed') || (state.tab === 'closed');
     var isAssigned = j.status === 'Assigned';
 
     // Assignment rule: Only the team to whom the job was issued (or SuperAdmin/Admin) can assign team members!
-    var canAssign = !closed && (isAdmin() || (userCurrentTeamId && j.issued_to_team === userCurrentTeamId));
-    // Status change / close permission
-    var canClose = !closed && (isAdmin() || (userCurrentTeamId && j.issued_to_team === userCurrentTeamId) || (j.assigned_supervisor === (currentUser && currentUser.email)));
+    var canAssign = canAssignJob(j);
+    // Status change / close permission: only authorized team manager, assigned supervisor, or Admin
+    var canClose = canCloseJob(j);
 
     var editBtn = '';
     // Edit Job ONLY for jobs with status 'Open' in Open tab (not Assigned or Closed)
@@ -703,9 +801,14 @@
         : '<span>Assigned Sub Dept</span><b title="' + esc(j.assignDept || 'NA') + '">' + (j.assignDept && j.assignDept !== 'NA' ? hl(j.assignDept) : '<span class="na">NA</span>') + '</b>' +
           '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) : '<span class="na">Not assigned</span>') + '</b>');
 
+    var canClose = canCloseJob(j);
+    var statusTag = !closed && canClose
+      ? '<button type="button" class="tag st-' + j.status + '" data-act="close" data-id="' + j.id + '" title="Click to update status / close job" style="cursor:pointer;border:none;font:inherit;">' + j.status + '</button>'
+      : '<span class="tag st-' + j.status + '">' + j.status + '</span>';
+
     return '<article class="jcard ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="top">' +
-        '<div class="left"><span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
+        '<div class="left"><span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' + statusTag + '</div>' +
         menuHTML(j) +
       '</div>' +
       '<h3 title="' + esc(j.details) + '">' + hl(j.details) + '</h3>' +
@@ -744,22 +847,26 @@
       '</article>';
     }
 
-    // Open row: remarks column is omitted
-    return '<article class="jrow ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
-      '<div class="rt">' +
-        '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
-        '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
-        '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
-      '</div>' +
-      '<div class="rc" title="' + esc(j.area) + '"><span>Area</span>' + hl(j.area) + '</div>' +
-      '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
-      '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
-      '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
-      '<div class="rc" title="' + esc(j.assignDept || 'NA') + '"><span>Assign Sub-Dept.</span>' + assignDeptVal + '</div>' +
-      '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assign To</span>' + assignedVal + '</div>' +
-      '<div class="rs"><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
-      menuHTML(j) +
-    '</article>';
+      var canClose = canCloseJob(j);
+      var statusTag = !closed && canClose
+        ? '<button type="button" class="tag st-' + j.status + '" data-act="close" data-id="' + j.id + '" title="Click to update status / close job" style="cursor:pointer;border:none;font:inherit;">' + j.status + '</button>'
+        : '<span class="tag st-' + j.status + '">' + j.status + '</span>';
+
+      return '<article class="jrow ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
+        '<div class="rt">' +
+          '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
+          '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
+          '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
+        '</div>' +
+        '<div class="rc" title="' + esc(j.area) + '"><span>Area</span>' + hl(j.area) + '</div>' +
+        '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
+        '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
+        '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
+        '<div class="rc" title="' + esc(j.assignDept || 'NA') + '"><span>Assign Sub-Dept.</span>' + assignDeptVal + '</div>' +
+        '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assign To</span>' + assignedVal + '</div>' +
+        '<div class="rs">' + statusTag + '</div>' +
+        menuHTML(j) +
+      '</article>';
   }
 
   /* ================= Pager HTML ================= */
@@ -840,21 +947,38 @@
       }).join('');
     }
 
-    // Dynamic Issued By dropdown (API jobs data only, cleaned)
+    // Dynamic Issued By dropdown (matches QuickFix Open "Issued By" dropdown)
     var issuedByMap = {};
-    currentList.forEach(function (j) {
-      if (j.by && typeof j.by === 'string') {
-        var cleanBy = j.by.replace(/\s+/g, ' ').trim();
-        if (cleanBy &&
-            cleanBy !== 'Select Issued By' &&
-            cleanBy !== 'NA' &&
-            cleanBy !== 'na' &&
-            cleanBy.toLowerCase() !== 'null' &&
-            cleanBy.toLowerCase() !== 'undefined') {
-          issuedByMap[cleanBy] = 1;
+    var openList = (openJobs && openJobs.length) ? openJobs : [];
+    var sourceList = openList.length ? openList : currentList;
+
+    sourceList.forEach(function (j) {
+      var val = (j.raw && j.raw.issued_by_team_details) || j.issued_by_team_details || j.by;
+      if (val && typeof val === 'string') {
+        var str = val.trim();
+        if (str &&
+            str !== 'Select Issued By' &&
+            str !== 'NA' &&
+            str !== 'na' &&
+            str.toLowerCase() !== 'null' &&
+            str.toLowerCase() !== 'undefined') {
+          issuedByMap[str] = 1;
         }
       }
     });
+
+    if (tab === 'closed' && closedJobs && closedJobs.length) {
+      closedJobs.forEach(function (j) {
+        var val = (j.raw && j.raw.issued_by_team_details) || j.issued_by_team_details || j.by;
+        if (val && typeof val === 'string') {
+          var str = val.trim();
+          if (str && str !== 'Select Issued By' && str !== 'NA' && str !== 'na' && str.toLowerCase() !== 'null' && str.toLowerCase() !== 'undefined') {
+            issuedByMap[str] = 1;
+          }
+        }
+      });
+    }
+
     var fltIssuedBy = $('#fltIssuedBy');
     if (fltIssuedBy) {
       fltIssuedBy.innerHTML = '<option value="all">All Issued By</option>' + Object.keys(issuedByMap).sort().map(function (by) {
@@ -1664,9 +1788,9 @@
     closeView();
     if (job && job.id) highlightJob(job.id);
     // Permission check: only assigned dept team or Admin can assign members!
-    var canAssign = isAdmin() || (userCurrentTeamId && (job.issued_to_team === userCurrentTeamId || job.dept === (currentUser && currentUser.desg)));
+    var canAssign = canAssignJob(job);
     if (!canAssign) {
-      toast('Only the assigned department (' + job.dept + ') can assign members.');
+      toast('Only the assigned department (' + (job.dept || 'team') + ') can assign members.');
       return;
     }
 
@@ -1790,8 +1914,24 @@
 
   /* ================= Close Modal & Status Update ================= */
   function openClose(job) {
+    if (!job) return;
     closeView();
     if (job && job.id) highlightJob(job.id);
+
+    // Permission check based on QuickFix conditions:
+    // Only Admin, or Manager of the team to whom the job was issued, or assigned supervisor can close!
+    if (!canCloseJob(job)) {
+      toast('You do not have permission to close this job. Only the assigned department manager, assigned supervisor, or administrator can close this job.');
+      return;
+    }
+
+    // QuickFix condition: non-admin can only close if supervisor is assigned
+    if (!isAdmin() && (!job.assigned_supervisor || job.assigned_supervisor === 'NA' || job.assigned_supervisor === 'null' || !String(job.assigned_supervisor).trim())) {
+      toast('This job must be assigned to a supervisor before it can be closed. Please assign a team member first.');
+      openAssign(job);
+      return;
+    }
+
     closeTargetJob = job;
     closePhotoFile = null;
     $('#closeId').textContent = job.propId;
@@ -1853,6 +1993,10 @@
 
   async function executeSubmitCloseJob(remarks) {
     if (!closeTargetJob) return;
+    if (!canCloseJob(closeTargetJob)) {
+      toast('You do not have permission to close this job.');
+      return;
+    }
 
     var clBy = $('#clBy');
     var closedBy = (clBy && clBy.value) || (currentUser && currentUser.name) || 'User';
@@ -2427,8 +2571,8 @@
       (closed ? field('Remarks', na(j.remarks), true) : '');
 
     var viewActions = '';
-    var canAssign = !closed && (isAdmin() || (userCurrentTeamId && j.issued_to_team === userCurrentTeamId));
-    var canClose = !closed && (isAdmin() || (userCurrentTeamId && j.issued_to_team === userCurrentTeamId) || (j.assigned_supervisor === (currentUser && currentUser.email)));
+    var canAssign = canAssignJob(j);
+    var canClose = canCloseJob(j);
 
     if (!closed) {
       if (canAssign) {
