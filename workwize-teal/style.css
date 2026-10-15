@@ -38,6 +38,7 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .tab.on{background:var(--green);color:var(--primary-deep);box-shadow:0 4px 12px rgba(108,198,91,.45)}
 .tab .ic{font-size:16px;line-height:1}
 .badge{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:20px;padding:0 6px;border-radius:10px;background:#fff;color:var(--primary);font-size:11px;font-weight:700}
+.badge:empty{display:none}
 .badge.muted-b{background:rgba(255,255,255,.22);color:#fff}
 .tab.on .badge{background:var(--primary-deep);color:#fff}
 .hr{display:flex;align-items:center;gap:16px;color:#D3DBF3}

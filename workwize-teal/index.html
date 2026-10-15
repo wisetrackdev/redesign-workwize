@@ -15,7 +15,7 @@
     <nav class="seg" id="tabs">
       <button class="tab on" data-tab="new"><span class="ic">+</span> New Job</button>
       <button class="tab" data-tab="open">Open <span class="badge" id="openBadge">0</span></button>
-      <button class="tab" data-tab="closed">Closed <span class="badge muted-b" id="closedBadge">0</span></button>
+      <button class="tab" data-tab="closed">Closed <span class="badge muted-b" id="closedBadge"></span></button>
     </nav>
 
     <div class="hr">
@@ -606,34 +606,6 @@
       <div class="btns">
         <button type="button" class="btn s" data-close>Cancel</button>
         <button type="submit" class="btn p">Update Password</button>
-      </div>
-    </form>
-  </div>
-
-  <!-- ===== LOGIN MODAL ===== -->
-  <div class="modal" id="loginModal" hidden>
-    <form class="dialog small" id="loginForm" novalidate>
-      <div class="dhead">
-        <h3>WorkWize Sign In</h3>
-        <button type="button" class="x" data-close>&times;</button>
-      </div>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">Sign in with your WorkWize account to access and sync live jobs.</p>
-      <div class="fgrid">
-        <div class="fld full">
-          <label for="loginEmail">Email / Username</label>
-          <input type="text" id="loginEmail" placeholder="e.g. user@workwize.com" required autofocus>
-        </div>
-        <div class="fld full">
-          <label for="loginPassword">Password</label>
-          <input type="password" id="loginPassword" placeholder="Enter password" required>
-        </div>
-        <div class="fld full" id="loginErrorWrap" hidden>
-          <small class="err" id="loginError" style="color:var(--danger,#e53e3e);display:block;"></small>
-        </div>
-      </div>
-      <div class="btns">
-        <button type="button" class="btn s" data-close>Cancel</button>
-        <button type="submit" class="btn p" id="btnLoginSubmit">Sign In</button>
       </div>
     </form>
   </div>

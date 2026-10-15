@@ -562,9 +562,16 @@
         }
       }
 
+      var matchIssuedBy = true;
+      if (state.issuedBy && state.issuedBy !== 'all') {
+        var selBy = state.issuedBy.trim();
+        var jBy = (j.by && typeof j.by === 'string') ? j.by.replace(/\s+/g, ' ').trim() : (j.by || '').trim();
+        matchIssuedBy = (jBy === selBy || (j.by && j.by.trim() === selBy));
+      }
+
       return matches(j) &&
         (state.area === 'all' || j.area === state.area) &&
-        (!state.issuedBy || state.issuedBy === 'all' || j.by === state.issuedBy) &&
+        matchIssuedBy &&
         (!state.issuedTo || state.issuedTo === 'all' || j.dept === state.issuedTo) &&
         matchAssign &&
         matchDate &&
@@ -833,11 +840,19 @@
       }).join('');
     }
 
-    // Dynamic Issued By dropdown
+    // Dynamic Issued By dropdown (API jobs data only, cleaned)
     var issuedByMap = {};
     currentList.forEach(function (j) {
-      if (j.by && j.by.trim() && j.by !== 'Select Issued By') {
-        issuedByMap[j.by.trim()] = 1;
+      if (j.by && typeof j.by === 'string') {
+        var cleanBy = j.by.replace(/\s+/g, ' ').trim();
+        if (cleanBy &&
+            cleanBy !== 'Select Issued By' &&
+            cleanBy !== 'NA' &&
+            cleanBy !== 'na' &&
+            cleanBy.toLowerCase() !== 'null' &&
+            cleanBy.toLowerCase() !== 'undefined') {
+          issuedByMap[cleanBy] = 1;
+        }
       }
     });
     var fltIssuedBy = $('#fltIssuedBy');
@@ -1875,7 +1890,7 @@
       closedJobs.unshift(closeTargetJob);
       pagination.closed.total = (pagination.closed.total || 0) + 1;
       var ob = $('#openBadge'); if (ob) ob.textContent = openJobs.length;
-      var cb = $('#closedBadge'); if (cb) cb.textContent = closedJobs.length;
+      var cb = $('#closedBadge'); if (cb && cb.textContent) cb.textContent = closedJobs.length;
     }
 
     // Immediately close modal and update UI
@@ -2314,7 +2329,7 @@
           closedJobs.unshift(editTargetJob);
           pagination.closed.total = (pagination.closed.total || 0) + 1;
           var ob = $('#openBadge'); if (ob) ob.textContent = openJobs.length;
-          var cb = $('#closedBadge'); if (cb) cb.textContent = closedJobs.length;
+          var cb = $('#closedBadge'); if (cb && cb.textContent) cb.textContent = closedJobs.length;
         }
       }
     } else if (oldStatus === 'Closed' && newStatus !== 'Closed') {
@@ -2325,7 +2340,7 @@
         openJobs.unshift(editTargetJob);
         pagination.open.total = (pagination.open.total || 0) + 1;
         var ob2 = $('#openBadge'); if (ob2) ob2.textContent = openJobs.length;
-        var cb2 = $('#closedBadge'); if (cb2) cb2.textContent = closedJobs.length;
+        var cb2 = $('#closedBadge'); if (cb2 && cb2.textContent) cb2.textContent = closedJobs.length;
       }
     }
 
@@ -2451,7 +2466,7 @@
 
   /* ================= Modals Management ================= */
   function closeModals() {
-    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#loginModal', '#noPhotoConfirmModal', '#noPhotoModal', '#viewModal'];
+    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#noPhotoConfirmModal', '#noPhotoModal', '#viewModal'];
     modals.forEach(function (m) {
       var el = $(m);
       if (el) el.hidden = true;
@@ -2460,12 +2475,7 @@
   }
 
   function showLoginModal() {
-    var lm = $('#loginModal');
-    if (lm) {
-      lm.hidden = false;
-      var err = $('#loginErrorWrap'); if (err) err.hidden = true;
-      var emailInp = $('#loginEmail'); if (emailInp) setTimeout(function () { emailInp.focus(); }, 80);
-    }
+    window.location.href = 'login.html';
   }
 
   /* ================= Property Selector ================= */
@@ -2545,14 +2555,18 @@
 
         // Fetch fresh jobs and data from API for the newly selected property
         if (state.tab === 'open') {
+          var cb = $('#closedBadge');
+          if (cb) cb.textContent = '';
+          closedJobs = [];
           await fetchOpenJobs();
-          fetchClosedJobs().catch(function () {});
         } else if (state.tab === 'closed') {
           await fetchClosedJobs();
           fetchOpenJobs().catch(function () {});
         } else if (state.tab === 'new') {
+          var cb2 = $('#closedBadge');
+          if (cb2) cb2.textContent = '';
+          closedJobs = [];
           await fetchOpenJobs();
-          fetchClosedJobs().catch(function () {});
           initNewJobForm();
         }
       });
@@ -3664,7 +3678,7 @@
       pdLoginBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         if (profileDropdown) profileDropdown.hidden = true;
-        showLoginModal();
+        window.location.href = 'login.html';
       });
     }
 
@@ -3674,10 +3688,7 @@
         e.stopPropagation();
         if (profileDropdown) profileDropdown.hidden = true;
         if (cfg && cfg.clearStoredUserData) cfg.clearStoredUserData();
-        loadStoredUser();
-        updateHeaderUserInfo();
-        toast('Logged out successfully.');
-        showLoginModal();
+        window.location.href = 'login.html';
       });
     }
 
@@ -3709,43 +3720,6 @@
         resetPwdForm.reset();
         resetPwdModal.hidden = true;
         toast('Password updated successfully!');
-      });
-    }
-
-    // Login Form
-    var loginForm = $('#loginForm');
-    if (loginForm) {
-      loginForm.addEventListener('submit', async function (e) {
-        e.preventDefault();
-        var email = ($('#loginEmail').value || '').trim();
-        var pwd = $('#loginPassword').value || '';
-        var errWrap = $('#loginErrorWrap');
-        var errEl = $('#loginError');
-        var submitBtn = $('#btnLoginSubmit');
-
-        if (!email || !pwd) {
-          if (errEl) errEl.textContent = 'Please enter email and password';
-          if (errWrap) errWrap.hidden = false;
-          return;
-        }
-
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Signing in...'; }
-        if (errWrap) errWrap.hidden = true;
-
-        try {
-          var userData = await api.login(email, pwd, 'quickfix');
-          currentUser = userData;
-          updateHeaderUserInfo();
-          closeModals();
-          toast('Welcome, ' + (userData.name || userData.email) + '!');
-          await initApp();
-        } catch (err) {
-          console.error('Login error:', err);
-          if (errEl) errEl.textContent = err.message || 'Invalid credentials';
-          if (errWrap) errWrap.hidden = false;
-        } finally {
-          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Sign In'; }
-        }
       });
     }
 

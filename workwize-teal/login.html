@@ -127,43 +127,6 @@
       margin-top: 14px;
       min-height: 20px;
     }
-    .demo-accounts {
-      margin-top: 24px;
-      padding-top: 20px;
-      border-top: 1px dashed var(--line);
-    }
-    .demo-accounts .demo-title {
-      font-size: 12px;
-      font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .demo-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .demo-chip {
-      background: #F0F4FD;
-      border: 1px solid #D9E3F8;
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-size: 12px;
-      color: var(--primary);
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .15s;
-    }
-    .demo-chip:hover {
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
     .login-footer {
       text-align: center;
       margin-top: 20px;
@@ -185,7 +148,7 @@
       <!-- Active Session Banner -->
       <div id="alreadyLoggedInBanner" style="display:none; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:12px 14px; margin-bottom:18px; font-size:13px; color:#1E40AF; align-items:center; justify-content:space-between; gap:10px;">
         <div>
-          <span>Logged in as: <strong id="loggedInUserLabel">IT (App admin)</strong></span>
+          <span>Logged in as: <strong id="loggedInUserLabel">User</strong></span>
         </div>
         <a href="index.html" style="color:#2563EB; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px; font-size:12.5px;">
           Go to Jobs &rarr;
@@ -223,28 +186,6 @@
 
         <div class="login-error" id="loginErrors"></div>
       </form>
-
-      <!-- Quick Demo Account Fill -->
-      <div class="demo-accounts">
-        <div class="demo-title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-          Quick Demo Accounts (Click to Fill):
-        </div>
-        <div class="demo-chips">
-          <button type="button" class="demo-chip" data-user="it@workwize.com" data-pwd="password123" data-name="IT" data-dept="Testing-Engineering" data-role="ADMIN">
-            IT (App admin)
-          </button>
-          <button type="button" class="demo-chip" data-user="hk_mgr@workwize.com" data-pwd="password123" data-name="HK Manager" data-dept="Testing-House Keeping" data-role="MANAGER">
-            HK Manager
-          </button>
-          <button type="button" class="demo-chip" data-user="sec_officer@workwize.com" data-pwd="password123" data-name="Security Officer" data-dept="Testing-Security" data-role="SUPERVISOR">
-            Security Officer
-          </button>
-        </div>
-      </div>
     </div>
 
     <div class="login-footer">
@@ -254,12 +195,10 @@
 
   <div class="toast" id="toast" role="status"></div>
 
+  <script src="api/config.js"></script>
+  <script src="api/dailyJobApi.js"></script>
   <script>
     (function () {
-      const applicationdomain = "https://localhost:7151/";
-      const applicationdomain2 = "http://op2.hyprscripts.com/";
-      const loginendpoint = applicationdomain + "api/login";
-
       const loginForm = document.getElementById('loginForm');
       const usernameInput = document.getElementById('username');
       const passwordInput = document.getElementById('password');
@@ -288,7 +227,7 @@
         const stored = localStorage.getItem('oproUserData');
         if (stored) {
           const u = JSON.parse(stored);
-          if (u && (u.name || u.username)) {
+          if (u && (u.name || u.username) && (u.jwt || u.token)) {
             const banner = document.getElementById('alreadyLoggedInBanner');
             const label = document.getElementById('loggedInUserLabel');
             if (banner && label) {
@@ -299,31 +238,8 @@
         }
       } catch (err) {}
 
-      // Quick Demo Chips
-      document.querySelectorAll('.demo-chip').forEach(chip => {
-        chip.addEventListener('click', function () {
-          usernameInput.value = this.dataset.user;
-          passwordInput.value = this.dataset.pwd;
-          usernameInput.focus();
-        });
-      });
-
-      // Simple JWT parser helper
-      function parseJwt(token) {
-        try {
-          const base64Url = token.split('.')[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-          }).join(''));
-          return JSON.parse(jsonPayload);
-        } catch (e) {
-          return null;
-        }
-      }
-
       // Login form submission
-      loginForm.addEventListener('submit', function (e) {
+      loginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
         const username = usernameInput.value.trim();
         const password = passwordInput.value.trim();
@@ -337,94 +253,28 @@
         signInBtn.disabled = true;
         signInBtn.innerHTML = 'Signing in...';
 
-        const payload = JSON.stringify({
-          Email: username,
-          Password: password,
-          App: 'quickfix'
-        });
-
-        // Try Live API first
-        fetch(loginendpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payload
-        })
-        .then(res => {
-          if (!res.ok) throw new Error('API returned status ' + res.status);
-          return res.json();
-        })
-        .then(response => {
-          if (response && response.token) {
-            const jst = parseJwt(response.token) || {};
-            let roles = jst['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || ['ADMIN'];
-            if (!Array.isArray(roles)) roles = [roles];
-
-            const updatedUserData = {
-              username: username,
-              jwt: response.token,
-              name: jst.name || jst.FirstName || (username.split('@')[0].toUpperCase()),
-              email: jst.email || username,
-              role: roles,
-              prop: jst.PrimaryProp || "1",
-              desg: jst.Designation || "App admin",
-              primaryTeam: "Testing-Engineering",
-              access: jst.Access ? (typeof jst.Access === 'string' ? JSON.parse(jst.Access) : jst.Access) : []
-            };
-
-            localStorage.removeItem('oproUserData');
-            localStorage.setItem('oproUserData', JSON.stringify(updatedUserData));
-            showToast('Login successful! Redirecting...');
-            setTimeout(() => { window.location.href = 'index.html'; }, 500);
-          } else {
-            fallbackOfflineLogin(username, password);
+        try {
+          if (!window.WorkWizeDailyJobApi || typeof window.WorkWizeDailyJobApi.login !== 'function') {
+            throw new Error('Login service is unavailable. Please refresh and try again.');
           }
-        })
-        .catch(err => {
-          console.warn('[Login API] Backend offline, using offline authentication mode:', err.message);
-          fallbackOfflineLogin(username, password);
-        });
-      });
 
-      function fallbackOfflineLogin(username, password) {
-        // Detect role & department from entered username
-        let role = ['ADMIN', 'MANAGER'];
-        let desg = 'App admin';
-        let primaryTeam = 'Testing-Engineering';
-        let displayName = 'IT';
+          await window.WorkWizeDailyJobApi.login(username, password, 'quickfix');
 
-        if (username.toLowerCase().includes('hk')) {
-          displayName = 'HK Manager';
-          desg = 'Head-House Keeping';
-          primaryTeam = 'Testing-House Keeping';
-          role = ['MANAGER'];
-        } else if (username.toLowerCase().includes('sec')) {
-          displayName = 'Security Officer';
-          desg = 'Head of Security';
-          primaryTeam = 'Testing-Security';
-          role = ['SUPERVISOR'];
-        } else {
-          displayName = username.split('@')[0].toUpperCase();
-          if (displayName.length > 15) displayName = 'IT';
+          showToast('Login successful! Redirecting...');
+          setTimeout(() => {
+            window.location.href = 'index.html';
+          }, 400);
+        } catch (err) {
+          console.error('[Login Error]:', err);
+          let msg = err.message || 'Login failed. Please try again.';
+          if (msg === 'UNAUTHORIZED' || msg.toLowerCase().includes('401') || msg.toLowerCase().includes('invalid credentials')) {
+            msg = 'Invalid email/username or password. Please try again.';
+          }
+          loginErrors.textContent = msg;
+          signInBtn.disabled = false;
+          signInBtn.innerHTML = '<span>Sign In</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>';
         }
-
-        const offlineUserData = {
-          username: username,
-          email: username,
-          jwt: 'mock-jwt-token-' + Date.now(),
-          name: displayName,
-          role: role,
-          prop: "1",
-          desg: desg,
-          primaryTeam: primaryTeam,
-          access: []
-        };
-
-        localStorage.removeItem('oproUserData');
-        localStorage.setItem('oproUserData', JSON.stringify(offlineUserData));
-        showToast('Login successful! Redirecting...');
-        setTimeout(() => { window.location.href = 'index.html'; }, 400);
-      }
-
+      });
     })();
   </script>
 </body>
