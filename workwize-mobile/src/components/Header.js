@@ -9,6 +9,7 @@ export default function Header({
   onOpenNewJob,
   onOpenMenu,
   onOpenProfile,
+  onOpenPropertyPicker,
   onOpenFilter,
   propertyName = 'Testing',
   unreadCount = 0,
@@ -23,7 +24,7 @@ export default function Header({
       <StatusBar
         barStyle="light-content"
         backgroundColor={Colors.primaryDark}
-        translucent={Platform.OS === 'android'}
+        translucent={false}
       />
 
       {/* Top Header Bar */}
@@ -33,7 +34,7 @@ export default function Header({
           style={styles.logoPill}
           activeOpacity={0.9}
           onPress={() => onTabChange && onTabChange('open')}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Image
             source={require('../../assets/logo.png')}
@@ -42,18 +43,18 @@ export default function Header({
           />
         </TouchableOpacity>
 
-        {/* Active Property Badge Pill */}
+        {/* Active Property Badge Pill - Clicking opens Property Switcher */}
         <TouchableOpacity
           style={styles.propPill}
-          onPress={onOpenProfile}
+          onPress={onOpenPropertyPicker || onOpenProfile}
           activeOpacity={0.7}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
         >
-          <Feather name="layers" size={13} color="#FFFFFF" />
+          <Feather name="layers" size={12} color="#FFFFFF" />
           <Text style={styles.propPillText} numberOfLines={1}>
             {propertyName}
           </Text>
-          <Feather name="chevron-down" size={13} color="rgba(255,255,255,0.85)" />
+          <Feather name="chevron-down" size={12} color="rgba(255,255,255,0.85)" />
         </TouchableOpacity>
 
         {/* Right Action Icons */}
@@ -62,17 +63,17 @@ export default function Header({
             style={styles.iconBtn}
             onPress={onOpenFilter}
             activeOpacity={0.7}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
           >
-            <Feather name="filter" size={18} color="#FFFFFF" />
+            <Feather name="filter" size={17} color="#FFFFFF" />
           </TouchableOpacity>
 
-          {/* User Avatar with Green Active Dot */}
+          {/* User Avatar with Green Active Dot - Clicking opens Profile Modal */}
           <TouchableOpacity
             style={styles.avatarWrap}
             onPress={onOpenProfile}
             activeOpacity={0.7}
-            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
           >
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{userInitial}</Text>
@@ -134,9 +135,9 @@ export default function Header({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.primary,
-    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 10 : (Platform.OS === 'ios' ? 44 : 12),
+    paddingTop: Platform.OS === 'android' ? 6 : (Platform.OS === 'ios' ? 8 : 4),
     paddingBottom: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 18,
     shadowColor: Colors.primaryDeep,
@@ -149,49 +150,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 10,
+    gap: 6,
   },
   logoPill: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 18,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoImage: {
-    width: 90,
-    height: 22,
+    width: 78,
+    height: 20,
   },
   propPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.32)',
-    maxWidth: 160,
+    flexShrink: 1,
+    maxWidth: 135,
   },
   propPillText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
+    flexShrink: 1,
   },
   rightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
   },
   iconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: 'rgba(255, 255, 255, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -199,12 +205,12 @@ const styles = StyleSheet.create({
   },
   avatarWrap: {
     position: 'relative',
-    padding: 2,
+    padding: 1,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -212,7 +218,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.9)',
   },
   avatarText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: Colors.primary,
   },

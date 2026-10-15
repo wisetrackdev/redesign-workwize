@@ -83,7 +83,7 @@ export function updateUserTeamContext(user, teams = [], userTeams = []) {
   }
 
   if (!teams || !teams.length) {
-    const fallbackDept = user?.primaryTeam || user?.dept || 'Testing-House Keeping';
+    const fallbackDept = user?.primaryTeam || user?.dept || '';
     return {
       userCurrentTeamId: fallbackDept,
       userSubTeamData: [],
@@ -156,8 +156,8 @@ export function getIssuedByDisplay(user, primaryTeamName) {
   if (isSuperAdmin(user)) {
     return `${user.name || 'IT'} [${user.desg || 'App admin'}]`;
   }
-  const teamLabel = primaryTeamName || user.primaryTeam || user.dept || 'General';
-  return `${user.name || 'User'} [${user.desg || 'Staff'}: ${teamLabel}]`;
+  const teamLabel = primaryTeamName || user.primaryTeam || user.dept || '';
+  return `${user.name || 'User'} [${user.desg || 'Staff'}${teamLabel ? ': ' + teamLabel : ''}]`;
 }
 
 /**
@@ -256,7 +256,8 @@ async function apiFetch(endpoint, options = {}) {
   const headers = options.headers || {};
   const jwt = await getStoredJwt();
 
-  if (jwt && !headers['Authorization']) {
+  // Only attach JWT if it's a real token, not empty or guest demo token
+  if (jwt && !jwt.startsWith('demo-') && !headers['Authorization']) {
     headers['Authorization'] = 'Bearer ' + jwt;
   }
   options.headers = headers;
@@ -264,7 +265,7 @@ async function apiFetch(endpoint, options = {}) {
   const url = endpoint.startsWith('http') ? endpoint : BASE_URL + endpoint;
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 9000);
+  const timeoutId = setTimeout(() => controller.abort(), 12000);
   options.signal = controller.signal;
 
   try {
@@ -297,7 +298,6 @@ async function apiFetch(endpoint, options = {}) {
     }
   } catch (err) {
     clearTimeout(timeoutId);
-    console.log(`API call notice (${url}):`, err.message || err);
     throw err;
   }
 }
@@ -313,17 +313,16 @@ export const DailyJobApi = {
       if (Array.isArray(res) && res.length > 0) return res;
       if (res && res.data && Array.isArray(res.data)) return res.data;
     } catch (e) {
+      if (e.message === 'UNAUTHORIZED') throw e;
       try {
         const res2 = await apiFetch('api/jobtracker/getallproperty', { method: 'GET' });
         if (Array.isArray(res2) && res2.length > 0) return res2;
         if (res2 && res2.data && Array.isArray(res2.data)) return res2.data;
       } catch (e2) {
-        console.log('Property fetch fallback to current active property');
+        if (e2.message === 'UNAUTHORIZED') throw e2;
       }
     }
-    return [
-      { propId: 'Testing', propName: 'Testing' },
-    ];
+    return [];
   },
 
   /**
@@ -331,9 +330,10 @@ export const DailyJobApi = {
    * Matches quickfix GetProperyInfo endpoint: POST /api/jobtracker/getpropinfo
    */
   getPropInfo: async function (propId) {
+    if (!propId) return null;
     try {
       const form = new FormData();
-      form.append('propId', propId || 'Testing');
+      form.append('propId', propId);
       const res = await apiFetch('api/jobtracker/getpropinfo', {
         method: 'POST',
         body: form,
@@ -346,41 +346,94 @@ export const DailyJobApi = {
 
   /**
    * Get QuickFix Jobs for a property
+   * Matches quickfix qindex.js: fetches both open jobs and close jobs dynamically
    * Endpoint: POST /api/dailyjob/getallquickfixjobs
    */
   getQuickFixJobs: async function (params = {}) {
-    const propId = params.propId || 'Testing';
-    const activePropName = params.propName || propId;
+    const propId = params.propId || '';
+    const activePropName = params.propName || propId || 'Testing';
 
     try {
-      const form = new FormData();
-      form.append('propId', propId);
-      form.append('jobList', params.jobList || 'open');
-      form.append('pageNumber', String(params.pageNumber || 1));
-      form.append('pageSize', String(params.pageSize || 100));
+      // 1. Fetch Open Jobs from API
+      const formOpen = new FormData();
+      formOpen.append('propId', propId);
+      formOpen.append('jobList', 'open');
+      formOpen.append('pageNumber', String(params.pageNumber || 1));
+      formOpen.append('pageSize', String(params.pageSize || 200));
 
-      const res = await apiFetch('api/dailyjob/getallquickfixjobs', {
+      const resOpen = await apiFetch('api/dailyjob/getallquickfixjobs', {
         method: 'POST',
-        body: form,
+        body: formOpen,
       });
 
-      if (res && (res.open || res.close || res.teams || Array.isArray(res))) {
-        const rawOpen = Array.isArray(res.open) ? res.open : [];
-        const rawClose = Array.isArray(res.close) ? res.close : [];
+      // 2. Fetch Closed Jobs from API
+      const formClose = new FormData();
+      formClose.append('propId', propId);
+      formClose.append('jobList', 'close');
+      formClose.append('pageNumber', '1');
+      formClose.append('pageSize', String(params.pageSize || 200));
+
+      let resClose = null;
+      try {
+        resClose = await apiFetch('api/dailyjob/getallquickfixjobs', {
+          method: 'POST',
+          body: formClose,
+        });
+      } catch (errClose) {
+        // Closed jobs fetch may be optional or fail if none exist
+      }
+
+      if (resOpen || resClose) {
+        const rawOpen = Array.isArray(resOpen?.open)
+          ? resOpen.open
+          : Array.isArray(resOpen)
+          ? resOpen
+          : [];
+        const rawClose = Array.isArray(resClose?.close)
+          ? resClose.close
+          : Array.isArray(resClose)
+          ? resClose
+          : Array.isArray(resOpen?.close)
+          ? resOpen.close
+          : [];
 
         const mappedOpen = rawOpen.map((j, idx) => mapApiJob(j, idx, activePropName));
         const mappedClosed = rawClose.map((j, idx) => mapApiJob(j, rawOpen.length + idx, activePropName));
 
-        let fetchedAreas = Array.isArray(res.areas) ? res.areas : [];
-        if (!fetchedAreas.length) {
+        let teams =
+          Array.isArray(resOpen?.teams) && resOpen.teams.length > 0
+            ? resOpen.teams
+            : Array.isArray(resClose?.teams) && resClose.teams.length > 0
+            ? resClose.teams
+            : [];
+
+        let areas =
+          Array.isArray(resOpen?.areas) && resOpen.areas.length > 0
+            ? resOpen.areas
+            : Array.isArray(resClose?.areas) && resClose.areas.length > 0
+            ? resClose.areas
+            : [];
+
+        let userTeam =
+          Array.isArray(resOpen?.userTeam) && resOpen.userTeam.length > 0
+            ? resOpen.userTeam
+            : Array.isArray(resClose?.userTeam) && resClose.userTeam.length > 0
+            ? resClose.userTeam
+            : [];
+
+        // If areas or teams are not directly in quickfix jobs response, query property info dynamically from API
+        if ((!areas.length || !teams.length) && propId) {
           try {
             const propInfo = await DailyJobApi.getPropInfo(propId);
-            if (propInfo && Array.isArray(propInfo.propArea)) {
-              fetchedAreas = propInfo.propArea.map((a) => ({
+            if (!areas.length && propInfo && Array.isArray(propInfo.propArea) && propInfo.propArea.length > 0) {
+              areas = propInfo.propArea.map((a) => ({
                 areaId: a.areaid || a.areaId,
                 areaName: a.areaName || a.name,
                 propsubarea: a.propsubarea || [],
               }));
+            }
+            if (!teams.length && propInfo && Array.isArray(propInfo.propEmp) && propInfo.propEmp.length > 0) {
+              teams = propInfo.propEmp;
             }
           } catch (e) {}
         }
@@ -388,128 +441,28 @@ export const DailyJobApi = {
         return {
           openJobs: mappedOpen,
           closedJobs: mappedClosed,
-          teams: Array.isArray(res.teams) ? res.teams : [],
-          areas: fetchedAreas,
-          userTeam: Array.isArray(res.userTeam) ? res.userTeam : [],
-          pagination: res.pagination || {},
+          teams: teams,
+          areas: areas,
+          userTeam: userTeam,
+          pagination: resOpen?.pagination || resClose?.pagination || {},
           isLive: true,
         };
       }
     } catch (e) {
-      console.log('Live jobs fetch failed, using local offline fallback');
+      if (e.message === 'UNAUTHORIZED') throw e;
     }
 
-    // Local cached fallback from jobs_data.json
+    // Local cached fallback from jobs_data.json only if completely offline
     const all = Array.isArray(mockJobsData) ? mockJobsData : [];
     const openRaw = all.filter((j) => (j.status || '').toLowerCase() !== 'closed');
     const closeRaw = all.filter((j) => (j.status || '').toLowerCase() === 'closed');
 
-    // Standard fallback teams with subteams & supervisors matching workwize-teal
-    const fallbackTeams = [
-      {
-        teamId: 'Testing-House Keeping',
-        teamName: 'Testing-House Keeping',
-        propsubteams: [
-          {
-            subteamId: 'shiva1234',
-            subteamName: 'shiva1234',
-            subteams: [
-              { email: 'housekeeping@workwize.in', firstName: 'Housekeeping', lastName: 'Supervisor' },
-              { email: 'hk_lead@workwize.in', firstName: 'Floor', lastName: 'Lead' },
-            ],
-          },
-          {
-            subteamId: 'Public Areas',
-            subteamName: 'Public Areas',
-            subteams: [
-              { email: 'pa_sup@workwize.in', firstName: 'PA', lastName: 'Supervisor' },
-            ],
-          },
-        ],
-        members: [
-          { email: 'hk_mgr@workwize.com', firstName: 'Testing', lastName: 'Head-House Keeping' },
-          { email: 'housekeeping@workwize.in', firstName: 'Housekeeping', lastName: 'Supervisor' },
-        ],
-      },
-      {
-        teamId: 'Testing-Engineering',
-        teamName: 'Testing-Engineering',
-        propsubteams: [
-          {
-            subteamId: 'General Maintenance',
-            subteamName: 'General Maintenance',
-            subteams: [
-              { email: 'eng_sup@workwize.com', firstName: 'Engineering', lastName: 'Supervisor' },
-              { email: 'elec_tech@workwize.com', firstName: 'Senior', lastName: 'Electrician' },
-            ],
-          },
-          {
-            subteamId: 'HVAC & AC',
-            subteamName: 'HVAC & AC',
-            subteams: [
-              { email: 'hvac_tech@workwize.com', firstName: 'HVAC', lastName: 'Technician' },
-            ],
-          },
-        ],
-        members: [
-          { email: 'eng_sup@workwize.com', firstName: 'Engineering', lastName: 'Supervisor' },
-        ],
-      },
-      {
-        teamId: 'IT',
-        teamName: 'IT',
-        propsubteams: [
-          {
-            subteamId: 'Hardware & Systems',
-            subteamName: 'Hardware & Systems',
-            subteams: [
-              { email: 'it_sup@workwize.com', firstName: 'IT', lastName: 'Supervisor' },
-            ],
-          },
-        ],
-        members: [
-          { email: 'it@workwize.com', firstName: 'IT', lastName: 'Admin' },
-        ],
-      },
-      {
-        teamId: 'Testing-Security',
-        teamName: 'Testing-Security',
-        propsubteams: [
-          {
-            subteamId: 'Main Gate',
-            subteamName: 'Main Gate',
-            subteams: [
-              { email: 'sec_officer@workwize.com', firstName: 'Security', lastName: 'Officer' },
-            ],
-          },
-        ],
-        members: [
-          { email: 'sec_officer@workwize.com', firstName: 'Security', lastName: 'Officer' },
-        ],
-      },
-    ];
-
-    const fallbackAreas = [
-      { areaId: '1', areaName: 'Waste Management' },
-      { areaId: '2', areaName: 'Public Area' },
-      { areaId: '3', areaName: 'SOP & Checklist' },
-      { areaId: '4', areaName: 'CAPEX' },
-      { areaId: '5', areaName: 'Fire Safety' },
-      { areaId: '6', areaName: 'Guest Villa' },
-      { areaId: '7', areaName: 'Utility' },
-      { areaId: '8', areaName: 'Development/Project' },
-      { areaId: '9', areaName: 'Back of the House' },
-      { areaId: '10', areaName: 'Landscaping' },
-      { areaId: '11', areaName: 'Energy Management' },
-      { areaId: '12', areaName: "Owner's Recommendation" },
-    ];
-
     return {
       openJobs: openRaw.map((j, idx) => mapApiJob(j, idx, activePropName)),
       closedJobs: closeRaw.map((j, idx) => mapApiJob(j, openRaw.length + idx, activePropName)),
-      teams: fallbackTeams,
-      areas: fallbackAreas,
-      userTeam: [{ primaryteam: 'Testing-House Keeping', primaryteamname: 'Testing-House Keeping' }],
+      teams: [],
+      areas: [],
+      userTeam: [],
       pagination: { totalOpenJobs: openRaw.length, totalCloseJobs: closeRaw.length },
       isLive: false,
     };
@@ -517,198 +470,174 @@ export const DailyJobApi = {
 
   /**
    * Add New Job
-   * Endpoint: POST /api/dailyjob/addnewjob
+   * Matches quickfix new.js: POST /api/dailyjob/addnewjob
    */
   addNewJob: async function (data, photoUri) {
-    try {
-      const form = new FormData();
-      form.append('propId', data.propId || 'Testing');
-      form.append('areaID', data.areaID || data.area || '');
-      form.append('subareaId', data.subareaId || data.sub || '');
-      form.append('issued_to_team', data.issued_to_team || data.dept || '');
-      form.append('issued_by_team', data.issued_by_team || data.by || '');
-      form.append('issued_by_team_details', data.issued_by_team_details || '');
-      form.append('creator_name', data.creator_name || '');
-      form.append('creator_position', data.creator_position || '');
-      form.append('job_detail', data.job_detail || data.details || '');
+    const form = new FormData();
+    form.append('propId', data.propId || '');
+    form.append('areaID', data.areaID || data.area || '');
+    form.append('subareaId', data.subareaId || data.sub || '');
+    form.append('issued_to_team', data.issued_to_team || data.dept || '');
+    form.append('issued_by_team', data.issued_by_team || data.by || '');
+    form.append('issued_by_team_details', data.issued_by_team_details || '');
+    form.append('creator_name', data.creator_name || '');
+    form.append('creator_position', data.creator_position || '');
+    form.append('job_detail', data.job_detail || data.details || '');
 
-      // Assign fields (only if assigning within own team)
-      if (data.assigned_dept) {
-        form.append('assigned_dept', data.assigned_dept);
-      }
-      if (data.assigned_supervisor) {
-        form.append('assigned_supervisor', data.assigned_supervisor);
-      }
-
-      if (photoUri) {
-        const filename = photoUri.split('/').pop() || 'job_photo.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image/jpeg`;
-        form.append('jobImages', {
-          uri: photoUri,
-          name: filename,
-          type,
-        });
-      }
-
-      const res = await apiFetch('api/dailyjob/addnewjob', {
-        method: 'POST',
-        body: form,
-      });
-      return { success: true, data: res, isLive: true };
-    } catch (e) {
-      console.warn('Backend addNewJob failed, falling back locally:', e.message);
-      return { success: true, localOnly: true, isLive: false };
+    // Assign fields (only if assigning within own team)
+    if (data.assigned_dept) {
+      form.append('assigned_dept', data.assigned_dept);
     }
+    if (data.assigned_supervisor) {
+      form.append('assigned_supervisor', data.assigned_supervisor);
+    }
+
+    if (photoUri) {
+      const filename = photoUri.split('/').pop() || 'job_photo.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : `image/jpeg`;
+      form.append('jobImages', {
+        uri: photoUri,
+        name: filename,
+        type,
+      });
+    }
+
+    const res = await apiFetch('api/dailyjob/addnewjob', {
+      method: 'POST',
+      body: form,
+    });
+    return { success: true, data: res, isLive: true };
   },
 
   /**
    * Get Team Members & Subteams for a department
-   * Endpoint: POST /api/dailyjob/getpropteam
+   * Matches quickfix open.js GetTeamMember: POST /api/dailyjob/getpropteam
    */
   getPropTeam: async function (propId, teamId) {
-    try {
-      const form = new FormData();
-      form.append('propID', propId || 'Testing');
-      form.append('teamID', teamId || '');
-      return await apiFetch('api/dailyjob/getpropteam', {
-        method: 'POST',
-        body: form,
-      });
-    } catch (e) {
-      return null;
-    }
+    const form = new FormData();
+    form.append('propID', propId || '');
+    form.append('teamID', teamId || '');
+    return await apiFetch('api/dailyjob/getpropteam', {
+      method: 'POST',
+      body: form,
+    });
   },
 
   /**
    * Assign team member to a job
-   * Endpoint: POST /api/dailyjob/assignteammember
+   * Matches quickfix open.js AssignTeamMember: POST /api/dailyjob/assignteammember
    */
   assignTeamMember: async function (jobId, propId, teamId, subteamId, assignedToEmail) {
-    try {
-      const form = new FormData();
-      form.append('jobId', String(jobId));
-      form.append('propId', propId || 'Testing');
-      form.append('teamId', teamId || '');
-      form.append('subteamId', subteamId || '');
-      form.append('assignedto', assignedToEmail || '');
-      return await apiFetch('api/dailyjob/assignteammember', {
-        method: 'POST',
-        body: form,
-      });
-    } catch (e) {
-      return { success: true, localOnly: true };
-    }
+    const form = new FormData();
+    form.append('jobId', String(jobId));
+    form.append('propId', propId || '');
+    form.append('teamId', teamId || '');
+    form.append('subteamId', subteamId || '');
+    form.append('assignedto', assignedToEmail || '');
+    return await apiFetch('api/dailyjob/assignteammember', {
+      method: 'POST',
+      body: form,
+    });
   },
 
   /**
-   * Change Job Status (Open -> Assigned -> In-Progress -> Closed)
-   * Endpoint: POST /api/dailyjob/changejobstatus
+   * Change Job Status (Assigned -> In-Progress -> Closed)
+   * Matches quickfix open.js ChangeJobStatus: POST /api/dailyjob/changejobstatus
    */
   changeJobStatus: async function (jobId, propId, areaId, status, remarks, photoUri) {
-    try {
-      const form = new FormData();
-      form.append('jobID', String(jobId));
-      form.append('propId', propId || 'Testing');
-      form.append('areaID', areaId || '');
-      form.append('status', status);
-      form.append('remarks', remarks || '');
+    const form = new FormData();
+    form.append('jobID', String(jobId));
+    form.append('propId', propId || '');
+    form.append('areaID', areaId || '');
+    form.append('status', status);
+    form.append('remarks', remarks || '');
 
-      if (photoUri) {
-        const filename = photoUri.split('/').pop() || 'closed_photo.jpg';
-        const match = /\.(\w+)$/.exec(filename);
-        const type = match ? `image/${match[1]}` : `image/jpeg`;
-        form.append('jobImages', {
-          uri: photoUri,
-          name: filename,
-          type,
-        });
-      }
-
-      return await apiFetch('api/dailyjob/changejobstatus', {
-        method: 'POST',
-        body: form,
+    if (photoUri) {
+      const filename = photoUri.split('/').pop() || 'closed_photo.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : `image/jpeg`;
+      form.append('jobImages', {
+        uri: photoUri,
+        name: filename,
+        type,
       });
-    } catch (e) {
-      return { success: true, localOnly: true };
     }
+
+    return await apiFetch('api/dailyjob/changejobstatus', {
+      method: 'POST',
+      body: form,
+    });
   },
 
   /**
    * User Login
-   * Endpoint: POST /api/login
+   * Matches quickfix login.html / app_quickfix.js: POST /api/login
    */
   login: async function (email, password, app = 'quickfix') {
-    try {
-      const res = await apiFetch('api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          Email: email,
-          Password: password,
-          App: app,
-        }),
-      });
+    const res = await apiFetch('api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        Email: email,
+        Password: password,
+        App: app,
+      }),
+    });
 
-      if (res && res.token) {
-        const jwt = res.token;
-        const payload = decodeJwtPayload(jwt);
-        let role = payload ? payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] : ['STAFF'];
-        if (!Array.isArray(role)) role = [role];
+    if (res && res.token) {
+      const jwt = res.token;
+      const payload = decodeJwtPayload(jwt);
+      let role = payload ? payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] : ['STAFF'];
+      if (!Array.isArray(role)) role = [role];
 
-        const updatedUserData = {
-          username: email,
-          jwt: jwt,
-          name: payload ? payload.unique_name || payload.name || email.split('@')[0] : email,
-          email: email,
-          role: role,
-          prop: payload ? payload.PrimaryProp : 'Testing',
-          desg: payload ? payload.Designation : 'Staff',
-          access: payload && payload.Access ? (typeof payload.Access === 'string' ? JSON.parse(payload.Access) : payload.Access) : {},
-        };
-
-        await setStoredUserData(updatedUserData);
-        return updatedUserData;
+      let fullName = '';
+      if (payload) {
+        if (payload.FirstName) {
+          fullName = (payload.FirstName + (payload.LastName ? (' ' + payload.LastName) : '')).trim();
+        } else if (payload.name) {
+          fullName = payload.name;
+        } else if (payload.unique_name) {
+          fullName = payload.unique_name;
+        }
       }
-    } catch (e) {
-      console.warn('Server login error:', e.message);
+      if (!fullName) fullName = email.split('@')[0];
+
+      const updatedUserData = {
+        username: email,
+        jwt: jwt,
+        name: fullName,
+        email: (payload && (payload.Email || payload.email)) || email,
+        role: role,
+        prop: payload ? (payload.PrimaryProp || payload.prop) : null,
+        desg: payload ? (payload.Designation || payload.desg) : 'Staff',
+        access: payload && payload.Access ? (typeof payload.Access === 'string' ? JSON.parse(payload.Access) : payload.Access) : {},
+      };
+
+      await setStoredUserData(updatedUserData);
+      return updatedUserData;
     }
 
-    // Role & Department resolution matching login.html fallback
-    let role = ['ADMIN'];
-    let desg = 'App admin';
-    let primaryTeam = 'Testing-Engineering';
-    let displayName = email.split('@')[0].toUpperCase();
+    throw new Error('Invalid email or password.');
+  },
 
-    if (email.toLowerCase().includes('hk')) {
-      displayName = 'Testing';
-      desg = 'Head-House Keeping';
-      primaryTeam = 'Testing-House Keeping';
-      role = ['MANAGER'];
-    } else if (email.toLowerCase().includes('sec')) {
-      displayName = 'Security Officer';
-      desg = 'Head of Security';
-      primaryTeam = 'Testing-Security';
-      role = ['SUPERVISOR'];
-    } else if (email.toLowerCase().includes('it')) {
-      displayName = 'IT';
-      desg = 'App admin';
-      primaryTeam = 'IT';
-      role = ['SUPERADMIN'];
-    }
-
-    const demoUser = {
-      username: email || 'it@workwize.com',
-      jwt: 'demo-token-' + Date.now(),
-      name: displayName,
-      email: email || 'it@workwize.com',
-      role: role,
+  /**
+   * Guest Demo Login (for offline preview without creating invalid tokens)
+   */
+  loginGuest: async function () {
+    const guestUser = {
+      username: 'guest@workwize.in',
+      jwt: '',
+      name: 'Guest User',
+      email: 'guest@workwize.in',
+      role: ['MANAGER'],
       prop: 'Testing',
-      desg: desg,
-      primaryTeam: primaryTeam,
-      access: { QuickFix: 'Full', TaskMaster: 'Full', DailyJobs: 'Full' },
+      desg: 'Guest Manager',
+      primaryTeam: '',
+      access: { QuickFix: 'Full', DailyJobs: 'Full' },
+      isGuest: true,
     };
-    await setStoredUserData(demoUser);
-    return demoUser;
+    await setStoredUserData(guestUser);
+    return guestUser;
   },
 };

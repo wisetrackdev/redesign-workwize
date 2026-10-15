@@ -71,7 +71,7 @@ export default function NewJobView({
   // No Photo Modal Confirmation (Exact match to workwize-teal #noPhotoModal)
   const [showNoPhotoModal, setShowNoPhotoModal] = useState(false);
 
-  // Format Teams for Dropdown
+  // Format Teams for Dropdown (Purely dynamic from API)
   const teamOptions = useMemo(() => {
     if (cachedTeams && cachedTeams.length > 0) {
       return cachedTeams.map((t) => ({
@@ -81,44 +81,20 @@ export default function NewJobView({
         teamObj: t,
       }));
     }
-    // Fallback teams matching workwize-teal
-    const defaults = [
-      'Testing-House Keeping',
-      'Testing-Engineering',
-      'IT',
-      'Testing-Security',
-      'Front Office',
-      'Food & Beverage',
-    ];
-    return defaults.map((d) => ({ id: d, label: d, value: d }));
+    return [];
   }, [cachedTeams]);
 
-  // Format Areas for Dropdown
+  // Format Areas for Dropdown (Purely dynamic from API)
   const areaOptions = useMemo(() => {
     if (cachedAreas && cachedAreas.length > 0) {
       return cachedAreas.map((a) => ({
-        id: a.areaId || a.areaName,
-        label: a.areaName || a.areaId,
-        value: a.areaId || a.areaName,
+        id: a.areaId || a.areaid || a.areaName,
+        label: a.areaName || a.name || a.areaId,
+        value: a.areaId || a.areaid || a.areaName,
         areaObj: a,
       }));
     }
-    // Fallback areas matching workwize-teal
-    const defaultAreaNames = [
-      'Waste Management',
-      'Public Area',
-      'SOP & Checklist',
-      'CAPEX',
-      'Fire Safety',
-      'Guest Villa',
-      'Utility',
-      'Development/Project',
-      'Back of the House',
-      'Landscaping',
-      'Energy Management',
-      "Owner's Recommendation",
-    ];
-    return defaultAreaNames.map((a, idx) => ({ id: String(idx + 1), label: a, value: a }));
+    return [];
   }, [cachedAreas]);
 
   // Synchronize Area dropdown when Property or cachedAreas changes (Matching quickfix logic)
@@ -496,7 +472,7 @@ export default function NewJobView({
               activeOpacity={0.8}
             >
               <Text style={issuedTo ? styles.dropdownVal : styles.dropdownPlaceholder}>
-                {issuedToLabel || issuedTo || 'Select department'}
+                {issuedToLabel || issuedTo || (teamOptions.length === 0 ? 'No departments available' : 'Select department')}
               </Text>
               <Feather name="chevron-down" size={18} color={Colors.primary} />
             </TouchableOpacity>
@@ -524,7 +500,7 @@ export default function NewJobView({
               activeOpacity={0.8}
             >
               <Text style={area ? styles.dropdownVal : styles.dropdownPlaceholder}>
-                {areaLabel || area || 'Select area'}
+                {areaLabel || area || (areaOptions.length === 0 ? 'No areas available' : 'Select area')}
               </Text>
               <Feather name="chevron-down" size={18} color={Colors.primary} />
             </TouchableOpacity>
@@ -1026,195 +1002,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-
-  /* Statistics Styles */
-  statsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.line,
-    padding: 16,
-    shadowColor: Colors.primaryDeep,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  statsTopBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  statsHeading: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  statPeriodTabs: {
-    flexDirection: 'row',
-    backgroundColor: '#EEF2F6',
-    borderRadius: 10,
-    padding: 3,
-  },
-  ptab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 7,
-  },
-  ptabActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  ptabText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: Colors.muted,
-  },
-  ptabTextActive: {
-    color: Colors.primary,
-    fontWeight: '700',
-  },
-  ptabBadge: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 8,
-  },
-  ptabBadgeActive: {
-    backgroundColor: Colors.primary,
-  },
-  ptabBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  ptabBadgeTextActive: {
-    color: '#FFFFFF',
-  },
-  metricGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
-  },
-  mBox: {
-    width: '48%',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.line,
-    padding: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  mBoxTotal: {
-    backgroundColor: '#FAFBFD',
-  },
-  mBoxOpen: {
-    backgroundColor: '#FFFDF9',
-    borderColor: '#FDE68A',
-  },
-  mBoxAssigned: {
-    backgroundColor: '#FAFBFD',
-    borderColor: '#DDD6FE',
-  },
-  mBoxClosed: {
-    backgroundColor: '#FAFCFA',
-    borderColor: '#A3E396',
-  },
-  mIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  mLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.muted,
-    letterSpacing: 0.3,
-  },
-  mNum: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.ink,
-  },
-  agingSection: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.line,
-    paddingTop: 12,
-  },
-  agingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  agingTitleLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  agingTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: Colors.ink,
-  },
-  agingBadge: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  agingBadgeText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: Colors.red,
-  },
-  agingRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  agingBox: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: Colors.line,
-    padding: 8,
-    alignItems: 'center',
-  },
-  agingBoxLabel: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: Colors.muted,
-  },
-  agingBoxNum: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginVertical: 2,
-  },
-  agingBoxSub: {
-    fontSize: 9,
-    color: Colors.muted,
-  },
-
   /* Modal Confirmation Styles */
   modalOverlay: {
     flex: 1,

@@ -29,6 +29,7 @@ import ProfileModal from './src/components/ProfileModal';
 import StatsModal from './src/components/StatsModal';
 import StatsView from './src/components/StatsView';
 import LoginScreen from './src/components/LoginScreen';
+import DropdownModal from './src/components/DropdownModal';
 
 import {
   DailyJobApi,
@@ -57,8 +58,8 @@ export default function App() {
   const [cachedAreas, setCachedAreas] = useState([]);
   const [cachedUserTeams, setCachedUserTeams] = useState([]);
 
-  // Master Jobs State
-  const [jobs, setJobs] = useState(Array.isArray(initialJobsData) ? initialJobsData : []);
+  // Master Jobs State (Synchronized with active property)
+  const [jobs, setJobs] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Navigation: 'new' | 'open' | 'closed'
@@ -85,6 +86,7 @@ export default function App() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showPropertyPickerModal, setShowPropertyPickerModal] = useState(false);
 
   // Selected Jobs for Modals
   const [selectedJob, setSelectedJob] = useState(null);
@@ -100,21 +102,25 @@ export default function App() {
         if (storedUser && storedUser.jwt) {
           setCurrentUser(storedUser);
           setIsLoggedIn(true);
-        }
-      } catch (e) {}
 
-      try {
-        const props = await DailyJobApi.getAllProperties();
-        if (Array.isArray(props) && props.length > 0) {
-          setAllProperties(props);
+          try {
+            const props = await DailyJobApi.getAllProperties();
+            if (Array.isArray(props) && props.length > 0) {
+              setAllProperties(props);
 
-          // If regular user, default to their assigned property (currentUser.prop)
-          const targetPropId =
-            storedUser?.prop && props.some((p) => String(p.propId) === String(storedUser.prop))
-              ? storedUser.prop
-              : props[0].propId || props[0].name || 'Testing';
+              // If regular user, default to their assigned property (currentUser.prop)
+              const targetPropId =
+                storedUser?.prop && props.some((p) => String(p.propId) === String(storedUser.prop))
+                  ? storedUser.prop
+                  : props[0].propId || props[0].name || 'Testing';
 
-          setCurrentPropertyId(targetPropId);
+              setCurrentPropertyId(targetPropId);
+            }
+          } catch (err) {
+            if (err.message === 'UNAUTHORIZED' || String(err.message).includes('401')) {
+              await handleLogout();
+            }
+          }
         }
       } catch (e) {}
     })();
@@ -159,6 +165,16 @@ export default function App() {
     return allProperties.length > 0 ? [allProperties[0]] : [];
   }, [allProperties, currentUser]);
 
+  // Formatted property options for direct DropdownModal
+  const propertyDropdownItems = useMemo(() => {
+    return visibleProperties.map((p) => ({
+      id: p.propId || p.id || p.propName,
+      label: p.propName || p.name || String(p.propId),
+      value: p.propId || p.id || p.propName,
+      sublabel: p.propId ? `Property ID: ${p.propId}` : undefined,
+    }));
+  }, [visibleProperties]);
+
   // Sync Jobs, Teams, and Areas from API matching workwize-teal fetchAllJobsFromApi
   const fetchJobs = useCallback(
     async (targetPropId) => {
@@ -185,9 +201,7 @@ export default function App() {
           const closeList = Array.isArray(res.closedJobs) ? res.closedJobs : [];
           const combined = [...openList, ...closeList];
 
-          if (combined.length > 0) {
-            setJobs(combined);
-          }
+          setJobs(combined);
         }
       } catch (e) {
         console.warn('Sync completed with local cache:', e);
@@ -211,18 +225,32 @@ export default function App() {
     setCurrentUser(user);
     setIsLoggedIn(true);
 
-    if (user.prop && allProperties.some((p) => String(p.propId) === String(user.prop))) {
-      setCurrentPropertyId(user.prop);
-      fetchJobs(user.prop);
-    } else {
-      fetchJobs(currentPropertyId);
+    try {
+      const props = await DailyJobApi.getAllProperties();
+      if (Array.isArray(props) && props.length > 0) {
+        setAllProperties(props);
+
+        // If regular user has assigned prop in props, pick it; else default to first
+        let targetPropId = props[0].propId || props[0].name;
+        if (user.prop && props.some((p) => String(p.propId) === String(user.prop))) {
+          targetPropId = user.prop;
+        }
+
+        setCurrentPropertyId(targetPropId);
+        fetchJobs(targetPropId);
+        return;
+      }
+    } catch (e) {
+      console.warn('Could not load properties on login:', e);
     }
+
+    fetchJobs(currentPropertyId);
   };
 
   const handleGuestLogin = () => {
     const guestUser = {
       name: 'Testing',
-      email: 'hk_mgr@workwize.com',
+      email: 'hk_mgr@workwize.in',
       desg: 'Head-House Keeping',
       prop: currentPropertyId || 'Testing',
       role: ['MANAGER'],
@@ -240,6 +268,7 @@ export default function App() {
     setCurrentUser(null);
     setIsLoggedIn(false);
     setShowProfileModal(false);
+    setShowPropertyPickerModal(false);
   };
 
   // Switch Property Handler (matching workwize-teal renderPropertySelector opt.click)
@@ -247,6 +276,7 @@ export default function App() {
     const propId = propItem.value || propItem.propId || propItem.id || String(propItem);
     const propName = propItem.label || propItem.propName || propItem.name || propId;
     setCurrentPropertyId(propId);
+    setShowPropertyPickerModal(false);
     fetchJobs(propId);
     Alert.alert('Property Switched', `Active property: ${propName}`);
   };
@@ -432,6 +462,9 @@ export default function App() {
 
   // Actions: Assign Staff
   const handleAssignSubmit = ({ jobId, subTeam, member, remarks }) => {
+    const emailMatch = typeof member === 'string' ? member.match(/\[(.*?)\]/) : null;
+    const assignedEmail = emailMatch ? emailMatch[1] : member;
+
     setJobs((prev) =>
       prev.map((j) => {
         if (j.id === jobId) {
@@ -447,7 +480,9 @@ export default function App() {
       })
     );
 
-    DailyJobApi.assignTeamMember(jobId, currentPropertyId, '', subTeam, member);
+    const targetJob = jobs.find((j) => j.id === jobId);
+    const teamId = targetJob?.issued_to_team || targetJob?.dept || '';
+    DailyJobApi.assignTeamMember(jobId, currentPropertyId, teamId, subTeam, assignedEmail);
   };
 
   // Actions: Close Job
@@ -469,7 +504,9 @@ export default function App() {
       })
     );
 
-    DailyJobApi.changeJobStatus(jobId, currentPropertyId, '', 'Closed', remarks, photoAfterUri);
+    const targetJob = jobs.find((j) => j.id === jobId);
+    const areaId = targetJob?.areaId || targetJob?.area || '';
+    DailyJobApi.changeJobStatus(jobId, currentPropertyId, areaId, 'Closed', remarks, photoAfterUri);
   };
 
   // Actions: Edit Job
@@ -530,6 +567,7 @@ export default function App() {
           }}
           onOpenNewJob={() => setActiveTab('new')}
           onOpenProfile={() => setShowProfileModal(true)}
+          onOpenPropertyPicker={() => setShowPropertyPickerModal(true)}
           onOpenFilter={() => setShowFilterModal(true)}
           propertyName={currentPropertyName}
           currentUser={currentUser}
@@ -832,6 +870,16 @@ export default function App() {
             if (st === 'Closed') setActiveTab('closed');
             else setActiveTab('open');
           }}
+        />
+
+        {/* Direct Property Selector Modal (Tapped from Header Property Pill) */}
+        <DropdownModal
+          visible={showPropertyPickerModal}
+          onClose={() => setShowPropertyPickerModal(false)}
+          title="Select Property"
+          items={propertyDropdownItems}
+          selectedValue={currentPropertyId}
+          onSelect={(propId, item) => handleSelectProperty(item)}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>

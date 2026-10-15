@@ -19,6 +19,7 @@ export default function DropdownModal({
   visible,
   title = 'Select Option',
   options = [],
+  items = [],
   selectedValue,
   onSelect,
   onClose,
@@ -26,8 +27,10 @@ export default function DropdownModal({
 }) {
   const [search, setSearch] = useState('');
 
+  const listToFormat = options && options.length > 0 ? options : (items || []);
+
   // Handle both string arrays and object arrays { id, name, value, label }
-  const formattedOptions = options.map((opt) => {
+  const formattedOptions = listToFormat.map((opt) => {
     if (typeof opt === 'string') {
       return { id: opt, label: opt, value: opt };
     }

@@ -118,9 +118,46 @@ export default function JobCard({
           <Text style={styles.kvLabel}>Assigned To:</Text>
           <Text style={styles.kvValue} numberOfLines={1}>
             {job.assigned || 'Unassigned'}
+            {job.assignDept && job.assignDept !== 'NA' ? ` (${job.assignDept})` : ''}
           </Text>
         </View>
+
+        {isClosed && job.closedBy && (
+          <View style={styles.kvRow}>
+            <Text style={styles.kvLabel}>Closed By:</Text>
+            <Text style={styles.kvValue} numberOfLines={1}>
+              {job.closedBy} {job.closedAt ? `• ${formatApiDate(job.closedAt)}` : ''}
+            </Text>
+          </View>
+        )}
+
+        {isClosed && job.remarks ? (
+          <View style={styles.kvRow}>
+            <Text style={styles.kvLabel}>Remark:</Text>
+            <Text style={styles.kvValue} numberOfLines={1}>
+              {job.remarks}
+            </Text>
+          </View>
+        ) : null}
       </View>
+
+      {/* Media indicators */}
+      {(job.photoBefore || job.photoAfter) && (
+        <View style={styles.mediaRow}>
+          {job.photoBefore ? (
+            <View style={styles.mediaBadge}>
+              <Feather name="camera" size={10} color={Colors.primary} />
+              <Text style={styles.mediaBadgeText}>Before Photo</Text>
+            </View>
+          ) : null}
+          {job.photoAfter ? (
+            <View style={[styles.mediaBadge, styles.mediaBadgeAfter]}>
+              <Feather name="check-circle" size={10} color={Colors.greenDark} />
+              <Text style={[styles.mediaBadgeText, styles.mediaBadgeTextAfter]}>After Photo</Text>
+            </View>
+          ) : null}
+        </View>
+      )}
 
       {/* Bottom Actions Row (.card-actions) */}
       <View style={styles.bottomRow}>
@@ -162,17 +199,6 @@ export default function JobCard({
           </View>
         ) : (
           <View style={styles.actionButtons}>
-            {onEdit && (
-              <TouchableOpacity
-                style={styles.btnEdit}
-                onPress={() => onEdit(job)}
-                activeOpacity={0.8}
-              >
-                <Feather name="edit-2" size={11} color={Colors.primary} />
-                <Text style={styles.btnEditText}>Edit</Text>
-              </TouchableOpacity>
-            )}
-
             <View style={styles.closedBadgeWrap}>
               <Feather name="check" size={13} color={Colors.greenDark} />
               <Text style={styles.closedBadgeText}>Completed</Text>
@@ -371,5 +397,34 @@ const styles = StyleSheet.create({
     color: Colors.greenDark,
     fontSize: 11,
     fontWeight: '700',
+  },
+  mediaRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  mediaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  mediaBadgeAfter: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  mediaBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  mediaBadgeTextAfter: {
+    color: Colors.greenDark,
   },
 });

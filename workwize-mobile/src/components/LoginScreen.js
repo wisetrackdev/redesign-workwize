@@ -16,7 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 
 export default function LoginScreen({ onLoginSuccess, onGuestLogin }) {
-  const [username, setUsername] = useState('it@workwize.com');
+  const [username, setUsername] = useState('it@workwize.in');
   const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,17 +25,17 @@ export default function LoginScreen({ onLoginSuccess, onGuestLogin }) {
   const demoAccounts = [
     {
       name: 'IT (App admin)',
-      user: 'it@workwize.com',
+      user: 'it@workwize.in',
       pwd: 'password123',
     },
     {
       name: 'HK Manager',
-      user: 'hk_mgr@workwize.com',
+      user: 'hk_mgr@workwize.in',
       pwd: 'password123',
     },
     {
       name: 'Security Officer',
-      user: 'sec_officer@workwize.com',
+      user: 'sec_officer@workwize.in',
       pwd: 'password123',
     },
   ];
@@ -112,7 +112,7 @@ export default function LoginScreen({ onLoginSuccess, onGuestLogin }) {
               <View style={styles.inputWrap}>
                 <TextInput
                   style={styles.input}
-                  placeholder="e.g. it@workwize.com"
+                  placeholder="e.g. it@workwize.in"
                   placeholderTextColor={Colors.placeholder}
                   value={username}
                   onChangeText={(t) => {
