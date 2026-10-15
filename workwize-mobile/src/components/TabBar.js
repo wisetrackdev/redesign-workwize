@@ -15,7 +15,7 @@ export default function TabBar({
   onPressStats,
 }) {
   return (
-    <View style={styles.wrapper}>
+    <View style={styles.wrapper} pointerEvents="box-none">
       <View style={styles.dockBar}>
         {/* Tab 1: Open Jobs Button */}
         <TouchableOpacity
@@ -52,25 +52,8 @@ export default function TabBar({
           <Text style={styles.tabLabel}>Filter</Text>
         </TouchableOpacity>
 
-        {/* Center Floating Action Button: + New Job */}
-        <View style={styles.fabContainer}>
-          <TouchableOpacity
-            style={styles.fabTouchable}
-            onPress={onPressNewJob}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={
-                activeTab === 'new'
-                  ? [Colors.primary, Colors.primaryDark]
-                  : [Colors.green, Colors.greenDark]
-              }
-              style={styles.fabGradient}
-            >
-              <Ionicons name="add" size={32} color="#FFFFFF" />
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
+        {/* Center Placeholder to leave space for Floating Action Button */}
+        <View style={styles.fabSpacer} pointerEvents="none" />
 
         {/* Tab 3: Closed Jobs Button */}
         <TouchableOpacity
@@ -99,12 +82,39 @@ export default function TabBar({
 
         {/* Tab 4: Statistics Button */}
         <TouchableOpacity
-          style={styles.tabButton}
+          style={[styles.tabButton, activeTab === 'stats' && styles.tabButtonActive]}
           onPress={onPressStats}
           activeOpacity={0.7}
         >
-          <Feather name="bar-chart-2" size={20} color={Colors.muted} />
-          <Text style={styles.tabLabel}>Stats</Text>
+          <Feather
+            name="bar-chart-2"
+            size={20}
+            color={activeTab === 'stats' ? Colors.primary : Colors.muted}
+          />
+          <Text style={[styles.tabLabel, activeTab === 'stats' && styles.tabLabelActive]}>
+            Stats
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Floating Center Action Button (+ New Job) positioned at wrapper level so Android doesn't clip touches! */}
+      <View style={styles.fabContainer}>
+        <TouchableOpacity
+          style={styles.fabTouchable}
+          onPress={onPressNewJob}
+          activeOpacity={0.8}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <LinearGradient
+            colors={
+              activeTab === 'new'
+                ? [Colors.primary, Colors.primaryDark]
+                : [Colors.green, Colors.greenDark]
+            }
+            style={styles.fabGradient}
+          >
+            <Ionicons name="add" size={32} color="#FFFFFF" />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
@@ -119,6 +129,7 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: 'transparent',
     alignItems: 'center',
+    paddingTop: 16,
   },
   dockBar: {
     width: '100%',
@@ -186,9 +197,15 @@ const styles = StyleSheet.create({
   tabBadgeTextActive: {
     color: '#FFFFFF',
   },
+  fabSpacer: {
+    width: 60,
+    height: 40,
+  },
   fabContainer: {
-    position: 'relative',
-    top: -18,
+    position: 'absolute',
+    top: 4,
+    left: '50%',
+    marginLeft: -30,
     width: 60,
     height: 60,
     borderRadius: 30,
@@ -200,7 +217,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.45,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 12,
+    zIndex: 99,
   },
   fabTouchable: {
     width: '100%',

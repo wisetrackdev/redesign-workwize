@@ -71,9 +71,6 @@ export default function NewJobView({
   // No Photo Modal Confirmation (Exact match to workwize-teal #noPhotoModal)
   const [showNoPhotoModal, setShowNoPhotoModal] = useState(false);
 
-  // Statistics Period Tab: 'today' | 'weekly' | 'monthly'
-  const [statPeriod, setStatPeriod] = useState('today');
-
   // Format Teams for Dropdown
   const teamOptions = useMemo(() => {
     if (cachedTeams && cachedTeams.length > 0) {
@@ -123,6 +120,24 @@ export default function NewJobView({
     ];
     return defaultAreaNames.map((a, idx) => ({ id: String(idx + 1), label: a, value: a }));
   }, [cachedAreas]);
+
+  // Synchronize Area dropdown when Property or cachedAreas changes (Matching quickfix logic)
+  useEffect(() => {
+    if (areaOptions && areaOptions.length > 0) {
+      const match = areaOptions.find(
+        (o) => String(o.value) === String(area) || String(o.label) === String(areaLabel)
+      );
+      if (!match) {
+        setArea(areaOptions[0].value);
+        setAreaLabel(areaOptions[0].label);
+        setSubArea('');
+      }
+    } else {
+      setArea('');
+      setAreaLabel('');
+      setSubArea('');
+    }
+  }, [currentPropertyId, cachedAreas, areaOptions]);
 
   // Set default department on mount if user belongs to a department
   useEffect(() => {
@@ -454,44 +469,6 @@ export default function NewJobView({
     }
   };
 
-  // Job Statistics Calculation (Exact match to workwize-teal aside.card.recent)
-  const stats = useMemo(() => {
-    const total = jobs.length;
-    const open = jobs.filter((j) => (j.status || '').toLowerCase() === 'open').length;
-    const assigned = jobs.filter((j) => (j.status || '').toLowerCase() === 'assigned').length;
-    const inProgress = jobs.filter((j) => (j.status || '').toLowerCase().includes('progress')).length;
-    const closed = jobs.filter((j) => (j.status || '').toLowerCase() === 'closed').length;
-
-    // Aging: > 1 week old
-    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const agingOpen = jobs.filter(
-      (j) =>
-        (j.status || '').toLowerCase() === 'open' &&
-        new Date(j.opened || j.createdAt).getTime() < oneWeekAgo
-    ).length;
-    const agingAssigned = jobs.filter(
-      (j) =>
-        (j.status || '').toLowerCase() === 'assigned' &&
-        new Date(j.opened || j.createdAt).getTime() < oneWeekAgo
-    ).length;
-    const agingInProgress = jobs.filter(
-      (j) =>
-        (j.status || '').toLowerCase().includes('progress') &&
-        new Date(j.opened || j.createdAt).getTime() < oneWeekAgo
-    ).length;
-
-    return {
-      total,
-      open,
-      assigned,
-      inProgress,
-      closed,
-      agingOpen,
-      agingAssigned,
-      agingInProgress,
-    };
-  }, [jobs]);
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -709,187 +686,6 @@ export default function NewJobView({
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Job Statistics Section matching workwize-teal */}
-        <View style={styles.statsCard}>
-          <View style={styles.statsTopBar}>
-            <Text style={styles.statsHeading}>Job Statistics</Text>
-            <View style={styles.statPeriodTabs}>
-              <TouchableOpacity
-                style={[styles.ptab, statPeriod === 'today' && styles.ptabActive]}
-                onPress={() => setStatPeriod('today')}
-              >
-                <Text
-                  style={[
-                    styles.ptabText,
-                    statPeriod === 'today' && styles.ptabTextActive,
-                  ]}
-                >
-                  Today
-                </Text>
-                <View
-                  style={[
-                    styles.ptabBadge,
-                    statPeriod === 'today' && styles.ptabBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.ptabBadgeText,
-                      statPeriod === 'today' && styles.ptabBadgeTextActive,
-                    ]}
-                  >
-                    {stats.total}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.ptab, statPeriod === 'weekly' && styles.ptabActive]}
-                onPress={() => setStatPeriod('weekly')}
-              >
-                <Text
-                  style={[
-                    styles.ptabText,
-                    statPeriod === 'weekly' && styles.ptabTextActive,
-                  ]}
-                >
-                  Weekly
-                </Text>
-                <View
-                  style={[
-                    styles.ptabBadge,
-                    statPeriod === 'weekly' && styles.ptabBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.ptabBadgeText,
-                      statPeriod === 'weekly' && styles.ptabBadgeTextActive,
-                    ]}
-                  >
-                    {stats.total}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.ptab, statPeriod === 'monthly' && styles.ptabActive]}
-                onPress={() => setStatPeriod('monthly')}
-              >
-                <Text
-                  style={[
-                    styles.ptabText,
-                    statPeriod === 'monthly' && styles.ptabTextActive,
-                  ]}
-                >
-                  Monthly
-                </Text>
-                <View
-                  style={[
-                    styles.ptabBadge,
-                    statPeriod === 'monthly' && styles.ptabBadgeActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.ptabBadgeText,
-                      statPeriod === 'monthly' && styles.ptabBadgeTextActive,
-                    ]}
-                  >
-                    {stats.total}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Metric Boxes Grid (4 boxes: Total, Open, Assigned, Closed) */}
-          <View style={styles.metricGrid}>
-            <View style={[styles.mBox, styles.mBoxTotal]}>
-              <View style={styles.mIconWrap}>
-                <Feather name="briefcase" size={18} color={Colors.primary} />
-              </View>
-              <View>
-                <Text style={styles.mLabel}>TOTAL NEW JOBS</Text>
-                <Text style={styles.mNum}>{stats.total}</Text>
-              </View>
-            </View>
-
-            <View style={[styles.mBox, styles.mBoxOpen]}>
-              <View style={styles.mIconWrap}>
-                <Feather name="clock" size={18} color={Colors.amberDark} />
-              </View>
-              <View>
-                <Text style={styles.mLabel}>OPEN</Text>
-                <Text style={[styles.mNum, { color: Colors.amberDark }]}>
-                  {stats.open}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[styles.mBox, styles.mBoxAssigned]}>
-              <View style={styles.mIconWrap}>
-                <Feather name="user-check" size={18} color="#2F4390" />
-              </View>
-              <View>
-                <Text style={styles.mLabel}>ASSIGNED</Text>
-                <Text style={[styles.mNum, { color: '#2F4390' }]}>
-                  {stats.assigned}
-                </Text>
-              </View>
-            </View>
-
-            <View style={[styles.mBox, styles.mBoxClosed]}>
-              <View style={styles.mIconWrap}>
-                <Feather name="check-circle" size={18} color={Colors.greenDark} />
-              </View>
-              <View>
-                <Text style={styles.mLabel}>CLOSED</Text>
-                <Text style={[styles.mNum, { color: Colors.greenDark }]}>
-                  {stats.closed}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Aging of Jobs Section */}
-          <View style={styles.agingSection}>
-            <View style={styles.agingHeader}>
-              <View style={styles.agingTitleLeft}>
-                <Feather name="clock" size={14} color={Colors.red} />
-                <Text style={styles.agingTitle}>Aging of Jobs</Text>
-              </View>
-              <View style={styles.agingBadge}>
-                <Text style={styles.agingBadgeText}>&gt; 1 Week Old</Text>
-              </View>
-            </View>
-
-            <View style={styles.agingRow}>
-              <View style={styles.agingBox}>
-                <Text style={styles.agingBoxLabel}>&bull; OPEN</Text>
-                <Text style={[styles.agingBoxNum, { color: Colors.amberDark }]}>
-                  {stats.agingOpen}
-                </Text>
-                <Text style={styles.agingBoxSub}>&gt; 7 days</Text>
-              </View>
-              <View style={styles.agingBox}>
-                <Text style={styles.agingBoxLabel}>&bull; ASSIGNED</Text>
-                <Text style={[styles.agingBoxNum, { color: '#2F4390' }]}>
-                  {stats.agingAssigned}
-                </Text>
-                <Text style={styles.agingBoxSub}>&gt; 7 days</Text>
-              </View>
-              <View style={styles.agingBox}>
-                <Text style={styles.agingBoxLabel}>&bull; IN-PROGRESS</Text>
-                <Text style={[styles.agingBoxNum, { color: Colors.progressDark }]}>
-                  {stats.agingInProgress}
-                </Text>
-                <Text style={styles.agingBoxSub}>&gt; 7 days</Text>
-              </View>
-            </View>
-          </View>
-        </View>
       </ScrollView>
 
       {/* No Photo Confirmation Modal (Exact match to workwize-teal #noPhotoModal) */}
@@ -980,7 +776,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 14,
-    paddingBottom: 40,
+    paddingBottom: 110,
   },
   card: {
     backgroundColor: '#FFFFFF',

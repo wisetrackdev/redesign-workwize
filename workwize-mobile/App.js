@@ -27,6 +27,7 @@ import EditJobModal from './src/components/EditJobModal';
 import DeleteJobModal from './src/components/DeleteJobModal';
 import ProfileModal from './src/components/ProfileModal';
 import StatsModal from './src/components/StatsModal';
+import StatsView from './src/components/StatsView';
 import LoginScreen from './src/components/LoginScreen';
 
 import {
@@ -45,13 +46,9 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Master Properties State (matching workwize-teal)
+  // Master Properties State (Matching quickfix architecture)
   const [allProperties, setAllProperties] = useState([
     { propId: 'Testing', propName: 'Testing' },
-    { propId: 'Male', propName: 'Male' },
-    { propId: 'APG-Main', propName: 'APG Main' },
-    { propId: 'Velana-Resort', propName: 'Velana Resort' },
-    { propId: 'Emerald-Island', propName: 'Emerald Island' },
   ]);
   const [currentPropertyId, setCurrentPropertyId] = useState('Testing');
 
@@ -540,7 +537,7 @@ export default function App() {
           closedCount={closedCount}
         />
 
-        {/* Tab View Switching: 'new' vs 'open' / 'closed' */}
+        {/* Tab View Switching: 'new' vs 'stats' vs 'open' / 'closed' */}
         {activeTab === 'new' ? (
           <NewJobView
             onSubmit={handleCreateJob}
@@ -554,6 +551,19 @@ export default function App() {
             currentPropertyId={currentPropertyId}
             currentPropertyName={currentPropertyName}
             jobs={jobs}
+          />
+        ) : activeTab === 'stats' ? (
+          <StatsView
+            jobs={jobs}
+            currentPropertyName={currentPropertyName}
+            onSelectFilter={(st) => {
+              setFilterState((prev) => ({ ...prev, status: st }));
+              if (st === 'Closed') {
+                setActiveTab('closed');
+              } else {
+                setActiveTab('open');
+              }
+            }}
           />
         ) : (
           <View style={styles.contentWrap}>
@@ -736,6 +746,8 @@ export default function App() {
             setActiveTab('closed');
             setPillFilter('all');
           }}
+          onPressFilter={() => setShowFilterModal(true)}
+          onPressStats={() => setActiveTab('stats')}
         />
 
         {/* Modal Dialogs */}
@@ -769,6 +781,8 @@ export default function App() {
           job={selectedJob}
           onClose={() => setShowAssignModal(false)}
           onAssignSubmit={handleAssignSubmit}
+          cachedTeams={cachedTeams}
+          userTeamContext={userTeamContext}
         />
 
         <CloseJobModal

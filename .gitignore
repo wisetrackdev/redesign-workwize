@@ -8,3 +8,6 @@ node_modules/
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+
+# Temporary / Screenshots
+WhatsApp Image*

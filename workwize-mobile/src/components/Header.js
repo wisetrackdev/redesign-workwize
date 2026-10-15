@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, StatusBar, Platform } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 
@@ -20,30 +20,40 @@ export default function Header({
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primaryDark} />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={Colors.primaryDark}
+        translucent={Platform.OS === 'android'}
+      />
 
       {/* Top Header Bar */}
       <View style={styles.topBar}>
         {/* WorkWize Logo in White Pill (Exact match to workwize-teal) */}
-        <View style={styles.logoPill}>
+        <TouchableOpacity
+          style={styles.logoPill}
+          activeOpacity={0.9}
+          onPress={() => onTabChange && onTabChange('open')}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Image
             source={require('../../assets/logo.png')}
             style={styles.logoImage}
             resizeMode="contain"
           />
-        </View>
+        </TouchableOpacity>
 
         {/* Active Property Badge Pill */}
         <TouchableOpacity
           style={styles.propPill}
           onPress={onOpenProfile}
-          activeOpacity={0.8}
+          activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <Feather name="layers" size={12} color="#FFFFFF" />
+          <Feather name="layers" size={13} color="#FFFFFF" />
           <Text style={styles.propPillText} numberOfLines={1}>
             {propertyName}
           </Text>
-          <Feather name="chevron-down" size={12} color="rgba(255,255,255,0.8)" />
+          <Feather name="chevron-down" size={13} color="rgba(255,255,255,0.85)" />
         </TouchableOpacity>
 
         {/* Right Action Icons */}
@@ -52,7 +62,7 @@ export default function Header({
             style={styles.iconBtn}
             onPress={onOpenFilter}
             activeOpacity={0.7}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             <Feather name="filter" size={18} color="#FFFFFF" />
           </TouchableOpacity>
@@ -61,7 +71,8 @@ export default function Header({
           <TouchableOpacity
             style={styles.avatarWrap}
             onPress={onOpenProfile}
-            activeOpacity={0.8}
+            activeOpacity={0.7}
+            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{userInitial}</Text>
@@ -123,7 +134,7 @@ export default function Header({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.primary,
-    paddingTop: 12,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 10 : (Platform.OS === 'ios' ? 44 : 12),
     paddingBottom: 10,
     paddingHorizontal: 14,
     borderBottomLeftRadius: 18,
@@ -158,18 +169,18 @@ const styles = StyleSheet.create({
   propPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.28)',
-    maxWidth: 130,
+    borderColor: 'rgba(255, 255, 255, 0.32)',
+    maxWidth: 160,
   },
   propPillText: {
     color: '#FFFFFF',
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '700',
   },
   rightActions: {
@@ -178,26 +189,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   iconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   avatarWrap: {
     position: 'relative',
+    padding: 2,
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: 'rgba(255, 255, 255, 0.9)',
   },
   avatarText: {
     fontSize: 13,

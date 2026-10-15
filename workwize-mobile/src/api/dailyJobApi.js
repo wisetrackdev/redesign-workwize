@@ -297,7 +297,7 @@ async function apiFetch(endpoint, options = {}) {
     }
   } catch (err) {
     clearTimeout(timeoutId);
-    console.warn(`API call failed for ${url}:`, err.message || err);
+    console.log(`API call notice (${url}):`, err.message || err);
     throw err;
   }
 }
@@ -305,7 +305,7 @@ async function apiFetch(endpoint, options = {}) {
 export const DailyJobApi = {
   /**
    * Get all properties
-   * Endpoint: GET /api/dailyjob/getallproperty
+   * Endpoint: GET /api/dailyjob/getallproperty or /api/jobtracker/getallproperty
    */
   getAllProperties: async function () {
     try {
@@ -313,15 +313,35 @@ export const DailyJobApi = {
       if (Array.isArray(res) && res.length > 0) return res;
       if (res && res.data && Array.isArray(res.data)) return res.data;
     } catch (e) {
-      console.log('Live property fetch failed, using fallback properties');
+      try {
+        const res2 = await apiFetch('api/jobtracker/getallproperty', { method: 'GET' });
+        if (Array.isArray(res2) && res2.length > 0) return res2;
+        if (res2 && res2.data && Array.isArray(res2.data)) return res2.data;
+      } catch (e2) {
+        console.log('Property fetch fallback to current active property');
+      }
     }
     return [
       { propId: 'Testing', propName: 'Testing' },
-      { propId: 'Male', propName: 'Male' },
-      { propId: 'APG-Main', propName: 'APG Main' },
-      { propId: 'Velana-Resort', propName: 'Velana Resort' },
-      { propId: 'Emerald-Island', propName: 'Emerald Island' },
     ];
+  },
+
+  /**
+   * Get Property Info (Areas & Employees)
+   * Matches quickfix GetProperyInfo endpoint: POST /api/jobtracker/getpropinfo
+   */
+  getPropInfo: async function (propId) {
+    try {
+      const form = new FormData();
+      form.append('propId', propId || 'Testing');
+      const res = await apiFetch('api/jobtracker/getpropinfo', {
+        method: 'POST',
+        body: form,
+      });
+      return res;
+    } catch (e) {
+      return null;
+    }
   },
 
   /**
@@ -351,11 +371,25 @@ export const DailyJobApi = {
         const mappedOpen = rawOpen.map((j, idx) => mapApiJob(j, idx, activePropName));
         const mappedClosed = rawClose.map((j, idx) => mapApiJob(j, rawOpen.length + idx, activePropName));
 
+        let fetchedAreas = Array.isArray(res.areas) ? res.areas : [];
+        if (!fetchedAreas.length) {
+          try {
+            const propInfo = await DailyJobApi.getPropInfo(propId);
+            if (propInfo && Array.isArray(propInfo.propArea)) {
+              fetchedAreas = propInfo.propArea.map((a) => ({
+                areaId: a.areaid || a.areaId,
+                areaName: a.areaName || a.name,
+                propsubarea: a.propsubarea || [],
+              }));
+            }
+          } catch (e) {}
+        }
+
         return {
           openJobs: mappedOpen,
           closedJobs: mappedClosed,
           teams: Array.isArray(res.teams) ? res.teams : [],
-          areas: Array.isArray(res.areas) ? res.areas : [],
+          areas: fetchedAreas,
           userTeam: Array.isArray(res.userTeam) ? res.userTeam : [],
           pagination: res.pagination || {},
           isLive: true,

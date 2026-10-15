@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,34 +16,90 @@ export default function AssignModal({
   job,
   onClose,
   onAssignSubmit,
+  cachedTeams = [],
+  userTeamContext = {},
 }) {
-  const [subTeam, setSubTeam] = useState('General Maintenance');
-  const [member, setMember] = useState('Ahmed Ali');
+  const [subTeam, setSubTeam] = useState('');
+  const [member, setMember] = useState('');
   const [remarks, setRemarks] = useState('');
 
+  // Find department matching job.dept or user's primary team
+  const targetTeam = useMemo(() => {
+    if (!job) return null;
+    const deptName = job.dept || job.issued_to_team;
+    return (
+      (cachedTeams || []).find(
+        (t) =>
+          String(t.teamId) === String(deptName) ||
+          String(t.teamName).toLowerCase() === String(deptName).toLowerCase()
+      ) ||
+      (cachedTeams && cachedTeams[0]) ||
+      null
+    );
+  }, [job, cachedTeams]);
+
+  // Extract subteams list
+  const subTeams = useMemo(() => {
+    if (targetTeam && targetTeam.propsubteams && targetTeam.propsubteams.length > 0) {
+      return targetTeam.propsubteams.map((s) => s.subteamName || s.subteamId);
+    }
+    if (userTeamContext?.userSubTeamData?.length > 0) {
+      return userTeamContext.userSubTeamData.map((s) => s.subteamName || s.subteamId);
+    }
+    return [
+      'General Maintenance',
+      'HVAC & AC',
+      'Electrical & Power',
+      'Plumbing & Water',
+      'Carpentry & Paint',
+    ];
+  }, [targetTeam, userTeamContext]);
+
+  // Extract members list for selected subteam
+  const members = useMemo(() => {
+    if (targetTeam && targetTeam.propsubteams && targetTeam.propsubteams.length > 0) {
+      const matchSub = targetTeam.propsubteams.find(
+        (s) => (s.subteamName || s.subteamId) === subTeam
+      );
+      if (matchSub && matchSub.subteams && matchSub.subteams.length > 0) {
+        return matchSub.subteams.map(
+          (m) => `${m.firstName || ''} ${m.lastName || ''} [${m.email}]`.trim()
+        );
+      }
+    }
+    if (targetTeam && targetTeam.members && targetTeam.members.length > 0) {
+      return targetTeam.members.map(
+        (m) => `${m.firstName || ''} ${m.lastName || ''} [${m.email}]`.trim()
+      );
+    }
+    return [
+      'Ahmed Ali [Senior Tech]',
+      'John Doe [Technician]',
+      'Jane Smith [Supervisor]',
+      'Rajesh Kumar [Staff]',
+      'Mohamed Hassan [Tech]',
+    ];
+  }, [targetTeam, subTeam]);
+
+  useEffect(() => {
+    if (subTeams.length > 0) {
+      setSubTeam(subTeams[0]);
+    }
+  }, [subTeams]);
+
+  useEffect(() => {
+    if (members.length > 0) {
+      setMember(members[0]);
+    }
+  }, [members]);
+
   if (!job) return null;
-
-  const subTeams = [
-    'General Maintenance',
-    'HVAC & AC',
-    'Electrical & Power',
-    'Plumbing & Water',
-    'Carpentry & Paint',
-  ];
-
-  const members = [
-    'Ahmed Ali [Senior Tech]',
-    'John Doe [Technician]',
-    'Jane Smith [Supervisor]',
-    'Rajesh Kumar [Staff]',
-    'Mohamed Hassan [Tech]',
-  ];
 
   const handleSubmit = () => {
     onAssignSubmit({
       jobId: job.id,
-      subTeam,
-      member,
+      subTeam: subTeam || 'General',
+      member: member || 'Staff',
       remarks,
     });
     onClose();
