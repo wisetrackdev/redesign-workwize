@@ -236,7 +236,7 @@ export default function StatsView({
             <View style={styles.agingHeader}>
               <View style={styles.agingTitleLeft}>
                 <Feather name="alert-circle" size={15} color={Colors.red} />
-                <Text style={styles.agingTitle}>Aging of Pending Jobs</Text>
+                <Text style={styles.agingTitle}>Aging of Open Jobs</Text>
               </View>
               <View style={styles.agingBadge}>
                 <Text style={styles.agingBadgeText}>&gt; 7 Days Old</Text>

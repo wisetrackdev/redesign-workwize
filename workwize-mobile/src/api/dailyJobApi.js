@@ -67,8 +67,90 @@ export function isAdmin(user) {
   if (!user) return false;
   if (isSuperAdmin(user)) return true;
   const roles = Array.isArray(user.role) ? user.role : [user.role];
-  return roles.some((r) => String(r).toUpperCase() === 'ADMIN');
+  return roles.some((r) => {
+    const s = String(r || '').toUpperCase().trim();
+    return s === 'ADMIN' || s.includes('ADMIN');
+  });
 }
+
+/**
+ * Checks if the logged-in user belongs to the department/team to whom this job was issued
+ */
+export function isJobIssuedToUserTeam(job, userCurrentTeamId, cachedTeams = []) {
+  if (!job || !userCurrentTeamId) return false;
+  const targetTeam = String(userCurrentTeamId).toLowerCase().trim();
+  if (job.issued_to_team && String(job.issued_to_team).toLowerCase().trim() === targetTeam) {
+    return true;
+  }
+  if (job.dept && String(job.dept).toLowerCase().trim() === targetTeam) {
+    return true;
+  }
+  if (cachedTeams && cachedTeams.length > 0) {
+    const userTeam = cachedTeams.find(
+      (t) => String(t.teamId || '').toLowerCase().trim() === targetTeam
+    );
+    if (userTeam) {
+      const uName = String(userTeam.teamName || userTeam.name || '').toLowerCase().trim();
+      const jDept = String(job.dept || '').toLowerCase().trim();
+      const jIssued = String(job.issued_to_team || job.issued_to_team_name || '').toLowerCase().trim();
+      if (uName && (uName === jDept || uName === jIssued)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * QuickFix rule: Can Assign Job
+ * Only the team to whom the job was issued (or SuperAdmin / Admin) can assign team members.
+ */
+export function canAssignJob(job, user, userCurrentTeamId, cachedTeams = []) {
+  if (!job || !user) return false;
+  if ((job.status || '').toLowerCase() === 'closed') return false;
+  if (isSuperAdmin(user) || isAdmin(user)) return true;
+  return isJobIssuedToUserTeam(job, userCurrentTeamId, cachedTeams);
+}
+
+/**
+ * QuickFix rule: Can Close Job
+ * 1. Superadmin / Oproadmin / Admin can close ANY job
+ * 2. Assigned supervisor can close their assigned job (assigned_supervisor === userEmail)
+ * 3. Manager of the team to whom the job was issued can close it
+ */
+export function canCloseJob(job, user, userCurrentTeamId, cachedTeams = []) {
+  if (!job || !user) return false;
+  if ((job.status || '').toLowerCase() === 'closed') return false;
+
+  // 1. Superadmin / Oproadmin / Admin can close any job
+  if (isSuperAdmin(user) || isAdmin(user)) return true;
+
+  // 2. Assigned supervisor can close their assigned job
+  const userEmail = String(user.email || user.username || '').toLowerCase().trim();
+  const assignedSup = String(job.assigned_supervisor || '').toLowerCase().trim();
+  if (userEmail && assignedSup && assignedSup === userEmail) {
+    return true;
+  }
+
+  // 3. Manager of the team to whom the job was issued can close it
+  const roles = Array.isArray(user.role) ? user.role : [user.role];
+  const hasManagerRole = roles.some((r) => String(r || '').toUpperCase().includes('MANAGER'));
+  if (isJobIssuedToUserTeam(job, userCurrentTeamId, cachedTeams) && hasManagerRole) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * QuickFix rule: Can Delete Job
+ * ONLY Superadmin and Oproadmin can delete jobs
+ */
+export function canDeleteJob(user) {
+  if (!user) return false;
+  return isSuperAdmin(user);
+}
+
 
 /**
  * Team Context Resolver matching workwize-teal updateUserTeamContext
@@ -253,12 +335,18 @@ export function mapApiJob(op, index = 0, activePropName = 'Testing') {
  * Authenticated API Fetcher
  */
 async function apiFetch(endpoint, options = {}) {
-  const headers = options.headers || {};
+  const headers = { ...(options.headers || {}) };
   const jwt = await getStoredJwt();
 
   // Only attach JWT if it's a real token, not empty or guest demo token, and not calling login
   if (jwt && !jwt.startsWith('demo-') && !headers['Authorization'] && !endpoint.includes('login')) {
     headers['Authorization'] = 'Bearer ' + jwt;
+  }
+
+  // Ensure Content-Type is NOT set for FormData so fetch automatically sets multipart boundary
+  if (options.body && typeof options.body === 'object' && typeof options.body.append === 'function') {
+    delete headers['Content-Type'];
+    delete headers['content-type'];
   }
   options.headers = headers;
 
@@ -474,6 +562,44 @@ export const DailyJobApi = {
     };
   },
 
+/**
+ * Safely append image file to FormData across modern Expo (WinterCG) and React Native fetch
+ */
+async function appendImageToFormData(form, fieldName, photoUri, defaultName = 'job_photo.jpg') {
+  if (!photoUri) return;
+  const filename = photoUri.split('/').pop() || defaultName;
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : `image/jpeg`;
+
+  // 1. Try modern expo-file-system File class (Blob compatible with modern Expo WinterCG fetch)
+  try {
+    const FileSystem = require('expo-file-system');
+    if (FileSystem && FileSystem.File) {
+      form.append(fieldName, new FileSystem.File(photoUri));
+      return;
+    }
+  } catch (e) {}
+
+  // 2. Try fetching as Blob
+  try {
+    const res = await fetch(photoUri);
+    if (res && typeof res.blob === 'function') {
+      const blob = await res.blob();
+      if (blob) {
+        form.append(fieldName, blob, filename);
+        return;
+      }
+    }
+  } catch (e) {}
+
+  // 3. Fallback to legacy React Native object format
+  form.append(fieldName, {
+    uri: photoUri,
+    name: filename,
+    type,
+  });
+}
+
   /**
    * Add New Job
    * Matches quickfix new.js: POST /api/dailyjob/addnewjob
@@ -499,14 +625,7 @@ export const DailyJobApi = {
     }
 
     if (photoUri) {
-      const filename = photoUri.split('/').pop() || 'job_photo.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
-      form.append('jobImages', {
-        uri: photoUri,
-        name: filename,
-        type,
-      });
+      await appendImageToFormData(form, 'jobImages', photoUri, 'job_photo.jpg');
     }
 
     const res = await apiFetch('api/dailyjob/addnewjob', {
@@ -560,14 +679,7 @@ export const DailyJobApi = {
     form.append('remarks', remarks || '');
 
     if (photoUri) {
-      const filename = photoUri.split('/').pop() || 'closed_photo.jpg';
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
-      form.append('jobImages', {
-        uri: photoUri,
-        name: filename,
-        type,
-      });
+      await appendImageToFormData(form, 'jobImages', photoUri, 'closed_photo.jpg');
     }
 
     return await apiFetch('api/dailyjob/changejobstatus', {

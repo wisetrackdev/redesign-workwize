@@ -19,6 +19,7 @@ export default function EditJobModal({
   onClose,
   onSave,
   onDelete,
+  canDelete = false,
   teamList = [],
   areaList = [],
 }) {
@@ -195,16 +196,18 @@ export default function EditJobModal({
 
           {/* Footer with Delete and Save buttons */}
           <View style={styles.footer}>
-            <TouchableOpacity
-              style={styles.btnDelete}
-              onPress={() => {
-                onClose();
-                if (onDelete) onDelete(job);
-              }}
-            >
-              <Feather name="trash-2" size={16} color={Colors.red} />
-              <Text style={styles.btnDeleteText}>Delete</Text>
-            </TouchableOpacity>
+            {canDelete && onDelete && (
+              <TouchableOpacity
+                style={styles.btnDelete}
+                onPress={() => {
+                  onClose();
+                  if (onDelete) onDelete(job);
+                }}
+              >
+                <Feather name="trash-2" size={16} color={Colors.red} />
+                <Text style={styles.btnDeleteText}>Delete</Text>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={styles.btnSave} onPress={handleSave}>
               <Feather name="check" size={16} color="#FFFFFF" />

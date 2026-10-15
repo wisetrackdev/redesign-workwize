@@ -10,7 +10,11 @@ export default function JobCard({
   onAssign,
   onClose,
   onEdit,
+  onDelete,
   isClosed = false,
+  canAssign = true,
+  canClose = true,
+  canDelete = false,
 }) {
   const status = job.status || 'Open';
 
@@ -168,7 +172,7 @@ export default function JobCard({
         {/* Mobile Action Buttons (Optimized for finger touches!) */}
         {!isClosed ? (
           <View style={styles.actionButtons}>
-            {onEdit && (
+            {onEdit && (job.status || '').toLowerCase() === 'open' && (
               <TouchableOpacity
                 style={styles.btnEdit}
                 onPress={() => onEdit(job)}
@@ -180,25 +184,50 @@ export default function JobCard({
             )}
 
             <TouchableOpacity
-              style={styles.btnAssign}
-              onPress={() => onAssign(job)}
-              activeOpacity={0.8}
+              style={[styles.btnAssign, !canAssign && styles.btnDisabled]}
+              onPress={() => {
+                if (canAssign) onAssign(job);
+              }}
+              disabled={!canAssign}
+              activeOpacity={canAssign ? 0.8 : 1}
             >
-              <Feather name="user-plus" size={11} color="#FFFFFF" />
-              <Text style={styles.btnAssignText}>Assign</Text>
+              <Feather name="user-plus" size={11} color={canAssign ? '#FFFFFF' : '#94A3B8'} />
+              <Text style={[styles.btnAssignText, !canAssign && styles.btnDisabledText]}>Assign</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.btnClose}
-              onPress={() => onClose(job)}
-              activeOpacity={0.8}
+              style={[styles.btnClose, !canClose && styles.btnDisabled]}
+              onPress={() => {
+                if (canClose) onClose(job);
+              }}
+              disabled={!canClose}
+              activeOpacity={canClose ? 0.8 : 1}
             >
-              <Feather name="check-circle" size={11} color="#FFFFFF" />
-              <Text style={styles.btnCloseText}>Close</Text>
+              <Feather name="check-circle" size={11} color={canClose ? '#FFFFFF' : '#94A3B8'} />
+              <Text style={[styles.btnCloseText, !canClose && styles.btnDisabledText]}>Close</Text>
             </TouchableOpacity>
+
+            {canDelete && onDelete && (
+              <TouchableOpacity
+                style={styles.btnDeleteCard}
+                onPress={() => onDelete(job)}
+                activeOpacity={0.8}
+              >
+                <Feather name="trash-2" size={11} color={Colors.red} />
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           <View style={styles.actionButtons}>
+            {canDelete && onDelete && (
+              <TouchableOpacity
+                style={styles.btnDeleteCard}
+                onPress={() => onDelete(job)}
+                activeOpacity={0.8}
+              >
+                <Feather name="trash-2" size={11} color={Colors.red} />
+              </TouchableOpacity>
+            )}
             <View style={styles.closedBadgeWrap}>
               <Feather name="check" size={13} color={Colors.greenDark} />
               <Text style={styles.closedBadgeText}>Completed</Text>
@@ -383,6 +412,24 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '700',
+  },
+  btnDisabled: {
+    backgroundColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
+    opacity: 0.55,
+  },
+  btnDisabledText: {
+    color: '#94A3B8',
+  },
+  btnDeleteCard: {
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 6,
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   closedBadgeWrap: {
     flexDirection: 'row',

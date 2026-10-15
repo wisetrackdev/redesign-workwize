@@ -20,6 +20,9 @@ export default function ViewJobModal({
   onCloseJob,
   onEdit,
   onDelete,
+  canAssign = true,
+  canClose = true,
+  canDelete = false,
 }) {
   if (!job) return null;
 
@@ -38,7 +41,7 @@ export default function ViewJobModal({
 
             {/* Quick Actions in Header */}
             <View style={styles.headerActions}>
-              {onEdit && (
+              {onEdit && (job.status || '').toLowerCase() === 'open' && (
                 <TouchableOpacity
                   style={styles.iconActionBtn}
                   onPress={() => {
@@ -51,7 +54,7 @@ export default function ViewJobModal({
                 </TouchableOpacity>
               )}
 
-              {onDelete && (
+              {canDelete && onDelete && (
                 <TouchableOpacity
                   style={[styles.iconActionBtn, styles.iconDeleteBtn]}
                   onPress={() => {
@@ -169,37 +172,47 @@ export default function ViewJobModal({
           {/* Action Footer */}
           {!isClosed ? (
             <View style={styles.footer}>
+              {onEdit && (job.status || '').toLowerCase() === 'open' && (
+                <TouchableOpacity
+                  style={styles.editBtn}
+                  onPress={() => {
+                    onClose();
+                    if (onEdit) onEdit(job);
+                  }}
+                >
+                  <Feather name="edit-2" size={14} color={Colors.primary} />
+                  <Text style={styles.editBtnText}>Edit</Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
-                style={styles.editBtn}
+                style={[styles.assignBtn, !canAssign && styles.btnDisabled]}
                 onPress={() => {
-                  onClose();
-                  if (onEdit) onEdit(job);
+                  if (canAssign) {
+                    onClose();
+                    onAssign(job);
+                  }
                 }}
+                disabled={!canAssign}
+                activeOpacity={canAssign ? 0.7 : 1}
               >
-                <Feather name="edit-2" size={14} color={Colors.primary} />
-                <Text style={styles.editBtnText}>Edit</Text>
+                <Feather name="user-check" size={14} color={canAssign ? '#FFFFFF' : '#94A3B8'} />
+                <Text style={[styles.assignBtnText, !canAssign && styles.btnDisabledText]}>Assign</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.assignBtn}
+                style={[styles.closeJobBtn, !canClose && styles.btnDisabled]}
                 onPress={() => {
-                  onClose();
-                  onAssign(job);
+                  if (canClose) {
+                    onClose();
+                    onCloseJob(job);
+                  }
                 }}
+                disabled={!canClose}
+                activeOpacity={canClose ? 0.7 : 1}
               >
-                <Feather name="user-check" size={14} color="#FFFFFF" />
-                <Text style={styles.assignBtnText}>Assign</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.closeJobBtn}
-                onPress={() => {
-                  onClose();
-                  onCloseJob(job);
-                }}
-              >
-                <Feather name="check-circle" size={14} color="#FFFFFF" />
-                <Text style={styles.closeJobBtnText}>Close</Text>
+                <Feather name="check-circle" size={14} color={canClose ? '#FFFFFF' : '#94A3B8'} />
+                <Text style={[styles.closeJobBtnText, !canClose && styles.btnDisabledText]}>Close</Text>
               </TouchableOpacity>
             </View>
           ) : (
@@ -453,5 +466,12 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
+  },
+  btnDisabled: {
+    backgroundColor: '#E2E8F0',
+    opacity: 0.55,
+  },
+  btnDisabledText: {
+    color: '#94A3B8',
   },
 });

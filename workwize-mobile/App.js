@@ -38,6 +38,9 @@ import {
   updateUserTeamContext,
   getJobDateCode,
   pad3,
+  canAssignJob,
+  canCloseJob,
+  canDeleteJob,
 } from './src/api/dailyJobApi';
 import { getStoredUserData, clearStoredUserData } from './src/api/config';
 import initialJobsData from './src/data/jobs_data.json';
@@ -474,15 +477,16 @@ export default function App() {
   };
 
   // Actions: Close Job
-  const handleCloseSubmit = ({ jobId, closingBy, remarks, photoAfterUri }) => {
+  const handleCloseSubmit = async ({ jobId, closingBy, remarks, photoAfterUri }) => {
     const nowIso = new Date().toISOString();
+    const resolvedClosingBy = closingBy || currentUser?.name || 'Staff';
     setJobs((prev) =>
       prev.map((j) => {
         if (j.id === jobId) {
           return {
             ...j,
             status: 'Closed',
-            closedBy,
+            closedBy: resolvedClosingBy,
             remarks,
             closedAt: nowIso,
             photoAfter: photoAfterUri || j.photoAfter,
@@ -494,7 +498,11 @@ export default function App() {
 
     const targetJob = jobs.find((j) => j.id === jobId);
     const areaId = targetJob?.areaId || targetJob?.area || '';
-    DailyJobApi.changeJobStatus(jobId, currentPropertyId, areaId, 'Closed', remarks, photoAfterUri);
+    try {
+      await DailyJobApi.changeJobStatus(jobId, currentPropertyId, areaId, 'Closed', remarks, photoAfterUri);
+    } catch (err) {
+      console.warn('Close job status update failed:', err);
+    }
   };
 
   // Actions: Edit Job
@@ -653,17 +661,12 @@ export default function App() {
               {activeTab === 'open' && (
                 <>
                   <TouchableOpacity
-                    style={[styles.chip, pillFilter === 'in-progress' && styles.chipActive]}
-                    onPress={() => setPillFilter('in-progress')}
+                    style={[styles.chip, pillFilter === 'open' && styles.chipActive]}
+                    onPress={() => setPillFilter('open')}
                     activeOpacity={0.8}
                   >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        pillFilter === 'in-progress' && styles.chipTextActive,
-                      ]}
-                    >
-                      In Progress
+                    <Text style={[styles.chipText, pillFilter === 'open' && styles.chipTextActive]}>
+                      Open
                     </Text>
                   </TouchableOpacity>
 
@@ -683,12 +686,17 @@ export default function App() {
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.chip, pillFilter === 'open' && styles.chipActive]}
-                    onPress={() => setPillFilter('open')}
+                    style={[styles.chip, pillFilter === 'in-progress' && styles.chipActive]}
+                    onPress={() => setPillFilter('in-progress')}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.chipText, pillFilter === 'open' && styles.chipTextActive]}>
-                      Pending
+                    <Text
+                      style={[
+                        styles.chipText,
+                        pillFilter === 'in-progress' && styles.chipTextActive,
+                      ]}
+                    >
+                      In Progress
                     </Text>
                   </TouchableOpacity>
                 </>
@@ -703,25 +711,45 @@ export default function App() {
             <FlatList
               data={displayedJobs}
               keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => (
-                <JobCard
-                  job={item}
-                  isClosed={activeTab === 'closed'}
-                  onPress={(j) => {
-                    setSelectedJob(j);
-                    setShowViewModal(true);
-                  }}
-                  onEdit={handleOpenEdit}
-                  onAssign={(j) => {
-                    setSelectedJob(j);
-                    setShowAssignModal(true);
-                  }}
-                  onClose={(j) => {
-                    setSelectedJob(j);
-                    setShowCloseModal(true);
-                  }}
-                />
-              )}
+              renderItem={({ item }) => {
+                const canAssign = canAssignJob(
+                  item,
+                  currentUser,
+                  userTeamContext.userCurrentTeamId,
+                  cachedTeams
+                );
+                const canClose = canCloseJob(
+                  item,
+                  currentUser,
+                  userTeamContext.userCurrentTeamId,
+                  cachedTeams
+                );
+                const canDelete = canDeleteJob(currentUser);
+
+                return (
+                  <JobCard
+                    job={item}
+                    isClosed={activeTab === 'closed'}
+                    canAssign={canAssign}
+                    canClose={canClose}
+                    canDelete={canDelete}
+                    onPress={(j) => {
+                      setSelectedJob(j);
+                      setShowViewModal(true);
+                    }}
+                    onEdit={handleOpenEdit}
+                    onAssign={(j) => {
+                      setSelectedJob(j);
+                      setShowAssignModal(true);
+                    }}
+                    onClose={(j) => {
+                      setSelectedJob(j);
+                      setShowCloseModal(true);
+                    }}
+                    onDelete={canDelete ? handlePromptDelete : undefined}
+                  />
+                );
+              }}
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               refreshControl={
@@ -785,9 +813,12 @@ export default function App() {
         <ViewJobModal
           visible={showViewModal}
           job={selectedJob}
+          canAssign={canAssignJob(selectedJob, currentUser, userTeamContext.userCurrentTeamId, cachedTeams)}
+          canClose={canCloseJob(selectedJob, currentUser, userTeamContext.userCurrentTeamId, cachedTeams)}
+          canDelete={canDeleteJob(currentUser)}
           onClose={() => setShowViewModal(false)}
           onEdit={handleOpenEdit}
-          onDelete={handlePromptDelete}
+          onDelete={canDeleteJob(currentUser) ? handlePromptDelete : undefined}
           onAssign={(j) => {
             setSelectedJob(j);
             setShowAssignModal(true);
@@ -818,9 +849,10 @@ export default function App() {
         <EditJobModal
           visible={showEditModal}
           job={selectedJobForEdit}
+          canDelete={canDeleteJob(currentUser)}
           onClose={() => setShowEditModal(false)}
           onSave={handleSaveEdit}
-          onDelete={handlePromptDelete}
+          onDelete={canDeleteJob(currentUser) ? handlePromptDelete : undefined}
           teamList={teamList}
           areaList={areaList}
         />
