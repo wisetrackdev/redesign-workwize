@@ -257,6 +257,24 @@ export function getIssuedByDisplay(user, primaryTeamName) {
   return cleanIssuedBy(user.name) || (isSuperAdmin(user) ? 'IT' : 'User');
 }
 
+export const globalJobCustomIdMap = {};
+
+export function setJobCustomId(key, customJobId, serial, dateCode) {
+  if (!key || !customJobId) return;
+  const k = String(key);
+  globalJobCustomIdMap[k] = {
+    canonicalPropId: customJobId,
+    serial: Number(serial) || 1,
+    serialStr: pad3(serial),
+    dateCode: dateCode || '',
+  };
+}
+
+export function getJobCustomId(key) {
+  if (!key) return null;
+  return globalJobCustomIdMap[String(key)] || null;
+}
+
 /**
  * Assign continuous, permanent serial numbers per calendar date (001, 002, 003...)
  * across both open and closed jobs.
@@ -269,11 +287,19 @@ export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Tes
 
   rawJobs.forEach((op, originalIndex) => {
     if (!op) return;
+    const jobIdKey = op.jobId != null ? String(op.jobId) : null;
+    const idKey = op.id != null ? String(op.id) : null;
+    const propIdKey = op.propId ? String(op.propId) : null;
+
+    const saved = (jobIdKey && globalJobCustomIdMap[jobIdKey]) ||
+                  (idKey && globalJobCustomIdMap[idKey]) ||
+                  (propIdKey && globalJobCustomIdMap[propIdKey]) || null;
+
     const parsed = parseFormattedPropId(op.propId);
-    let dateCode = parsed && parsed.dateCode ? parsed.dateCode : getJobDateCode(op.openDate || op.opened || op.createdAt);
+    let dateCode = saved?.dateCode || parsed?.dateCode || getJobDateCode(op.openDate || op.opened || op.createdAt);
     if (!dateCode) dateCode = getJobDateCode(new Date());
 
-    let explicitSerial = (parsed && parsed.serial > 0) ? parsed.serial : (op.serial > 0 ? op.serial : null);
+    let explicitSerial = saved?.serial || (parsed && parsed.serial > 0 ? parsed.serial : (op.serial > 0 ? op.serial : null));
 
     const item = {
       rawJob: op,
@@ -281,6 +307,7 @@ export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Tes
       dateCode,
       serial: explicitSerial,
       openTime: new Date(op.openDate || op.opened || op.createdAt || 0).getTime() || 0,
+      jobIdNum: Number(op.jobId || op.id || 0) || 0,
     };
 
     if (!groupsByDate[dateCode]) {
@@ -301,7 +328,14 @@ export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Tes
 
     const unassigned = group.filter((item) => item.serial == null);
     unassigned.sort((a, b) => {
-      if (a.openTime !== b.openTime) return a.openTime - b.openTime;
+      // 1. Sort by creation time if available
+      if (a.openTime && b.openTime && a.openTime !== b.openTime) {
+        return a.openTime - b.openTime;
+      }
+      // 2. Sort by numeric job ID ascending (in database, earlier jobs have smaller IDs)
+      if (a.jobIdNum && b.jobIdNum && a.jobIdNum !== b.jobIdNum) {
+        return a.jobIdNum - b.jobIdNum;
+      }
       return a.originalIndex - b.originalIndex;
     });
 
@@ -320,6 +354,14 @@ export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Tes
       const canonicalPropId = `${activePropName}-${dateCode}-${serialStr}`;
       item.canonicalPropId = canonicalPropId;
       item.serialStr = serialStr;
+
+      // Lock in globalJobCustomIdMap permanently
+      const op = item.rawJob;
+      if (op) {
+        if (op.jobId != null) setJobCustomId(op.jobId, canonicalPropId, item.serial, dateCode);
+        if (op.id != null) setJobCustomId(op.id, canonicalPropId, item.serial, dateCode);
+        if (op.propId) setJobCustomId(op.propId, canonicalPropId, item.serial, dateCode);
+      }
       processed.push(item);
     });
   });
@@ -430,7 +472,16 @@ export function mapApiJob(op, serialInfo = 0, activePropName = 'Testing', areaLi
   }
   if (!resolvedArea) resolvedArea = 'General';
 
-  const resolvedSub = op.subarea || op.subArea || op.sub || '';
+  let resolvedSub = op.subarea || op.subArea || op.sub || '';
+
+  // Clean if area contains ">" or "›" or "•"
+  if (resolvedArea.includes('>') || resolvedArea.includes('›') || resolvedArea.includes('•')) {
+    const parts = resolvedArea.split(/\s*(?:>|›|•)\s*/);
+    resolvedArea = parts[0] || resolvedArea;
+    if (!resolvedSub && parts[1]) {
+      resolvedSub = parts.slice(1).join(' - ');
+    }
+  }
 
   return {
     id: op.jobId || op.id || customJobId,

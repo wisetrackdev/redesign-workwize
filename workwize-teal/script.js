@@ -1800,7 +1800,8 @@
       '<b>' + esc(job.details) + '</b>' +
       '<small><b>Job ID:</b> ' + esc(job.propId) + '</small>' +
       '<small><b>Issued To Dept:</b> ' + esc(job.dept) + '</small>' +
-      '<small><b>Area:</b> ' + esc(job.area) + (job.sub ? ' &rsaquo; ' + esc(job.sub) : '') + '</small>' +
+      '<small><b>Area:</b> ' + esc(job.area) + '</small>' +
+      (job.sub ? '<small><b>Sub Area:</b> ' + esc(job.sub) + '</small>' : '') +
       '<small><b>Status:</b> ' + esc(job.status) + '</small>';
 
     var asDept = $('#asDept');
@@ -1939,7 +1940,8 @@
       '<b>' + esc(job.details) + '</b>' +
       '<small><b>Job ID:</b> ' + esc(job.propId) + '</small>' +
       '<small><b>Issued To Dept:</b> ' + esc(job.dept) + '</small>' +
-      '<small><b>Area:</b> ' + esc(job.area) + (job.sub ? ' &rsaquo; ' + esc(job.sub) : '') + '</small>' +
+      '<small><b>Area:</b> ' + esc(job.area) + '</small>' +
+      (job.sub ? '<small><b>Sub Area:</b> ' + esc(job.sub) + '</small>' : '') +
       '<small><b>Opened:</b> ' + fmt(job.opened) + '</small>';
 
     $('#closeTeamNotice').innerHTML =
@@ -2586,7 +2588,7 @@
     $('#viewDialog').innerHTML =
       '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips"><span class="prop-badge" style="font-size:12px;padding:3px 9px" title="Job ID">' + esc(j.propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span><span class="age">' + age + '</span></div>' +
       '<div class="vnav"><button data-vnav="-1" title="Previous (&larr;)"' + (pos <= 0 ? ' disabled' : '') + '>&lsaquo;</button><span>' + (pos + 1) + ' of ' + tot + '</span><button data-vnav="1" title="Next (&rarr;)"' + (pos >= tot - 1 ? ' disabled' : '') + '>&rsaquo;</button><button class="vx" data-vclose title="Close (Esc)">&times;</button></div></div>' +
-      '<h2>' + esc(j.details) + '</h2><p>Issued To: ' + esc(j.dept) + ' &middot; ' + esc(j.area) + (j.sub ? ' &rsaquo; ' + esc(j.sub) : '') + '</p></div>' +
+      '<h2>' + esc(j.details) + '</h2><p>Issued To: ' + esc(j.dept) + ' &middot; Area: ' + esc(j.area) + (j.sub ? ' &middot; Sub Area: ' + esc(j.sub) : '') + '</p></div>' +
       '<div class="vbody"><div class="vmain"><h4>Job Information</h4><div class="fv">' + fields + '</div>' +
       '<h4>Photos</h4><div class="phs">' + photoPanel('Before', j.photoBefore) + (closed ? photoPanel('After', j.photoAfter) : '') + '</div></div>' +
       '<aside class="vside"><h4>Progress</h4><ul class="tl">' + tl + '</ul>' +

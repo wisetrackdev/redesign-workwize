@@ -55,7 +55,17 @@ export default function JobCard({
     }
   };
 
-  const badgeStyle = getStatusBadge(status);
+  // Cleanly split Area & Sub-Area if formatted as "Area > SubArea"
+  let displayArea = (job.area || '').trim() || 'General Area';
+  let displaySub = (job.sub || '').trim();
+
+  if (displayArea.includes('>') || displayArea.includes('›') || displayArea.includes('•')) {
+    const parts = displayArea.split(/\s*(?:>|›|•)\s*/);
+    displayArea = parts[0] || displayArea;
+    if ((!displaySub || displaySub.toLowerCase() === 'na') && parts[1]) {
+      displaySub = parts.slice(1).join(' - ');
+    }
+  }
 
   return (
     <TouchableOpacity
@@ -102,18 +112,16 @@ export default function JobCard({
         <View style={styles.kvRow}>
           <Text style={styles.kvLabel}>Area:</Text>
           <Text style={styles.kvValue} numberOfLines={1}>
-            {job.area || 'General Area'}
+            {displayArea}
           </Text>
         </View>
 
-        {Boolean(job.sub && String(job.sub).trim() && String(job.sub).toLowerCase() !== 'na') && (
-          <View style={styles.kvRow}>
-            <Text style={styles.kvLabel}>Sub-Area:</Text>
-            <Text style={styles.kvValue} numberOfLines={1}>
-              {job.sub}
-            </Text>
-          </View>
-        )}
+        <View style={styles.kvRow}>
+          <Text style={styles.kvLabel}>Sub-Area:</Text>
+          <Text style={styles.kvValue} numberOfLines={1}>
+            {displaySub && displaySub.toLowerCase() !== 'na' ? displaySub : 'NA'}
+          </Text>
+        </View>
 
         <View style={styles.kvRow}>
           <Text style={styles.kvLabel}>Issued By:</Text>

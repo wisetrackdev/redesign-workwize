@@ -43,6 +43,7 @@ import {
   canAssignJob,
   canCloseJob,
   canDeleteJob,
+  setJobCustomId,
 } from './src/api/dailyJobApi';
 import { getStoredUserData, clearStoredUserData } from './src/api/config';
 import initialJobsData from './src/data/jobs_data.json';
@@ -541,6 +542,8 @@ export default function App() {
     const customJobId = `${currentPropertyName}-${dateCode}-${serialStr}`;
     const cleanBy = cleanIssuedBy(newJobData.by);
 
+    setJobCustomId(nextId, customJobId, nextSerial, dateCode);
+
     const areaName = newJobData.areaName || newJobData.area || 'General';
     const subName = newJobData.subarea || newJobData.sub || '';
     const deptName = newJobData.issued_to_team_name || newJobData.dept || newJobData.issued_to_team || 'Department';
@@ -577,17 +580,24 @@ export default function App() {
     setActiveTab('open');
 
     // Call backend API
-    await DailyJobApi.addNewJob(
-      {
-        ...newJobData,
-        propId: currentPropertyId,
-        areaID: newJobData.areaID || newJobData.areaId || areaName,
-        subareaId: subName,
-        issued_to_team: newJobData.issued_to_team || newJobData.deptId || deptName,
-        issued_by_team_details: cleanBy,
-      },
-      newJobData.photoUri
-    );
+    try {
+      const res = await DailyJobApi.addNewJob(
+        {
+          ...newJobData,
+          propId: currentPropertyId,
+          areaID: newJobData.areaID || newJobData.areaId || areaName,
+          subareaId: subName,
+          issued_to_team: newJobData.issued_to_team || newJobData.deptId || deptName,
+          issued_by_team_details: cleanBy,
+        },
+        newJobData.photoUri
+      );
+      if (res && res.jobId) {
+        setJobCustomId(res.jobId, customJobId, nextSerial, dateCode);
+      }
+    } catch (e) {
+      console.warn('API add new job error:', e);
+    }
 
     // Refresh from API
     fetchJobs(currentPropertyId);
@@ -625,6 +635,9 @@ export default function App() {
     setJobs((prev) =>
       prev.map((j) => {
         if (String(j.id) === String(jobId) || (j.jobId != null && String(j.jobId) === String(jobId))) {
+          if (j.propId && j.serial) {
+            setJobCustomId(j.jobId || j.id, j.propId, j.serial, j.dateCode);
+          }
           return {
             ...j,
             status: 'Closed',

@@ -38,6 +38,18 @@ export default function ViewJobModal({
     }
   };
 
+  // Cleanly split Area & Sub-Area if formatted as "Area > SubArea"
+  let displayArea = (job?.area || '').trim() || 'NA';
+  let displaySub = (job?.sub || '').trim();
+
+  if (displayArea.includes('>') || displayArea.includes('›') || displayArea.includes('•')) {
+    const parts = displayArea.split(/\s*(?:>|›|•)\s*/);
+    displayArea = parts[0] || displayArea;
+    if ((!displaySub || displaySub.toLowerCase() === 'na') && parts[1]) {
+      displaySub = parts.slice(1).join(' - ');
+    }
+  }
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
@@ -112,12 +124,12 @@ export default function ViewJobModal({
             <View style={styles.jobBrief}>
               <View style={styles.briefRow}>
                 <Text style={styles.briefLabel}>Area:</Text>
-                <Text style={styles.briefValue}>{job.area || 'NA'}</Text>
+                <Text style={styles.briefValue}>{displayArea}</Text>
               </View>
 
               <View style={styles.briefRow}>
                 <Text style={styles.briefLabel}>Sub-Area:</Text>
-                <Text style={styles.briefValue}>{job.sub || 'NA'}</Text>
+                <Text style={styles.briefValue}>{displaySub && displaySub.toLowerCase() !== 'na' ? displaySub : 'NA'}</Text>
               </View>
 
               <View style={styles.briefRow}>
