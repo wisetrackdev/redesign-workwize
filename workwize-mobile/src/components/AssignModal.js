@@ -112,9 +112,9 @@ export default function AssignModal({
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Assign Job #{job.id}</Text>
+              <Text style={styles.title}>Assign Job</Text>
               <Text style={styles.subTitle} numberOfLines={1}>
-                {job.details || 'Task'}
+                {job.propId || job.details || 'Task'}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>

@@ -58,18 +58,13 @@ export default function JobCard({
       onPress={() => onPress(job)}
       activeOpacity={0.85}
     >
-      {/* Top Header Row: Job ID + Property + Status Badge */}
+      {/* Top Header Row: Property ID + Status Badge */}
       <View style={styles.topRow}>
         <View style={styles.leftMeta}>
-          {/* Number badge (.num) */}
-          <View style={styles.numBadge}>
-            <Text style={styles.numText}>#{job.id || '1'}</Text>
-          </View>
-
           {/* Property badge (.prop-badge) */}
           <View style={styles.propBadge}>
             <Text style={styles.propText} numberOfLines={1}>
-              {job.propId || 'Testing-040726-001'}
+              {job.propId || ''}
             </Text>
           </View>
         </View>
@@ -237,32 +232,21 @@ const styles = StyleSheet.create({
     gap: 6,
     flex: 1,
   },
-  numBadge: {
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 7,
-    height: 22,
-    borderRadius: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  numText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '800',
-  },
   propBadge: {
-    backgroundColor: '#EEF2F6',
-    paddingHorizontal: 8,
-    height: 22,
+    backgroundColor: '#EEF2FA',
+    paddingHorizontal: 9,
+    paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D4E0F4',
     alignItems: 'center',
     justifyContent: 'center',
-    maxWidth: 160,
   },
   propText: {
-    color: Colors.muted,
-    fontSize: 10.5,
-    fontWeight: '700',
+    color: Colors.primaryDark,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   statusTag: {
     paddingHorizontal: 8,

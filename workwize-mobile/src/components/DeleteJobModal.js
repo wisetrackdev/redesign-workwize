@@ -33,7 +33,7 @@ export default function DeleteJobModal({
 
           {/* Prompt */}
           <Text style={styles.prompt}>
-            Are you sure you want to delete <Text style={styles.boldText}>Job #{job.id}</Text>?
+            Are you sure you want to delete <Text style={styles.boldText}>{job.propId || 'this job'}</Text>?
           </Text>
           <Text style={styles.subtext}>
             {job.details || 'This job record'} will be permanently removed. This action cannot be undone.
