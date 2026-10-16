@@ -13,6 +13,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
+import ImagePreviewModal from './ImagePreviewModal';
 
 export default function CloseJobModal({
   visible,
@@ -26,6 +27,7 @@ export default function CloseJobModal({
   );
   const [remarks, setRemarks] = useState('Done.');
   const [photoAfterUri, setPhotoAfterUri] = useState(null);
+  const [showImagePreview, setShowImagePreview] = useState(false);
 
   if (!job) return null;
 
@@ -83,9 +85,9 @@ export default function CloseJobModal({
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Close Job #{job.id}</Text>
+              <Text style={styles.title}>Close Job</Text>
               <Text style={styles.subTitle} numberOfLines={1}>
-                {job.details}
+                {job.propId || job.details}
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -128,7 +130,13 @@ export default function CloseJobModal({
             <Text style={styles.label}>PHOTO AFTER (OPTIONAL)</Text>
             {photoAfterUri ? (
               <View style={styles.photoPreviewWrap}>
-                <Image source={{ uri: photoAfterUri }} style={styles.previewImage} />
+                <TouchableOpacity
+                  onPress={() => setShowImagePreview(true)}
+                  activeOpacity={0.85}
+                  style={{ width: '100%' }}
+                >
+                  <Image source={{ uri: photoAfterUri }} style={styles.previewImage} />
+                </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.removePhotoBtn}
                   onPress={() => setPhotoAfterUri(null)}
@@ -169,6 +177,15 @@ export default function CloseJobModal({
           </View>
         </View>
       </View>
+
+      {/* Image Preview Modal */}
+      <ImagePreviewModal
+        visible={showImagePreview}
+        imageUrl={photoAfterUri}
+        title="Photo After Preview"
+        subTitle={job.propId || ''}
+        onClose={() => setShowImagePreview(false)}
+      />
     </Modal>
   );
 }

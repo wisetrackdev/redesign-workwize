@@ -97,7 +97,7 @@ export default function EditJobModal({
           <View style={styles.header}>
             <View>
               <Text style={styles.title}>Edit Job</Text>
-              <Text style={styles.subTitle}>{job.propId || `Job #${job.id}`}</Text>
+              <Text style={styles.subTitle}>{job.propId || ''}</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={Colors.muted} />

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { formatApiDate } from '../api/config';
+import ImagePreviewModal from './ImagePreviewModal';
 
 export default function ViewJobModal({
   visible,
@@ -24,9 +25,17 @@ export default function ViewJobModal({
   canClose = true,
   canDelete = false,
 }) {
+  const [previewImage, setPreviewImage] = useState(null);
+
   if (!job) return null;
 
   const isClosed = (job.status || '').toLowerCase() === 'closed';
+
+  const handleOpenPreview = (url, title) => {
+    if (url) {
+      setPreviewImage({ url, title });
+    }
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -35,8 +44,7 @@ export default function ViewJobModal({
           {/* Header */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.jobCode}>Job #{job.id || '1'}</Text>
-              <Text style={styles.propCode}>{job.propId || 'Testing-040726-001'}</Text>
+              <Text style={styles.jobCode}>{job.propId || 'Job Details'}</Text>
             </View>
 
             {/* Quick Actions in Header */}
@@ -150,20 +158,41 @@ export default function ViewJobModal({
             {/* Attached Photos */}
             {(job.photoBefore || job.photoAfter) && (
               <View style={styles.photosSection}>
-                <Text style={styles.remarksLabel}>ATTACHED MEDIA</Text>
+                <Text style={styles.remarksLabel}>ATTACHED PHOTOS</Text>
                 <View style={styles.photosRow}>
-                  {job.photoBefore && (
+                  {job.photoBefore ? (
                     <View style={styles.photoCol}>
                       <Text style={styles.photoSubLabel}>Photo Before</Text>
-                      <Image source={{ uri: job.photoBefore }} style={styles.jobPhoto} />
+                      <TouchableOpacity
+                        style={styles.photoTouchable}
+                        onPress={() => handleOpenPreview(job.photoBefore, 'Photo Before')}
+                        activeOpacity={0.85}
+                      >
+                        <Image source={{ uri: job.photoBefore }} style={styles.jobPhoto} />
+                        <View style={styles.zoomHintBadge}>
+                          <Feather name="maximize-2" size={11} color="#FFFFFF" />
+                          <Text style={styles.zoomHintText}>Tap to view</Text>
+                        </View>
+                      </TouchableOpacity>
                     </View>
-                  )}
-                  {job.photoAfter && (
+                  ) : null}
+
+                  {job.photoAfter ? (
                     <View style={styles.photoCol}>
-                      <Text style={styles.photoSubLabel}>Photo After</Text>
-                      <Image source={{ uri: job.photoAfter }} style={styles.jobPhoto} />
+                      <Text style={[styles.photoSubLabel, styles.photoSubLabelAfter]}>Photo After</Text>
+                      <TouchableOpacity
+                        style={styles.photoTouchable}
+                        onPress={() => handleOpenPreview(job.photoAfter, 'Photo After')}
+                        activeOpacity={0.85}
+                      >
+                        <Image source={{ uri: job.photoAfter }} style={styles.jobPhoto} />
+                        <View style={[styles.zoomHintBadge, styles.zoomHintBadgeAfter]}>
+                          <Feather name="maximize-2" size={11} color="#FFFFFF" />
+                          <Text style={styles.zoomHintText}>Tap to view</Text>
+                        </View>
+                      </TouchableOpacity>
                     </View>
-                  )}
+                  ) : null}
                 </View>
               </View>
             )}
@@ -231,6 +260,15 @@ export default function ViewJobModal({
           )}
         </View>
       </View>
+
+      {/* Fullscreen Image Popup Modal with Bottom Close Button */}
+      <ImagePreviewModal
+        visible={!!previewImage}
+        imageUrl={previewImage?.url}
+        title={previewImage?.title || 'Job Photo'}
+        subTitle={job.propId || ''}
+        onClose={() => setPreviewImage(null)}
+      />
     </Modal>
   );
 }
@@ -392,11 +430,43 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.muted,
     marginBottom: 4,
+    fontWeight: '600',
+  },
+  photoSubLabelAfter: {
+    color: Colors.greenDark,
+    fontWeight: '700',
+  },
+  photoTouchable: {
+    position: 'relative',
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: Colors.line,
+  },
+  zoomHintBadge: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.68)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  zoomHintBadgeAfter: {
+    backgroundColor: 'rgba(22, 101, 52, 0.85)',
+  },
+  zoomHintText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
   },
   jobPhoto: {
     width: '100%',
     height: 120,
-    borderRadius: 10,
     backgroundColor: '#E2E8F0',
   },
   footer: {

@@ -75,6 +75,7 @@ export default function App() {
     area: 'all',
     issuedTo: 'all',
     issuedBy: 'all',
+    assignedTo: 'all',
     sort: 'new',
     fromDate: '',
     toDate: '',
@@ -296,6 +297,69 @@ export default function App() {
     return Array.from(set).sort();
   }, [cachedTeams, jobs]);
 
+  // Distinct Issued By list matching QuickFix
+  const issuedByList = useMemo(() => {
+    const set = new Set();
+    jobs.forEach((j) => {
+      const val =
+        (j.raw && j.raw.issued_by_team_details) ||
+        j.issued_by_team_details ||
+        j.by ||
+        j.creator_name;
+      if (val && typeof val === 'string') {
+        const str = val.trim();
+        if (
+          str &&
+          str !== 'Select Issued By' &&
+          str !== 'NA' &&
+          str !== 'na' &&
+          str.toLowerCase() !== 'null' &&
+          str.toLowerCase() !== 'undefined'
+        ) {
+          set.add(str);
+        }
+      }
+    });
+    return Array.from(set).sort();
+  }, [jobs]);
+
+  // Distinct Assign To list
+  const assignToList = useMemo(() => {
+    const set = new Set();
+    jobs.forEach((j) => {
+      const val = j.assigned;
+      if (val && typeof val === 'string') {
+        const str = val.trim();
+        if (
+          str &&
+          str !== 'NA' &&
+          str !== 'na' &&
+          str !== 'Unassigned' &&
+          str !== 'Not assigned' &&
+          str.toLowerCase() !== 'null' &&
+          str.toLowerCase() !== 'undefined'
+        ) {
+          set.add(str);
+        }
+      }
+    });
+    return Array.from(set).sort();
+  }, [jobs]);
+
+  // Check if any filter is active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filterState.status !== 'all' ||
+      filterState.area !== 'all' ||
+      filterState.issuedTo !== 'all' ||
+      (filterState.issuedBy && filterState.issuedBy !== 'all') ||
+      (filterState.assignedTo && filterState.assignedTo !== 'all') ||
+      !!filterState.fromDate ||
+      !!filterState.toDate ||
+      filterState.sort !== 'new'
+    );
+  }, [filterState]);
+
   // Counts
   const openCount = useMemo(() => {
     return jobs.filter((j) => (j.status || '').toLowerCase() !== 'closed').length;
@@ -344,12 +408,34 @@ export default function App() {
         }
 
         // Drawer Filters: Issued By
-        if (
-          filterState.issuedBy !== 'all' &&
-          job.by !== filterState.issuedBy &&
-          job.creator_name !== filterState.issuedBy
-        ) {
-          return false;
+        if (filterState.issuedBy && filterState.issuedBy !== 'all') {
+          const selBy = filterState.issuedBy.trim().toLowerCase();
+          const jBy = (job.by || '').trim().toLowerCase();
+          const jCreator = (job.creator_name || '').trim().toLowerCase();
+          const jDetails = (
+            (job.raw && job.raw.issued_by_team_details) ||
+            job.issued_by_team_details ||
+            ''
+          ).trim().toLowerCase();
+
+          if (jBy !== selBy && jCreator !== selBy && jDetails !== selBy) {
+            return false;
+          }
+        }
+
+        // Drawer Filters: Assign To
+        if (filterState.assignedTo && filterState.assignedTo !== 'all') {
+          if (filterState.assignedTo === '__unassigned__') {
+            const asg = (job.assigned || '').trim();
+            if (asg && asg !== 'NA' && asg !== 'na' && asg !== 'Not assigned' && asg !== 'Unassigned') {
+              return false;
+            }
+          } else {
+            const asg = (job.assigned || '').trim();
+            if (asg.toLowerCase() !== filterState.assignedTo.trim().toLowerCase()) {
+              return false;
+            }
+          }
         }
 
         // Date Range filter
@@ -619,8 +705,7 @@ export default function App() {
               <TouchableOpacity
                 style={[
                   styles.btnFilterChip,
-                  (filterState.status !== 'all' || filterState.area !== 'all') &&
-                    styles.btnFilterChipActive,
+                  hasActiveFilters && styles.btnFilterChipActive,
                 ]}
                 onPress={() => setShowFilterModal(true)}
                 activeOpacity={0.8}
@@ -628,20 +713,15 @@ export default function App() {
                 <Feather
                   name="sliders"
                   size={14}
-                  color={
-                    filterState.status !== 'all' || filterState.area !== 'all'
-                      ? '#FFFFFF'
-                      : Colors.primary
-                  }
+                  color={hasActiveFilters ? '#FFFFFF' : Colors.primary}
                 />
                 <Text
                   style={[
                     styles.btnFilterText,
-                    (filterState.status !== 'all' || filterState.area !== 'all') &&
-                      styles.btnFilterTextActive,
+                    hasActiveFilters && styles.btnFilterTextActive,
                   ]}
                 >
-                  Filter
+                  Filter{hasActiveFilters ? ' •' : ''}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -808,6 +888,8 @@ export default function App() {
           onApply={setFilterState}
           areaList={areaList}
           teamList={teamList}
+          issuedByList={issuedByList}
+          assignToList={assignToList}
         />
 
         <ViewJobModal
