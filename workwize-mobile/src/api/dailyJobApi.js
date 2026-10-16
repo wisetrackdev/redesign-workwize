@@ -32,6 +32,76 @@ export function cleanIssuedBy(str) {
   return str.replace(/\[.*?\]/g, '').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Resolve display name from team members or clean format without displaying raw emails
+ */
+export function resolveUserName(val, cachedTeams = []) {
+  if (!val || typeof val !== 'string') return '';
+  const trimmed = val.trim();
+  if (!trimmed) return '';
+
+  // Extract possible email from string like "john.doe@workwize.in" or "John [john.doe@workwize.in]"
+  const emailMatch = trimmed.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+  const targetEmail = emailMatch
+    ? emailMatch[1].toLowerCase()
+    : trimmed.includes('@')
+    ? trimmed.toLowerCase()
+    : null;
+
+  // Look up targetEmail in cached teams members
+  if (targetEmail && Array.isArray(cachedTeams) && cachedTeams.length > 0) {
+    for (const team of cachedTeams) {
+      if (team.members && Array.isArray(team.members)) {
+        for (const m of team.members) {
+          if (m.email && m.email.toLowerCase() === targetEmail) {
+            const fn = (m.firstName || '').trim();
+            const ln = (m.lastName || '').trim();
+            const fullName = `${fn} ${ln}`.trim() || m.name;
+            if (fullName && !fullName.includes('@')) return fullName;
+          }
+        }
+      }
+      if (team.propsubteams && Array.isArray(team.propsubteams)) {
+        for (const sub of team.propsubteams) {
+          if (sub.subteams && Array.isArray(sub.subteams)) {
+            for (const m of sub.subteams) {
+              if (m.email && m.email.toLowerCase() === targetEmail) {
+                const fn = (m.firstName || '').trim();
+                const ln = (m.lastName || '').trim();
+                const fullName = `${fn} ${ln}`.trim() || m.name;
+                if (fullName && !fullName.includes('@')) return fullName;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // If string has a clean name before brackets: "Jane Smith [jane@xyz.com]"
+  const cleaned = cleanIssuedBy(trimmed);
+  if (cleaned && !cleaned.includes('@')) {
+    return cleaned;
+  }
+
+  // If it's already a clean name without an email address
+  if (!trimmed.includes('@')) {
+    return cleaned;
+  }
+
+  // If only an email address is available (e.g. "ahmed.ali@workwize.in" or "it@workwize.in")
+  if (targetEmail) {
+    const userPart = targetEmail.split('@')[0];
+    if (userPart.toLowerCase() === 'it') return 'IT Staff';
+    return userPart
+      .split(/[._-]/)
+      .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(' ');
+  }
+
+  return cleaned;
+}
+
 export function parseFormattedPropId(str) {
   if (!str || typeof str !== 'string') return null;
   const trimmed = str.trim();
@@ -279,7 +349,7 @@ export function getJobCustomId(key) {
  * Assign continuous, permanent serial numbers per calendar date (001, 002, 003...)
  * across both open and closed jobs.
  */
-export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Testing', areaList = []) {
+export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Testing', areaList = [], cachedTeams = []) {
   if (!Array.isArray(rawJobs) || rawJobs.length === 0) return [];
 
   const groupsByDate = {};
@@ -369,14 +439,14 @@ export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Tes
   processed.sort((a, b) => a.originalIndex - b.originalIndex);
 
   return processed.map((item) => {
-    return mapApiJob(item.rawJob, item, activePropName, areaList);
+    return mapApiJob(item.rawJob, item, activePropName, areaList, cachedTeams);
   });
 }
 
 /**
  * Map API Job shape to App Model matching workwize-teal mapApiJob
  */
-export function mapApiJob(op, serialInfo = 0, activePropName = 'Testing', areaList = []) {
+export function mapApiJob(op, serialInfo = 0, activePropName = 'Testing', areaList = [], cachedTeams = []) {
   if (!op) return null;
 
   let photoBefore = '';
@@ -414,16 +484,35 @@ export function mapApiJob(op, serialInfo = 0, activePropName = 'Testing', areaLi
   if (op.assigned_supervisor) {
     const fn = op.assigned_supervisor_first_name || '';
     const ln = op.assigned_supervisor_last_name || '';
-    assignedName = (fn + ' ' + ln).trim() || op.assigned_supervisor;
+    const supFullName = (fn + ' ' + ln).trim();
+    if (supFullName) {
+      assignedName = supFullName;
+    } else if (op.assigned && !op.assigned.includes('@')) {
+      assignedName = op.assigned;
+    } else {
+      assignedName = resolveUserName(op.assigned_supervisor, cachedTeams);
+    }
   } else if (op.assigned) {
-    assignedName = op.assigned;
+    assignedName = resolveUserName(op.assigned, cachedTeams);
   }
 
   let closedBy = '';
   if ((op.job_status || op.status) === 'Closed') {
     const cfn = op.assigned_supervisor_first_name || '';
     const cln = op.assigned_supervisor_last_name || '';
-    closedBy = (cfn + ' ' + cln).trim() || assignedName || op.closedBy || 'Staff';
+    const supFullName = (cfn + ' ' + cln).trim();
+
+    if (op.closedBy && !op.closedBy.includes('@')) {
+      closedBy = op.closedBy;
+    } else if (supFullName) {
+      closedBy = supFullName;
+    } else if (op.closedBy) {
+      closedBy = resolveUserName(op.closedBy, cachedTeams);
+    } else if (assignedName) {
+      closedBy = assignedName;
+    } else {
+      closedBy = 'Staff';
+    }
   }
 
   // Canonical propId and serial resolution
@@ -455,8 +544,8 @@ export function mapApiJob(op, serialInfo = 0, activePropName = 'Testing', areaLi
     }
   }
 
-  const cleanBy = cleanIssuedBy(op.issued_by_team_details || op.creator_name || op.by || 'Staff');
-  const cleanClosedBy = cleanIssuedBy(closedBy);
+  const cleanBy = resolveUserName(op.issued_by_team_details || op.creator_name || op.by || 'Staff', cachedTeams);
+  const cleanClosedBy = resolveUserName(closedBy, cachedTeams);
 
   // Robust Area Resolution (Name preferred over raw ID)
   let resolvedArea = op.areaName || op.area_name || op.areaname || op.area || '';
@@ -755,7 +844,7 @@ export const DailyJobApi = {
           ...rawClose.map((j) => ({ ...j, job_status: 'Closed' })),
         ];
 
-        const allMapped = assignDateBasedSerialNumbers(allRaw, activePropName, areas);
+        const allMapped = assignDateBasedSerialNumbers(allRaw, activePropName, areas, teams);
         const mappedOpen = allMapped.filter((j) => (j.status || '').toLowerCase() !== 'closed');
         const mappedClosed = allMapped.filter((j) => (j.status || '').toLowerCase() === 'closed');
 
@@ -909,15 +998,27 @@ export const DailyJobApi = {
 
       let fullName = '';
       if (payload) {
-        if (payload.FirstName) {
-          fullName = (payload.FirstName + (payload.LastName ? (' ' + payload.LastName) : '')).trim();
-        } else if (payload.name) {
+        const msName = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
+        const msGiven = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname'];
+        const msSurname = payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname'];
+
+        if (payload.FirstName || payload.firstName) {
+          const fn = payload.FirstName || payload.firstName || '';
+          const ln = payload.LastName || payload.lastName || '';
+          fullName = `${fn} ${ln}`.trim();
+        } else if (msGiven || msSurname) {
+          fullName = `${msGiven || ''} ${msSurname || ''}`.trim();
+        } else if (payload.FullName || payload.fullName) {
+          fullName = payload.FullName || payload.fullName;
+        } else if (payload.name && !payload.name.includes('@')) {
           fullName = payload.name;
-        } else if (payload.unique_name) {
-          fullName = payload.unique_name;
+        } else if (msName && !msName.includes('@')) {
+          fullName = msName;
         }
       }
-      if (!fullName) fullName = email.split('@')[0];
+      if (!fullName || fullName.includes('@')) {
+        fullName = resolveUserName(email);
+      }
 
       const updatedUserData = {
         username: email.trim(),

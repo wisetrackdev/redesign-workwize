@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { formatApiDate } from '../api/config';
-import { cleanIssuedBy } from '../api/dailyJobApi';
+import { cleanIssuedBy, resolveUserName } from '../api/dailyJobApi';
 
 export default function JobCard({
   job,
@@ -144,7 +144,7 @@ export default function JobCard({
           <View style={styles.kvRow}>
             <Text style={styles.kvLabel}>Closed By:</Text>
             <Text style={styles.kvValue} numberOfLines={1}>
-              {cleanIssuedBy(job.closedBy)} {job.closedAt ? `• ${formatApiDate(job.closedAt)}` : ''}
+              {resolveUserName(job.closedBy)} {job.closedAt ? `• ${formatApiDate(job.closedAt)}` : ''}
             </Text>
           </View>
         )}

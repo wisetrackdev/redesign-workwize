@@ -11,7 +11,7 @@ import {
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { formatApiDate } from '../api/config';
-import { cleanIssuedBy } from '../api/dailyJobApi';
+import { cleanIssuedBy, resolveUserName } from '../api/dailyJobApi';
 import ImagePreviewModal from './ImagePreviewModal';
 
 export default function ViewJobModal({
@@ -162,7 +162,7 @@ export default function ViewJobModal({
                 <Text style={styles.remarksValue}>{job.remarks}</Text>
                 {job.closedBy && (
                   <Text style={styles.closedByText}>
-                    Closed by: {cleanIssuedBy(job.closedBy)} {job.closedAt ? `(${formatApiDate(job.closedAt)})` : ''}
+                    Closed by: {resolveUserName(job.closedBy)} {job.closedAt ? `(${formatApiDate(job.closedAt)})` : ''}
                   </Text>
                 )}
               </View>

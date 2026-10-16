@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
-import { cleanIssuedBy } from '../api/dailyJobApi';
+import { cleanIssuedBy, resolveUserName } from '../api/dailyJobApi';
 import ImagePreviewModal from './ImagePreviewModal';
 
 export default function CloseJobModal({
@@ -22,15 +22,43 @@ export default function CloseJobModal({
   onClose,
   onCloseSubmit,
   currentUser,
+  userTeamContext,
+  cachedTeams = [],
 }) {
-  const [closingBy, setClosingBy] = useState(
-    cleanIssuedBy(currentUser ? currentUser.name : 'IT Staff')
-  );
-  const [remarks, setRemarks] = useState('Done.');
+  const [closingBy, setClosingBy] = useState('');
+  const [remarks, setRemarks] = useState('');
   const [photoAfterUri, setPhotoAfterUri] = useState(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
 
+  // When modal opens or target job changes: ALWAYS reset remarks and photos, and pre-select user's name & team
+  useEffect(() => {
+    if (visible && job) {
+      setRemarks('');
+      setPhotoAfterUri(null);
+      setShowImagePreview(false);
+
+      const rawUser = currentUser?.name || currentUser?.email || currentUser?.username || 'User';
+      const userName = resolveUserName(rawUser, cachedTeams);
+      const teamName =
+        userTeamContext?.primaryTeamName ||
+        currentUser?.primaryTeam ||
+        currentUser?.dept ||
+        job.dept ||
+        'General';
+      const autoClosingBy = `${userName} (${teamName})`;
+
+      setClosingBy(autoClosingBy);
+    }
+  }, [visible, job, currentUser, userTeamContext, cachedTeams]);
+
   if (!job) return null;
+
+  const handleModalClose = () => {
+    setRemarks('');
+    setPhotoAfterUri(null);
+    setShowImagePreview(false);
+    onClose();
+  };
 
   const pickImage = async (fromCamera = false) => {
     try {
@@ -67,16 +95,47 @@ export default function CloseJobModal({
 
   const handleSubmit = () => {
     if (!remarks.trim()) {
-      Alert.alert('Remarks required', 'Please provide completion remarks.');
+      Alert.alert('Remarks required', 'Please provide completion remarks to close this job.');
       return;
     }
-    onCloseSubmit({
-      jobId: job.id,
-      closingBy,
-      remarks,
-      photoAfterUri,
-    });
-    onClose();
+
+    const rawUser = currentUser?.name || currentUser?.email || currentUser?.username || 'User';
+    const userName = resolveUserName(rawUser, cachedTeams);
+    const teamName =
+      userTeamContext?.primaryTeamName ||
+      currentUser?.primaryTeam ||
+      currentUser?.dept ||
+      job.dept ||
+      'General';
+    const finalClosingBy = (closingBy && closingBy.trim()) || `${userName} (${teamName})`;
+
+    const doSubmit = () => {
+      onCloseSubmit({
+        jobId: job.id,
+        closingBy: finalClosingBy,
+        remarks: remarks.trim(),
+        photoAfterUri,
+      });
+      setRemarks('');
+      setPhotoAfterUri(null);
+      setShowImagePreview(false);
+      onClose();
+    };
+
+    // If without photo, prompt confirmation matching workwize-teal / quickfix
+    if (!photoAfterUri) {
+      Alert.alert(
+        'Close without image?',
+        'You have not attached any completion photo for this job. Do you want to continue?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Confirm & Close', onPress: doSubmit },
+        ]
+      );
+      return;
+    }
+
+    doSubmit();
   };
 
   return (
@@ -91,7 +150,7 @@ export default function CloseJobModal({
                 {job.propId || job.details}
               </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <TouchableOpacity onPress={handleModalClose} style={styles.closeBtn}>
               <Ionicons name="close" size={22} color={Colors.muted} />
             </TouchableOpacity>
           </View>
@@ -101,7 +160,7 @@ export default function CloseJobModal({
             <View style={styles.noticeBox}>
               <Feather name="info" size={16} color="#92400E" />
               <Text style={styles.noticeText}>
-                Jobs can be closed by authorized members of the responsible team.
+                Job belongs to {job.dept || 'team'}. Closing remarks are required.
               </Text>
             </View>
 
@@ -109,7 +168,7 @@ export default function CloseJobModal({
             <Text style={styles.label}>CLOSING TEAM MEMBER</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. IT Staff / Ahmed Ali"
+              placeholder="e.g. Ahmed Ali (Housekeeping)"
               placeholderTextColor={Colors.placeholder}
               value={closingBy}
               onChangeText={setClosingBy}
@@ -119,7 +178,7 @@ export default function CloseJobModal({
             <Text style={styles.label}>COMPLETION REMARKS *</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
-              placeholder="e.g. Work completed. Done."
+              placeholder="Enter completion remarks..."
               placeholderTextColor={Colors.placeholder}
               value={remarks}
               onChangeText={setRemarks}
@@ -168,7 +227,7 @@ export default function CloseJobModal({
 
           {/* Footer */}
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={handleModalClose}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.confirmBtn} onPress={handleSubmit}>

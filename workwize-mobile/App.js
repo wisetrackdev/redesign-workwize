@@ -39,13 +39,14 @@ import {
   getJobDateCode,
   pad3,
   cleanIssuedBy,
+  resolveUserName,
   parseFormattedPropId,
   canAssignJob,
   canCloseJob,
   canDeleteJob,
   setJobCustomId,
 } from './src/api/dailyJobApi';
-import { getStoredUserData, clearStoredUserData } from './src/api/config';
+import { getStoredUserData, setStoredUserData, clearStoredUserData } from './src/api/config';
 import initialJobsData from './src/data/jobs_data.json';
 
 export default function App() {
@@ -200,6 +201,19 @@ export default function App() {
         if (res) {
           if (res.teams && res.teams.length > 0) {
             setCachedTeams(res.teams);
+            setCurrentUser((prevUser) => {
+              if (!prevUser) return prevUser;
+              const resolved = resolveUserName(
+                prevUser.name || prevUser.email || prevUser.username,
+                res.teams
+              );
+              if (resolved && resolved !== prevUser.name && !resolved.includes('@')) {
+                const updated = { ...prevUser, name: resolved };
+                setStoredUserData(updated);
+                return updated;
+              }
+              return prevUser;
+            });
           }
           if (res.areas && res.areas.length > 0) {
             setCachedAreas(res.areas);
@@ -995,6 +1009,8 @@ export default function App() {
           onClose={() => setShowCloseModal(false)}
           onCloseSubmit={handleCloseSubmit}
           currentUser={currentUser}
+          userTeamContext={userTeamContext}
+          cachedTeams={cachedTeams}
         />
 
         <EditJobModal
