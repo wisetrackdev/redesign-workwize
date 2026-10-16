@@ -24,6 +24,7 @@ export default function DropdownModal({
   onSelect,
   onClose,
   placeholder = 'Search...',
+  allowCustom = false,
 }) {
   const [search, setSearch] = useState('');
 
@@ -50,8 +51,29 @@ export default function DropdownModal({
     return lbl.includes(q) || sub.includes(q);
   });
 
+  const hasExactMatch = formattedOptions.some(
+    (item) => (item.label || '').toLowerCase() === search.trim().toLowerCase()
+  );
+
+  const displayList =
+    allowCustom && search.trim() && !hasExactMatch
+      ? [{ id: '__custom_new_entry__', label: `Use "${search.trim()}"`, value: search.trim() }, ...filtered]
+      : filtered;
+
   const handlePick = (item) => {
-    onSelect(item.value, item);
+    if (item.id === '__custom_new_entry__') {
+      const cleanCustom = {
+        id: item.value,
+        label: item.value,
+        value: item.value,
+        areaName: item.value,
+        name: item.value,
+        isCustom: true,
+      };
+      onSelect(item.value, cleanCustom);
+    } else {
+      onSelect(item.value, item);
+    }
     setSearch('');
     onClose();
   };
@@ -77,7 +99,7 @@ export default function DropdownModal({
             </View>
 
             {/* Search Box */}
-            {options.length > 6 && (
+            {(options.length > 5 || allowCustom) && (
               <View style={styles.searchWrap}>
                 <Feather name="search" size={16} color={Colors.muted} />
                 <TextInput
@@ -99,7 +121,7 @@ export default function DropdownModal({
 
             {/* List of Options */}
             <FlatList
-              data={filtered}
+              data={displayList}
               keyExtractor={(item) => String(item.id)}
               renderItem={({ item }) => {
                 const isSelected = String(selectedValue) === String(item.value);

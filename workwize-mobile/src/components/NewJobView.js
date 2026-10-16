@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import DropdownModal from './DropdownModal';
-import { isSuperAdmin, getIssuedByDisplay } from '../api/dailyJobApi';
+import { isSuperAdmin, getIssuedByDisplay, cleanIssuedBy } from '../api/dailyJobApi';
 
 export default function NewJobView({
   onSubmit,
@@ -46,6 +46,7 @@ export default function NewJobView({
   const [area, setArea] = useState('');
   const [areaLabel, setAreaLabel] = useState('');
   const [subArea, setSubArea] = useState('');
+  const [subAreaLabel, setSubAreaLabel] = useState('');
   const [details, setDetails] = useState('');
 
   // 2 Dynamic Conditional Fields
@@ -57,6 +58,7 @@ export default function NewJobView({
   // Picker Modals Visibility
   const [showDeptPicker, setShowDeptPicker] = useState(false);
   const [showAreaPicker, setShowAreaPicker] = useState(false);
+  const [showSubAreaPicker, setShowSubAreaPicker] = useState(false);
   const [showSubTeamPicker, setShowSubTeamPicker] = useState(false);
   const [showSupervisorPicker, setShowSupervisorPicker] = useState(false);
 
@@ -87,15 +89,78 @@ export default function NewJobView({
   // Format Areas for Dropdown (Purely dynamic from API)
   const areaOptions = useMemo(() => {
     if (cachedAreas && cachedAreas.length > 0) {
-      return cachedAreas.map((a) => ({
-        id: a.areaId || a.areaid || a.areaName,
-        label: a.areaName || a.name || a.areaId,
-        value: a.areaId || a.areaid || a.areaName,
-        areaObj: a,
-      }));
+      return cachedAreas.map((a) => {
+        const aName = a.areaName || a.name || String(a.areaId || a.areaid || '');
+        const aId = a.areaId || a.areaid || aName;
+        return {
+          id: String(aId),
+          label: aName,
+          value: String(aId),
+          areaName: aName,
+          areaObj: a,
+        };
+      });
     }
     return [];
   }, [cachedAreas]);
+
+  // Selected area object
+  const currentAreaObj = useMemo(() => {
+    if (!area && !areaLabel) return null;
+    return (
+      (cachedAreas || []).find(
+        (a) =>
+          String(a.areaId || a.areaid) === String(area) ||
+          String(a.areaName || a.name).toLowerCase() === String(areaLabel || area).toLowerCase()
+      ) || null
+    );
+  }, [area, areaLabel, cachedAreas]);
+
+  // Dynamic Sub-Area Options (from propsubarea, existing jobs, or common defaults)
+  const subAreaOptions = useMemo(() => {
+    const list = [];
+    const set = new Set();
+
+    // 1. From current area's propsubarea array
+    if (currentAreaObj) {
+      const subs = currentAreaObj.propsubarea || currentAreaObj.subareas || currentAreaObj.subArea || [];
+      if (Array.isArray(subs)) {
+        subs.forEach((s) => {
+          const name = typeof s === 'string' ? s : (s.subareaName || s.subAreaName || s.name || s.subareaId || s.subarea);
+          const id = typeof s === 'string' ? s : (s.subareaId || s.id || name);
+          if (name && !set.has(name.toLowerCase())) {
+            set.add(name.toLowerCase());
+            list.push({ id: String(id), label: name, value: name });
+          }
+        });
+      }
+    }
+
+    // 2. From existing jobs under this area
+    if (jobs && jobs.length > 0) {
+      const targetAreaName = (areaLabel || area || '').toLowerCase();
+      jobs.forEach((j) => {
+        const jArea = String(j.area || '').toLowerCase();
+        if ((!targetAreaName || jArea === targetAreaName) && j.sub && typeof j.sub === 'string') {
+          const sName = j.sub.trim();
+          if (sName && sName !== 'NA' && sName !== 'na' && !set.has(sName.toLowerCase())) {
+            set.add(sName.toLowerCase());
+            list.push({ id: sName, label: sName, value: sName });
+          }
+        }
+      });
+    }
+
+    // 3. Fallback defaults if none configured yet
+    if (list.length === 0) {
+      const defaults = ['General Area', 'Room 101', 'Room 102', 'Lobby', 'Ground Floor', 'First Floor', 'Kitchen', 'Corridor', 'Washroom'];
+      defaults.forEach((d) => {
+        list.push({ id: d, label: d, value: d });
+      });
+    }
+
+    return list;
+  }, [currentAreaObj, area, areaLabel, jobs]);
 
   // Synchronize Area dropdown when Property or cachedAreas changes (Matching quickfix logic)
   useEffect(() => {
@@ -107,11 +172,13 @@ export default function NewJobView({
         setArea(areaOptions[0].value);
         setAreaLabel(areaOptions[0].label);
         setSubArea('');
+        setSubAreaLabel('');
       }
     } else {
       setArea('');
       setAreaLabel('');
       setSubArea('');
+      setSubAreaLabel('');
     }
   }, [currentPropertyId, cachedAreas, areaOptions]);
 
@@ -341,9 +408,19 @@ export default function NewJobView({
   };
 
   const handleAreaSelect = (areaVal, areaItem) => {
-    setArea(areaVal);
-    setAreaLabel(areaItem?.label || areaVal);
+    const chosenName = areaItem?.areaName || areaItem?.label || areaVal;
+    const chosenId = areaItem?.value || areaItem?.id || areaVal;
+    setArea(chosenId);
+    setAreaLabel(chosenName);
     setErrors((prev) => ({ ...prev, area: '' }));
+    setSubArea('');
+    setSubAreaLabel('');
+  };
+
+  const handleSubAreaSelect = (subVal, subItem) => {
+    const chosenName = subItem?.label || subVal;
+    setSubArea(chosenName);
+    setSubAreaLabel(chosenName);
   };
 
   // Image Picker with 5MB validation matching workwize-teal handleNewJobFiles
@@ -411,16 +488,27 @@ export default function NewJobView({
   const executeSubmission = async () => {
     setShowNoPhotoModal(false);
     setIsSubmitting(true);
+    const chosenAreaName = areaLabel || area;
+    const chosenDeptName = issuedToLabel || issuedTo;
+    const chosenSubName = (subAreaLabel || subArea || '').trim();
+
     try {
       await onSubmit({
-        dept: issuedTo,
+        dept: chosenDeptName,
+        deptId: issuedTo,
         issued_to_team: issuedTo,
-        area: area,
-        sub: subArea.trim(),
-        subareaId: subArea.trim(),
+        issued_to_team_name: chosenDeptName,
+        area: chosenAreaName,
+        areaName: chosenAreaName,
+        areaId: area,
+        areaID: area,
+        sub: chosenSubName,
+        subarea: chosenSubName,
+        subareaId: chosenSubName,
         details: details.trim(),
         job_detail: details.trim(),
-        by: issuedBy,
+        by: cleanIssuedBy(issuedBy),
+        creator_name: cleanIssuedBy(issuedBy),
         assigned_dept: showAssignmentFields ? assignedSubTeam : null,
         assigned_supervisor: showAssignmentFields ? assignedSupervisor : null,
         photoUri: photoUri,
@@ -432,6 +520,7 @@ export default function NewJobView({
       setArea('');
       setAreaLabel('');
       setSubArea('');
+      setSubAreaLabel('');
       setDetails('');
       setPhotoUri(null);
       setAssignedSubTeam('');
@@ -484,7 +573,7 @@ export default function NewJobView({
             <Text style={styles.label}>Issued By</Text>
             <TextInput
               style={[styles.input, styles.inputReadonly]}
-              value={issuedBy}
+              value={cleanIssuedBy(issuedBy)}
               editable={false}
             />
           </View>
@@ -499,24 +588,27 @@ export default function NewJobView({
               onPress={() => setShowAreaPicker(true)}
               activeOpacity={0.8}
             >
-              <Text style={area ? styles.dropdownVal : styles.dropdownPlaceholder}>
-                {areaLabel || area || (areaOptions.length === 0 ? 'No areas available' : 'Select area')}
+              <Text style={areaLabel || area ? styles.dropdownVal : styles.dropdownPlaceholder}>
+                {areaLabel || (areaOptions.length === 0 ? 'No areas available' : 'Select area')}
               </Text>
               <Feather name="chevron-down" size={18} color={Colors.primary} />
             </TouchableOpacity>
             {errors.area ? <Text style={styles.errText}>{errors.area}</Text> : null}
           </View>
 
-          {/* 4. Field: Sub-Area */}
+          {/* 4. Field: Sub-Area (Styled exactly like Area dropdown) */}
           <View style={styles.fld}>
             <Text style={styles.label}>Sub-Area</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Subarea"
-              placeholderTextColor={Colors.placeholder}
-              value={subArea}
-              onChangeText={setSubArea}
-            />
+            <TouchableOpacity
+              style={styles.dropdownBox}
+              onPress={() => setShowSubAreaPicker(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={subAreaLabel || subArea ? styles.dropdownVal : styles.dropdownPlaceholder}>
+                {subAreaLabel || subArea || 'Select or enter subarea'}
+              </Text>
+              <Feather name="chevron-down" size={18} color={Colors.primary} />
+            </TouchableOpacity>
           </View>
 
           {/* 5. Field: Job Details */}
@@ -720,6 +812,18 @@ export default function NewJobView({
         onSelect={handleAreaSelect}
         onClose={() => setShowAreaPicker(false)}
         placeholder="Search area..."
+        allowCustom={true}
+      />
+
+      <DropdownModal
+        visible={showSubAreaPicker}
+        title="Select Sub-Area"
+        options={subAreaOptions}
+        selectedValue={subArea}
+        onSelect={handleSubAreaSelect}
+        onClose={() => setShowSubAreaPicker(false)}
+        placeholder="Search or enter custom subarea..."
+        allowCustom={true}
       />
 
       <DropdownModal

@@ -27,18 +27,37 @@ export function getJobDateCode(val) {
   return parts.dd + parts.mm + parts.yy;
 }
 
+export function cleanIssuedBy(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str.replace(/\[.*?\]/g, '').replace(/\s+/g, ' ').trim();
+}
+
 export function parseFormattedPropId(str) {
   if (!str || typeof str !== 'string') return null;
   const trimmed = str.trim();
-  const m = trimmed.match(/^(.+)-(\d{6})-(\d+)$/);
-  if (!m) return null;
-  return {
-    raw: trimmed,
-    prefix: m[1],
-    dateCode: m[2],
-    serial: parseInt(m[3], 10),
-    serialStr: m[3],
-  };
+  const m = trimmed.match(/^(?:(.+)-)?(\d{6})-(\d+)$/);
+  if (m) {
+    const serialNum = parseInt(m[3], 10);
+    return {
+      raw: trimmed,
+      prefix: m[1] || '',
+      dateCode: m[2],
+      serial: serialNum,
+      serialStr: pad3(serialNum),
+    };
+  }
+  const mSerial = trimmed.match(/^#?(\d{1,4})$/);
+  if (mSerial) {
+    const num = parseInt(mSerial[1], 10);
+    return {
+      raw: trimmed,
+      prefix: '',
+      dateCode: '',
+      serial: num,
+      serialStr: pad3(num),
+    };
+  }
+  return null;
 }
 
 /**
@@ -231,21 +250,91 @@ export function updateUserTeamContext(user, teams = [], userTeams = []) {
 }
 
 /**
- * Format "Issued By" text string matching workwize-teal
+ * Format "Issued By" text string without bracketed metadata
  */
 export function getIssuedByDisplay(user, primaryTeamName) {
-  if (!user) return 'IT [App admin]';
-  if (isSuperAdmin(user)) {
-    return `${user.name || 'IT'} [${user.desg || 'App admin'}]`;
-  }
-  const teamLabel = primaryTeamName || user.primaryTeam || user.dept || '';
-  return `${user.name || 'User'} [${user.desg || 'Staff'}${teamLabel ? ': ' + teamLabel : ''}]`;
+  if (!user) return 'IT';
+  return cleanIssuedBy(user.name) || (isSuperAdmin(user) ? 'IT' : 'User');
+}
+
+/**
+ * Assign continuous, permanent serial numbers per calendar date (001, 002, 003...)
+ * across both open and closed jobs.
+ */
+export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Testing', areaList = []) {
+  if (!Array.isArray(rawJobs) || rawJobs.length === 0) return [];
+
+  const groupsByDate = {};
+  const processed = [];
+
+  rawJobs.forEach((op, originalIndex) => {
+    if (!op) return;
+    const parsed = parseFormattedPropId(op.propId);
+    let dateCode = parsed && parsed.dateCode ? parsed.dateCode : getJobDateCode(op.openDate || op.opened || op.createdAt);
+    if (!dateCode) dateCode = getJobDateCode(new Date());
+
+    let explicitSerial = (parsed && parsed.serial > 0) ? parsed.serial : (op.serial > 0 ? op.serial : null);
+
+    const item = {
+      rawJob: op,
+      originalIndex,
+      dateCode,
+      serial: explicitSerial,
+      openTime: new Date(op.openDate || op.opened || op.createdAt || 0).getTime() || 0,
+    };
+
+    if (!groupsByDate[dateCode]) {
+      groupsByDate[dateCode] = [];
+    }
+    groupsByDate[dateCode].push(item);
+  });
+
+  Object.keys(groupsByDate).forEach((dateCode) => {
+    const group = groupsByDate[dateCode];
+    const takenSerials = new Set();
+
+    group.forEach((item) => {
+      if (item.serial != null) {
+        takenSerials.add(item.serial);
+      }
+    });
+
+    const unassigned = group.filter((item) => item.serial == null);
+    unassigned.sort((a, b) => {
+      if (a.openTime !== b.openTime) return a.openTime - b.openTime;
+      return a.originalIndex - b.originalIndex;
+    });
+
+    let currentSeq = 1;
+    unassigned.forEach((item) => {
+      while (takenSerials.has(currentSeq)) {
+        currentSeq++;
+      }
+      item.serial = currentSeq;
+      takenSerials.add(currentSeq);
+      currentSeq++;
+    });
+
+    group.forEach((item) => {
+      const serialStr = pad3(item.serial);
+      const canonicalPropId = `${activePropName}-${dateCode}-${serialStr}`;
+      item.canonicalPropId = canonicalPropId;
+      item.serialStr = serialStr;
+      processed.push(item);
+    });
+  });
+
+  processed.sort((a, b) => a.originalIndex - b.originalIndex);
+
+  return processed.map((item) => {
+    return mapApiJob(item.rawJob, item, activePropName, areaList);
+  });
 }
 
 /**
  * Map API Job shape to App Model matching workwize-teal mapApiJob
  */
-export function mapApiJob(op, index = 0, activePropName = 'Testing') {
+export function mapApiJob(op, serialInfo = 0, activePropName = 'Testing', areaList = []) {
   if (!op) return null;
 
   let photoBefore = '';
@@ -295,26 +384,69 @@ export function mapApiJob(op, index = 0, activePropName = 'Testing') {
     closedBy = (cfn + ' ' + cln).trim() || assignedName || op.closedBy || 'Staff';
   }
 
-  // Generate or preserve formatted propId: [Prefix]-[DDMMYY]-[Serial]
-  let customJobId = op.propId || '';
-  const parsed = parseFormattedPropId(op.propId);
-  if (parsed) {
-    customJobId = `${activePropName}-${parsed.dateCode}-${pad3(parsed.serial)}`;
-  } else {
-    const dateCode = getJobDateCode(op.openDate || op.opened);
-    customJobId = `${activePropName}-${dateCode}-${pad3(index + 1)}`;
+  // Canonical propId and serial resolution
+  let customJobId = '';
+  let serial = 0;
+  let serialStr = '001';
+  let dateCode = '';
+
+  if (serialInfo && typeof serialInfo === 'object') {
+    customJobId = serialInfo.canonicalPropId || '';
+    serial = serialInfo.serial || 0;
+    serialStr = serialInfo.serialStr || pad3(serial);
+    dateCode = serialInfo.dateCode || '';
   }
 
+  if (!customJobId) {
+    const parsed = parseFormattedPropId(op.propId);
+    if (parsed && parsed.serial > 0) {
+      dateCode = parsed.dateCode || getJobDateCode(op.openDate || op.opened);
+      serial = parsed.serial;
+      serialStr = pad3(serial);
+      customJobId = `${activePropName}-${dateCode}-${serialStr}`;
+    } else {
+      dateCode = getJobDateCode(op.openDate || op.opened);
+      const fallbackIdx = typeof serialInfo === 'number' ? serialInfo + 1 : 1;
+      serial = fallbackIdx;
+      serialStr = pad3(serial);
+      customJobId = `${activePropName}-${dateCode}-${serialStr}`;
+    }
+  }
+
+  const cleanBy = cleanIssuedBy(op.issued_by_team_details || op.creator_name || op.by || 'Staff');
+  const cleanClosedBy = cleanIssuedBy(closedBy);
+
+  // Robust Area Resolution (Name preferred over raw ID)
+  let resolvedArea = op.areaName || op.area_name || op.areaname || op.area || '';
+  if (Array.isArray(areaList) && areaList.length > 0) {
+    const matched = areaList.find(
+      (a) =>
+        String(a.areaId || a.areaid || '') === String(op.areaId || op.areaID || resolvedArea) ||
+        String(a.areaName || a.name || '').toLowerCase() === String(resolvedArea).toLowerCase()
+    );
+    if (matched && (matched.areaName || matched.name)) {
+      resolvedArea = matched.areaName || matched.name;
+    }
+  }
+  if (!resolvedArea) resolvedArea = 'General';
+
+  const resolvedSub = op.subarea || op.subArea || op.sub || '';
+
   return {
-    id: op.jobId || op.id || index + 1,
+    id: op.jobId || op.id || customJobId,
     jobId: op.jobId || op.id,
     propId: customJobId,
+    serial: serial,
+    serialStr: serialStr,
+    dateCode: dateCode,
     details: op.job_detail || op.details || '',
-    by: op.issued_by_team_details || op.creator_name || op.by || 'Staff',
+    by: cleanBy,
     dept: op.issued_to_team_name || op.dept || op.issued_to_team || 'Department',
-    area: op.area_name || op.area || 'General',
-    sub: op.subarea || op.sub || '',
-    areaId: op.areaId,
+    area: resolvedArea,
+    areaName: resolvedArea,
+    sub: resolvedSub,
+    subarea: resolvedSub,
+    areaId: op.areaId || op.areaID,
     issued_to_team: op.issued_to_team,
     issued_by_team: op.issued_by_team,
     assigned_supervisor: op.assigned_supervisor,
@@ -326,7 +458,7 @@ export function mapApiJob(op, index = 0, activePropName = 'Testing') {
     assigned: assignedName,
     status: op.job_status || op.status || 'Open',
     remarks: op.job_remark || op.remarks || '',
-    closedBy,
+    closedBy: cleanClosedBy,
     raw: op,
   };
 }
@@ -529,9 +661,6 @@ export const DailyJobApi = {
           ? resOpen.close
           : [];
 
-        const mappedOpen = rawOpen.map((j, idx) => mapApiJob(j, idx, activePropName));
-        const mappedClosed = rawClose.map((j, idx) => mapApiJob(j, rawOpen.length + idx, activePropName));
-
         let teams =
           Array.isArray(resOpen?.teams) && resOpen.teams.length > 0
             ? resOpen.teams
@@ -570,6 +699,15 @@ export const DailyJobApi = {
           } catch (e) {}
         }
 
+        const allRaw = [
+          ...rawOpen.map((j) => ({ ...j, job_status: j.job_status || j.status || 'Open' })),
+          ...rawClose.map((j) => ({ ...j, job_status: 'Closed' })),
+        ];
+
+        const allMapped = assignDateBasedSerialNumbers(allRaw, activePropName, areas);
+        const mappedOpen = allMapped.filter((j) => (j.status || '').toLowerCase() !== 'closed');
+        const mappedClosed = allMapped.filter((j) => (j.status || '').toLowerCase() === 'closed');
+
         return {
           openJobs: mappedOpen,
           closedJobs: mappedClosed,
@@ -586,16 +724,17 @@ export const DailyJobApi = {
 
     // Local cached fallback from jobs_data.json only if completely offline
     const all = Array.isArray(mockJobsData) ? mockJobsData : [];
-    const openRaw = all.filter((j) => (j.status || '').toLowerCase() !== 'closed');
-    const closeRaw = all.filter((j) => (j.status || '').toLowerCase() === 'closed');
+    const allMapped = assignDateBasedSerialNumbers(all, activePropName);
+    const mappedOpen = allMapped.filter((j) => (j.status || '').toLowerCase() !== 'closed');
+    const mappedClosed = allMapped.filter((j) => (j.status || '').toLowerCase() === 'closed');
 
     return {
-      openJobs: openRaw.map((j, idx) => mapApiJob(j, idx, activePropName)),
-      closedJobs: closeRaw.map((j, idx) => mapApiJob(j, openRaw.length + idx, activePropName)),
+      openJobs: mappedOpen,
+      closedJobs: mappedClosed,
       teams: [],
       areas: [],
       userTeam: [],
-      pagination: { totalOpenJobs: openRaw.length, totalCloseJobs: closeRaw.length },
+      pagination: { totalOpenJobs: mappedOpen.length, totalCloseJobs: mappedClosed.length },
       isLive: false,
     };
   },

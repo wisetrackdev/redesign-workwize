@@ -11,6 +11,7 @@ import {
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { formatApiDate } from '../api/config';
+import { cleanIssuedBy } from '../api/dailyJobApi';
 import ImagePreviewModal from './ImagePreviewModal';
 
 export default function ViewJobModal({
@@ -126,7 +127,7 @@ export default function ViewJobModal({
 
               <View style={styles.briefRow}>
                 <Text style={styles.briefLabel}>Issued By:</Text>
-                <Text style={styles.briefValue}>{job.by || job.creator_name || 'IT Staff'}</Text>
+                <Text style={styles.briefValue}>{cleanIssuedBy(job.by || job.creator_name || 'IT Staff')}</Text>
               </View>
 
               <View style={styles.briefRow}>
@@ -149,7 +150,7 @@ export default function ViewJobModal({
                 <Text style={styles.remarksValue}>{job.remarks}</Text>
                 {job.closedBy && (
                   <Text style={styles.closedByText}>
-                    Closed by: {job.closedBy} {job.closedAt ? `(${formatApiDate(job.closedAt)})` : ''}
+                    Closed by: {cleanIssuedBy(job.closedBy)} {job.closedAt ? `(${formatApiDate(job.closedAt)})` : ''}
                   </Text>
                 )}
               </View>

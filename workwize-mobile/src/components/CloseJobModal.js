@@ -13,6 +13,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
+import { cleanIssuedBy } from '../api/dailyJobApi';
 import ImagePreviewModal from './ImagePreviewModal';
 
 export default function CloseJobModal({
@@ -23,7 +24,7 @@ export default function CloseJobModal({
   currentUser,
 }) {
   const [closingBy, setClosingBy] = useState(
-    currentUser ? currentUser.name : 'IT Staff'
+    cleanIssuedBy(currentUser ? currentUser.name : 'IT Staff')
   );
   const [remarks, setRemarks] = useState('Done.');
   const [photoAfterUri, setPhotoAfterUri] = useState(null);

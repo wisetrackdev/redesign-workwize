@@ -38,6 +38,8 @@ import {
   updateUserTeamContext,
   getJobDateCode,
   pad3,
+  cleanIssuedBy,
+  parseFormattedPropId,
   canAssignJob,
   canCloseJob,
   canDeleteJob,
@@ -301,23 +303,21 @@ export default function App() {
   const issuedByList = useMemo(() => {
     const set = new Set();
     jobs.forEach((j) => {
-      const val =
+      const val = cleanIssuedBy(
         (j.raw && j.raw.issued_by_team_details) ||
         j.issued_by_team_details ||
         j.by ||
-        j.creator_name;
-      if (val && typeof val === 'string') {
-        const str = val.trim();
-        if (
-          str &&
-          str !== 'Select Issued By' &&
-          str !== 'NA' &&
-          str !== 'na' &&
-          str.toLowerCase() !== 'null' &&
-          str.toLowerCase() !== 'undefined'
-        ) {
-          set.add(str);
-        }
+        j.creator_name
+      );
+      if (
+        val &&
+        val !== 'Select Issued By' &&
+        val !== 'NA' &&
+        val !== 'na' &&
+        val.toLowerCase() !== 'null' &&
+        val.toLowerCase() !== 'undefined'
+      ) {
+        set.add(val);
       }
     });
     return Array.from(set).sort();
@@ -410,13 +410,13 @@ export default function App() {
         // Drawer Filters: Issued By
         if (filterState.issuedBy && filterState.issuedBy !== 'all') {
           const selBy = filterState.issuedBy.trim().toLowerCase();
-          const jBy = (job.by || '').trim().toLowerCase();
-          const jCreator = (job.creator_name || '').trim().toLowerCase();
-          const jDetails = (
+          const jBy = cleanIssuedBy(job.by || '').toLowerCase();
+          const jCreator = cleanIssuedBy(job.creator_name || '').toLowerCase();
+          const jDetails = cleanIssuedBy(
             (job.raw && job.raw.issued_by_team_details) ||
             job.issued_by_team_details ||
             ''
-          ).trim().toLowerCase();
+          ).toLowerCase();
 
           if (jBy !== selBy && jCreator !== selBy && jDetails !== selBy) {
             return false;
@@ -475,15 +475,38 @@ export default function App() {
         return true;
       })
       .sort((a, b) => {
+        const parsedA = parseFormattedPropId(a.propId);
+        const parsedB = parseFormattedPropId(b.propId);
+        const serialA = a.serial || (parsedA ? parsedA.serial : 0);
+        const serialB = b.serial || (parsedB ? parsedB.serial : 0);
+        const dateCodeA = a.dateCode || (parsedA && parsedA.dateCode ? parsedA.dateCode : getJobDateCode(a.opened || a.createdAt));
+        const dateCodeB = b.dateCode || (parsedB && parsedB.dateCode ? parsedB.dateCode : getJobDateCode(b.opened || b.createdAt));
+        const timeA = new Date(a.opened || a.createdAt || 0).getTime() || 0;
+        const timeB = new Date(b.opened || b.createdAt || 0).getTime() || 0;
+
         if (filterState.sort === 'new') {
-          const da = new Date(a.opened || a.createdAt || 0);
-          const db = new Date(b.opened || b.createdAt || 0);
-          return db - da;
+          // If on same date, higher serial number (newest created) goes on TOP: 003, 002, 001
+          if (dateCodeA && dateCodeB && dateCodeA === dateCodeB) {
+            if (serialB !== serialA) {
+              return serialB - serialA;
+            }
+          }
+          if (timeB !== timeA) {
+            return timeB - timeA;
+          }
+          return (Number(b.id) || 0) - (Number(a.id) || 0);
         }
         if (filterState.sort === 'old') {
-          const da = new Date(a.opened || a.createdAt || 0);
-          const db = new Date(b.opened || b.createdAt || 0);
-          return da - db;
+          // If on same date, lower serial number (earliest created) goes on TOP: 001, 002, 003
+          if (dateCodeA && dateCodeB && dateCodeA === dateCodeB) {
+            if (serialA !== serialB) {
+              return serialA - serialB;
+            }
+          }
+          if (timeA !== timeB) {
+            return timeA - timeB;
+          }
+          return (Number(a.id) || 0) - (Number(b.id) || 0);
         }
         if (filterState.sort === 'az') {
           return (a.details || '').localeCompare(b.details || '');
@@ -500,17 +523,45 @@ export default function App() {
     const nextId = jobs.length > 0 ? Math.max(...jobs.map((j) => Number(j.id) || 0)) + 1 : 1;
     const nowIso = new Date().toISOString();
     const dateCode = getJobDateCode(nowIso);
-    const customJobId = `${currentPropertyName}-${dateCode}-${pad3(nextId)}`;
+
+    // Find highest serial number used on today's date across all jobs (both open and closed)
+    const todaySerials = jobs
+      .map((j) => {
+        const parsed = parseFormattedPropId(j.propId);
+        const jDateCode = j.dateCode || (parsed && parsed.dateCode ? parsed.dateCode : getJobDateCode(j.opened || j.createdAt));
+        if (jDateCode === dateCode) {
+          return j.serial || (parsed ? parsed.serial : 0);
+        }
+        return 0;
+      })
+      .filter((s) => s > 0);
+
+    const nextSerial = todaySerials.length > 0 ? Math.max(...todaySerials) + 1 : 1;
+    const serialStr = pad3(nextSerial);
+    const customJobId = `${currentPropertyName}-${dateCode}-${serialStr}`;
+    const cleanBy = cleanIssuedBy(newJobData.by);
+
+    const areaName = newJobData.areaName || newJobData.area || 'General';
+    const subName = newJobData.subarea || newJobData.sub || '';
+    const deptName = newJobData.issued_to_team_name || newJobData.dept || newJobData.issued_to_team || 'Department';
 
     const created = {
       id: nextId,
       jobId: nextId,
       propId: customJobId,
+      serial: nextSerial,
+      serialStr: serialStr,
+      dateCode: dateCode,
       details: newJobData.details,
-      by: newJobData.by,
-      dept: newJobData.dept,
-      area: newJobData.area,
-      sub: newJobData.sub,
+      by: cleanBy,
+      dept: deptName,
+      area: areaName,
+      sub: subName,
+      areaId: newJobData.areaID || newJobData.areaId,
+      issued_to_team: newJobData.issued_to_team || deptName,
+      issued_to_team_name: deptName,
+      issued_by_team: newJobData.issued_by_team,
+      assigned_supervisor: newJobData.assigned_supervisor,
       opened: nowIso,
       status: 'Open',
       photoBefore: newJobData.photoUri || null,
@@ -519,6 +570,7 @@ export default function App() {
       remarks: null,
       closedBy: null,
       closedAt: null,
+      raw: null,
     };
 
     setJobs((prev) => [created, ...prev]);
@@ -529,6 +581,10 @@ export default function App() {
       {
         ...newJobData,
         propId: currentPropertyId,
+        areaID: newJobData.areaID || newJobData.areaId || areaName,
+        subareaId: subName,
+        issued_to_team: newJobData.issued_to_team || newJobData.deptId || deptName,
+        issued_by_team_details: cleanBy,
       },
       newJobData.photoUri
     );
@@ -565,10 +621,10 @@ export default function App() {
   // Actions: Close Job
   const handleCloseSubmit = async ({ jobId, closingBy, remarks, photoAfterUri }) => {
     const nowIso = new Date().toISOString();
-    const resolvedClosingBy = closingBy || currentUser?.name || 'Staff';
+    const resolvedClosingBy = cleanIssuedBy(closingBy || currentUser?.name || 'Staff');
     setJobs((prev) =>
       prev.map((j) => {
-        if (j.id === jobId) {
+        if (String(j.id) === String(jobId) || (j.jobId != null && String(j.jobId) === String(jobId))) {
           return {
             ...j,
             status: 'Closed',

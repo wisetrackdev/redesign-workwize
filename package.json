@@ -1,0 +1,13 @@
+{
+  "name": "redesign-workwize",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix workwize-mobile start",
+    "tunnel": "npm --prefix workwize-mobile run tunnel",
+    "lan": "npm --prefix workwize-mobile run lan",
+    "android": "npm --prefix workwize-mobile run android",
+    "ios": "npm --prefix workwize-mobile run ios",
+    "web": "npm --prefix workwize-mobile run web"
+  }
+}

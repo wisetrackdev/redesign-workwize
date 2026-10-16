@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import { formatApiDate } from '../api/config';
+import { cleanIssuedBy } from '../api/dailyJobApi';
 
 export default function JobCard({
   job,
@@ -102,14 +103,22 @@ export default function JobCard({
           <Text style={styles.kvLabel}>Area:</Text>
           <Text style={styles.kvValue} numberOfLines={1}>
             {job.area || 'General Area'}
-            {job.sub ? ` • ${job.sub}` : ''}
           </Text>
         </View>
+
+        {Boolean(job.sub && String(job.sub).trim() && String(job.sub).toLowerCase() !== 'na') && (
+          <View style={styles.kvRow}>
+            <Text style={styles.kvLabel}>Sub-Area:</Text>
+            <Text style={styles.kvValue} numberOfLines={1}>
+              {job.sub}
+            </Text>
+          </View>
+        )}
 
         <View style={styles.kvRow}>
           <Text style={styles.kvLabel}>Issued By:</Text>
           <Text style={styles.kvValue} numberOfLines={1}>
-            {job.by || job.creator_name || 'IT Staff'}
+            {cleanIssuedBy(job.by || job.creator_name || 'IT Staff')}
           </Text>
         </View>
 
@@ -125,7 +134,7 @@ export default function JobCard({
           <View style={styles.kvRow}>
             <Text style={styles.kvLabel}>Closed By:</Text>
             <Text style={styles.kvValue} numberOfLines={1}>
-              {job.closedBy} {job.closedAt ? `• ${formatApiDate(job.closedAt)}` : ''}
+              {cleanIssuedBy(job.closedBy)} {job.closedAt ? `• ${formatApiDate(job.closedAt)}` : ''}
             </Text>
           </View>
         )}
