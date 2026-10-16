@@ -21,7 +21,7 @@ export default function JobCard({
 
   // Get status badge styles matching workwize-teal
   const getStatusBadge = (st) => {
-    switch (st.toLowerCase()) {
+    switch ((st || '').toLowerCase()) {
       case 'in-progress':
       case 'inprogress':
         return {
@@ -54,6 +54,8 @@ export default function JobCard({
         };
     }
   };
+
+  const badgeStyle = getStatusBadge(status);
 
   // Cleanly split Area & Sub-Area if formatted as "Area > SubArea"
   let displayArea = (job.area || '').trim() || 'General Area';
