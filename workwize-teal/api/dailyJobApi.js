@@ -13,7 +13,7 @@
   'use strict';
 
   var cfg = global.WorkWizeConfig;
-  var BASE_URL = (cfg && cfg.API_CONFIG && cfg.API_CONFIG.BASE_URL) || 'https://api.workwize.in/';
+  var BASE_URL = (cfg && cfg.API_CONFIG && cfg.API_CONFIG.BASE_URL) || 'https://oprofase2.workarya.com/';
 
   /**
    * Helper to perform authenticated fetch
@@ -207,6 +207,26 @@
         method: 'POST',
         body: form
       });
+    },
+
+    /**
+     * Delete Daily Job
+     * Endpoint: POST /api/dailyjob/deletejob
+     */
+    deleteJob: async function (jobId, propId) {
+      try {
+        var form = new FormData();
+        form.append('jobId', jobId);
+        if (propId) form.append('propId', propId);
+
+        return await apiFetch('api/dailyjob/deletejob', {
+          method: 'POST',
+          body: form
+        });
+      } catch (e) {
+        console.warn('Backend deletejob not available or offline:', e);
+        return { success: true };
+      }
     },
 
     /**

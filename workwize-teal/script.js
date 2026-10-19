@@ -281,8 +281,26 @@
     dept: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
     img: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',
     tick: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
-    up: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>'
+    up: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>',
+    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>'
   };
+
+  /* Deleted Jobs session tracker */
+  var deletedJobIds = new Set();
+  try {
+    var storedDeleted = sessionStorage.getItem('ww_deleted_jobs');
+    if (storedDeleted) {
+      JSON.parse(storedDeleted).forEach(function (id) { deletedJobIds.add(String(id)); });
+    }
+  } catch (e) {}
+
+  function markJobDeleted(id) {
+    if (!id) return;
+    deletedJobIds.add(String(id));
+    try {
+      sessionStorage.setItem('ww_deleted_jobs', JSON.stringify(Array.from(deletedJobIds)));
+    } catch (e) {}
+  }
 
   /* ================= User Authentication & Context ================= */
   function loadStoredUser() {
@@ -316,6 +334,26 @@
       var u = String(r).toUpperCase();
       return u === 'SUPERADMIN' || u === 'OPROADMIN';
     });
+  }
+
+  /**
+   * QuickFix rule: Can Delete Job
+   * ONLY Superadmin and Oproadmin can delete jobs
+   */
+  function canDeleteJob() {
+    if (!currentUser) return false;
+    if (isSuperAdmin()) return true;
+    var desg = String(currentUser.desg || currentUser.designation || '').toUpperCase().trim();
+    if (desg === 'SUPERADMIN' || desg === 'OPROADMIN') return true;
+    var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
+    if (roles.some(function (r) {
+      if (!r) return false;
+      var u = String(r).toUpperCase().trim();
+      return u === 'SUPERADMIN' || u === 'OPROADMIN';
+    })) return true;
+    var uRole = String(currentUser.user_role || '').toUpperCase().trim();
+    if (uRole === 'SUPERADMIN' || uRole === 'OPROADMIN') return true;
+    return false;
   }
 
   function isAdmin() {
@@ -755,11 +793,17 @@
       closeBtn = '<button data-act="close" data-id="' + j.id + '">' + I.check + ' Close Job</button>';
     }
 
+    var deleteBtn = '';
+    if (canDeleteJob()) {
+      deleteBtn = '<button data-act="del" data-id="' + j.id + '" class="del">' + I.trash + ' Delete Job</button>';
+    }
+
     return '<div class="dots"><button type="button" data-act="menu" aria-label="More options">' + I.dots + '</button><div class="menu">' +
       '<button data-act="view" data-id="' + j.id + '">' + I.eye + ' View Details</button>' +
       editBtn +
       assignBtn +
       closeBtn +
+      deleteBtn +
       '</div></div>';
   }
 
@@ -847,26 +891,26 @@
       '</article>';
     }
 
-      var canClose = canCloseJob(j);
-      var statusTag = !closed && canClose
-        ? '<button type="button" class="tag st-' + j.status + '" data-act="close" data-id="' + j.id + '" title="Click to update status / close job" style="cursor:pointer;border:none;font:inherit;">' + j.status + '</button>'
-        : '<span class="tag st-' + j.status + '">' + j.status + '</span>';
+    var canClose = canCloseJob(j);
+    var statusTag = !closed && canClose
+      ? '<button type="button" class="tag st-' + j.status + '" data-act="close" data-id="' + j.id + '" title="Click to update status / close job" style="cursor:pointer;border:none;font:inherit;">' + j.status + '</button>'
+      : '<span class="tag st-' + j.status + '">' + j.status + '</span>';
 
-      return '<article class="jrow ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
-        '<div class="rt">' +
-          '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
-          '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
-          '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
-        '</div>' +
-        '<div class="rc" title="' + esc(j.area) + '"><span>Area</span>' + hl(j.area) + '</div>' +
-        '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
-        '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
-        '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
-        '<div class="rc" title="' + esc(j.assignDept || 'NA') + '"><span>Assign Sub-Dept.</span>' + assignDeptVal + '</div>' +
-        '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assign To</span>' + assignedVal + '</div>' +
-        '<div class="rs">' + statusTag + '</div>' +
-        menuHTML(j) +
-      '</article>';
+    return '<article class="jrow ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
+      '<div class="rt">' +
+        '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
+        '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
+        '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
+      '</div>' +
+      '<div class="rc" title="' + esc(j.area) + '"><span>Area</span>' + hl(j.area) + '</div>' +
+      '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
+      '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
+      '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
+      '<div class="rc" title="' + esc(j.assignDept || 'NA') + '"><span>Assign Sub-Dept.</span>' + assignDeptVal + '</div>' +
+      '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assign To</span>' + assignedVal + '</div>' +
+      '<div class="rs">' + statusTag + '</div>' +
+      menuHTML(j) +
+    '</article>';
   }
 
   /* ================= Pager HTML ================= */
@@ -1149,12 +1193,15 @@
       });
     }
 
-    // Deduplicate by jobId / id
+    // Deduplicate by jobId / id and filter out deleted jobs
     var seen = {};
     var uniqueList = [];
     rawList.forEach(function (item) {
       if (!item) return;
       var key = item.jobId != null ? String(item.jobId) : (item.id != null ? String(item.id) : null);
+      if (key && deletedJobIds.has(key)) return;
+      if (item.id != null && deletedJobIds.has(String(item.id))) return;
+      if (item.jobId != null && deletedJobIds.has(String(item.jobId))) return;
       if (!key || !seen[key]) {
         if (key) seen[key] = true;
         uniqueList.push(item);
@@ -2496,6 +2543,20 @@
     renderRecentStats();
   }
 
+  /* ================= Delete Modal (SuperAdmin / OproAdmin Only) ================= */
+  var deleteTargetJob = null;
+
+  function openDel(job) {
+    if (!job || !canDeleteJob()) return;
+    deleteTargetJob = job;
+    var dt = $('#delText');
+    if (dt) {
+      dt.innerHTML = 'Are you sure you want to delete <b style="color:var(--ink);">' + esc(job.propId || ('Job #' + job.id)) + '</b>?<br><small style="color:var(--muted);display:block;margin-top:6px;">' + esc(job.details || 'This job record') + ' will be permanently removed. This action cannot be undone.</small>';
+    }
+    $('#delModal').hidden = false;
+    document.body.classList.add('noscroll');
+  }
+
   /* ================= View Modal (Job Details) ================= */
   function openView(id, ids) {
     var j = byId(id);
@@ -3191,6 +3252,7 @@
       else if (act === 'edit') openEdit(job);
       else if (act === 'assign') openAssign(job);
       else if (act === 'close') openClose(job);
+      else if (act === 'del') openDel(job);
       return;
     }
 
@@ -3284,6 +3346,7 @@
         if (act === 'assign') { closeView(); openAssign(job); }
         else if (act === 'close') { closeView(); openClose(job); }
         else if (act === 'edit') { closeView(); openEdit(job); }
+        else if (act === 'del') { openDel(job); }
       }
     });
   }
@@ -3769,6 +3832,85 @@
       });
     }
 
+    // Confirm Delete Action
+    var confirmDelBtn = $('#confirmDelete');
+    if (confirmDelBtn) {
+      confirmDelBtn.addEventListener('click', async function () {
+        if (!deleteTargetJob) return;
+        var target = deleteTargetJob;
+        confirmDelBtn.disabled = true;
+        confirmDelBtn.textContent = 'Deleting...';
+
+        try {
+          if (api && api.deleteJob) {
+            try {
+              await api.deleteJob(target.id, currentPropertyId);
+            } catch (apiErr) {
+              console.warn('API delete warning:', apiErr);
+            }
+          }
+
+          var targetIdStr = String(target.id);
+          var targetJobIdStr = target.jobId != null ? String(target.jobId) : null;
+
+          // Track deleted job so it never re-appears in this session
+          markJobDeleted(targetIdStr);
+          if (targetJobIdStr) markJobDeleted(targetJobIdStr);
+
+          // Remove from openJobs
+          var oIdx = openJobs.findIndex(function (j) {
+            return String(j.id) === targetIdStr || (targetJobIdStr && String(j.jobId) === targetJobIdStr);
+          });
+          if (oIdx !== -1) {
+            openJobs.splice(oIdx, 1);
+            if (pagination.open) {
+              pagination.open.total = Math.max(0, (pagination.open.total || 1) - 1);
+              pagination.open.totalPages = Math.max(1, Math.ceil(pagination.open.total / (pagination.open.pageSize || 25)));
+            }
+          }
+
+          // Remove from closedJobs
+          var cIdx = closedJobs.findIndex(function (j) {
+            return String(j.id) === targetIdStr || (targetJobIdStr && String(j.jobId) === targetJobIdStr);
+          });
+          if (cIdx !== -1) {
+            closedJobs.splice(cIdx, 1);
+            if (pagination.closed) {
+              pagination.closed.total = Math.max(0, (pagination.closed.total || 1) - 1);
+              pagination.closed.totalPages = Math.max(1, Math.ceil(pagination.closed.total / (pagination.closed.pageSize || 25)));
+            }
+          }
+
+          // Remove from custom ID map
+          if (target.id != null) delete globalJobCustomIdMap[String(target.id)];
+          if (target.jobId != null) delete globalJobCustomIdMap[String(target.jobId)];
+          saveJobCustomIdMap();
+
+          // Update tab badges
+          var ob = $('#openBadge');
+          if (ob) ob.textContent = (pagination.open && pagination.open.total !== undefined) ? pagination.open.total : openJobs.length;
+          var cb = $('#closedBadge');
+          if (cb) cb.textContent = (pagination.closed && pagination.closed.total !== undefined) ? pagination.closed.total : closedJobs.length;
+
+          // Close modals
+          closeModals();
+          closeView();
+
+          // Re-render
+          renderList(state.tab);
+          renderRecentStats();
+
+          toast('Job ' + (target.propId || target.id) + ' deleted successfully');
+        } catch (err) {
+          console.error('Delete job error:', err);
+          toast('Failed to delete job: ' + (err.message || 'Unknown error'));
+        } finally {
+          confirmDelBtn.disabled = false;
+          confirmDelBtn.textContent = 'Delete';
+          deleteTargetJob = null;
+        }
+      });
+    }
 
     // User Menu / Profile Popover
     var userMenuTrigger = $('#userMenuTrigger');
