@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import { Colors } from '../theme/colors';
 import DropdownModal from './DropdownModal';
-import { isSuperAdmin, getIssuedByDisplay, cleanIssuedBy } from '../api/dailyJobApi';
+import { isSuperAdmin, getIssuedByDisplay, cleanIssuedBy, DailyJobApi } from '../api/dailyJobApi';
 
 export default function NewJobView({
   onSubmit,
@@ -29,6 +29,7 @@ export default function NewJobView({
   currentPropertyId = 'Testing',
   currentPropertyName = 'Testing',
   jobs = [],
+  onSelectFilter,
 }) {
   // Check if current user is SuperAdmin (Superadmin never sees assignment fields)
   const superAdmin = isSuperAdmin(currentUser);
@@ -72,6 +73,93 @@ export default function NewJobView({
 
   // No Photo Modal Confirmation (Exact match to workwize-teal #noPhotoModal)
   const [showNoPhotoModal, setShowNoPhotoModal] = useState(false);
+
+  // Dynamic Dashboard Stats from API (Matching workwize-teal #periodStatBoxes & #agingStatBoxes)
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [statsPeriod, setStatsPeriod] = useState('today'); // 'today' | 'weekly' | 'monthly'
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      if (currentPropertyId) {
+        try {
+          const res = await DailyJobApi.getDashboardStats(currentPropertyId);
+          if (isMounted && res) {
+            setDashboardStats(res.data || res);
+          }
+        } catch (e) {
+          console.warn('Dashboard stats fetch in NewJobView:', e);
+        }
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [currentPropertyId]);
+
+  const activeStats = useMemo(() => {
+    if (dashboardStats) {
+      let root = dashboardStats.data && dashboardStats.data.today ? dashboardStats.data : dashboardStats;
+      const pData = root[statsPeriod] || root.today || {};
+      const aging = root.aging || root.agingOverOneWeek || {};
+      return {
+        total: pData.total != null ? pData.total : 0,
+        open: pData.open != null ? pData.open : 0,
+        assigned: pData.assigned != null ? pData.assigned : 0,
+        inProgress: pData.inProgress != null ? pData.inProgress : 0,
+        closed: pData.closed != null ? pData.closed : 0,
+        todayCount: root.today ? (root.today.total != null ? root.today.total : 0) : 0,
+        weeklyCount: root.weekly ? (root.weekly.total != null ? root.weekly.total : 0) : 0,
+        monthlyCount: root.monthly ? (root.monthly.total != null ? root.monthly.total : 0) : 0,
+        agingOpen: aging.open != null ? aging.open : 0,
+        agingAssigned: aging.assigned != null ? aging.assigned : 0,
+        agingInProgress: aging.inProgress != null ? aging.inProgress : 0,
+      };
+    }
+
+    // Local calculation fallback if offline
+    const now = new Date();
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
+    const filtered = (jobs || []).filter((j) => {
+      const d = new Date(j.opened || j.createdAt || now).getTime();
+      if (isNaN(d)) return true;
+      if (statsPeriod === 'today') {
+        const jd = new Date(d);
+        return (
+          jd.getDate() === now.getDate() &&
+          jd.getMonth() === now.getMonth() &&
+          jd.getFullYear() === now.getFullYear()
+        );
+      } else if (statsPeriod === 'weekly') {
+        return d >= oneWeekAgo;
+      }
+      return d >= thirtyDaysAgo;
+    });
+
+    return {
+      total: filtered.length,
+      open: filtered.filter((j) => (j.status || '').toLowerCase() === 'open').length,
+      assigned: filtered.filter((j) => (j.status || '').toLowerCase() === 'assigned').length,
+      inProgress: filtered.filter((j) => (j.status || '').toLowerCase().includes('progress')).length,
+      closed: filtered.filter((j) => (j.status || '').toLowerCase() === 'closed').length,
+      todayCount: (jobs || []).filter((j) => {
+        const jd = new Date(j.opened || j.createdAt || now);
+        return jd.getDate() === now.getDate() && jd.getMonth() === now.getMonth() && jd.getFullYear() === now.getFullYear();
+      }).length,
+      weeklyCount: (jobs || []).filter((j) => new Date(j.opened || j.createdAt || now).getTime() >= oneWeekAgo).length,
+      monthlyCount: (jobs || []).filter((j) => new Date(j.opened || j.createdAt || now).getTime() >= thirtyDaysAgo).length,
+      agingOpen: (jobs || []).filter((j) => (j.status || '').toLowerCase() === 'open' && new Date(j.opened || j.createdAt || now).getTime() < oneWeekAgo).length,
+      agingAssigned: (jobs || []).filter((j) => (j.status || '').toLowerCase() === 'assigned' && new Date(j.opened || j.createdAt || now).getTime() < oneWeekAgo).length,
+      agingInProgress: (jobs || []).filter((j) => (j.status || '').toLowerCase().includes('progress') && new Date(j.opened || j.createdAt || now).getTime() < oneWeekAgo).length,
+    };
+  }, [dashboardStats, statsPeriod, jobs]);
+
+  const handleStatCardClick = (statusFilter) => {
+    if (onSelectFilter) {
+      onSelectFilter(statusFilter);
+    }
+  };
+
 
   // Format Teams for Dropdown (Purely dynamic from API)
   const teamOptions = useMemo(() => {
@@ -754,6 +842,176 @@ export default function NewJobView({
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ================= Job Statistics & Aging of Jobs (Exact match to workwize-teal) ================= */}
+        <View style={styles.statsCard}>
+          <View style={styles.statsTopBar}>
+            <View>
+              <Text style={styles.statsHeading}>Job Statistics</Text>
+              <Text style={styles.statsSubHeading}>
+                Property: <Text style={styles.propNameText}>{currentPropertyName}</Text>
+              </Text>
+            </View>
+
+            {/* Period selector tabs: Today, Weekly, Monthly */}
+            <View style={styles.statPeriodTabs}>
+              <TouchableOpacity
+                style={[styles.ptab, statsPeriod === 'today' && styles.ptabActive]}
+                onPress={() => setStatsPeriod('today')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.ptabText, statsPeriod === 'today' && styles.ptabTextActive]}>
+                  Today {activeStats.todayCount > 0 ? `(${activeStats.todayCount})` : ''}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.ptab, statsPeriod === 'weekly' && styles.ptabActive]}
+                onPress={() => setStatsPeriod('weekly')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.ptabText, statsPeriod === 'weekly' && styles.ptabTextActive]}>
+                  Weekly {activeStats.weeklyCount > 0 ? `(${activeStats.weeklyCount})` : ''}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.ptab, statsPeriod === 'monthly' && styles.ptabActive]}
+                onPress={() => setStatsPeriod('monthly')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.ptabText, statsPeriod === 'monthly' && styles.ptabTextActive]}>
+                  Monthly {activeStats.monthlyCount > 0 ? `(${activeStats.monthlyCount})` : ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Metric Boxes Grid: Total, Open, Assigned, In-Progress, Closed */}
+          <View style={styles.metricGrid}>
+            <TouchableOpacity
+              style={[styles.mBox, styles.mBoxTotal]}
+              onPress={() => handleStatCardClick('all')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.mIconWrap, { backgroundColor: '#EEF2FF' }]}>
+                <Feather name="briefcase" size={16} color={Colors.primary} />
+              </View>
+              <View>
+                <Text style={styles.mLabel}>TOTAL</Text>
+                <Text style={styles.mNum}>{activeStats.total}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.mBox, styles.mBoxOpen]}
+              onPress={() => handleStatCardClick('Open')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.mIconWrap, { backgroundColor: '#FEF3C7' }]}>
+                <Feather name="clock" size={16} color={Colors.amberDark} />
+              </View>
+              <View>
+                <Text style={styles.mLabel}>OPEN</Text>
+                <Text style={[styles.mNum, { color: Colors.amberDark }]}>{activeStats.open}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.mBox, styles.mBoxAssigned]}
+              onPress={() => handleStatCardClick('Assigned')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.mIconWrap, { backgroundColor: '#E0E7FF' }]}>
+                <Feather name="user-check" size={16} color="#4338CA" />
+              </View>
+              <View>
+                <Text style={styles.mLabel}>ASSIGNED</Text>
+                <Text style={[styles.mNum, { color: '#4338CA' }]}>{activeStats.assigned}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.mBox, styles.mBoxInProgress]}
+              onPress={() => handleStatCardClick('In-Progress')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.mIconWrap, { backgroundColor: '#EDE9FE' }]}>
+                <Feather name="play-circle" size={16} color={Colors.progressDark} />
+              </View>
+              <View>
+                <Text style={styles.mLabel}>IN PROGRESS</Text>
+                <Text style={[styles.mNum, { color: Colors.progressDark }]}>{activeStats.inProgress}</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.mBox, styles.mBoxClosed]}
+              onPress={() => handleStatCardClick('Closed')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.mIconWrap, { backgroundColor: '#DCFCE7' }]}>
+                <Feather name="check-circle" size={16} color={Colors.greenDark} />
+              </View>
+              <View>
+                <Text style={styles.mLabel}>CLOSED</Text>
+                <Text style={[styles.mNum, { color: Colors.greenDark }]}>{activeStats.closed}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Aging of Jobs Section (> 7 Days Old) */}
+          <View style={styles.agingSection}>
+            <View style={styles.agingHeader}>
+              <View style={styles.agingTitleRow}>
+                <Feather name="alert-circle" size={15} color={Colors.red} />
+                <Text style={styles.agingTitle}>Aging of Jobs</Text>
+              </View>
+              <View style={styles.agingBadge}>
+                <Text style={styles.agingBadgeText}>&gt; 7 Days Old</Text>
+              </View>
+            </View>
+
+            <View style={styles.agingRow}>
+              <TouchableOpacity
+                style={styles.agingBox}
+                onPress={() => handleStatCardClick('Open')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.agingBoxLabel}>OPEN</Text>
+                <Text style={[styles.agingBoxNum, { color: Colors.amberDark }]}>
+                  {activeStats.agingOpen}
+                </Text>
+                <Text style={styles.agingBoxSub}>&gt; 7 days</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.agingBox}
+                onPress={() => handleStatCardClick('Assigned')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.agingBoxLabel}>ASSIGNED</Text>
+                <Text style={[styles.agingBoxNum, { color: '#4338CA' }]}>
+                  {activeStats.agingAssigned}
+                </Text>
+                <Text style={styles.agingBoxSub}>&gt; 7 days</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.agingBox}
+                onPress={() => handleStatCardClick('In-Progress')}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.agingBoxLabel}>IN-PROGRESS</Text>
+                <Text style={[styles.agingBoxNum, { color: Colors.progressDark }]}>
+                  {activeStats.agingInProgress}
+                </Text>
+                <Text style={styles.agingBoxSub}>&gt; 7 days</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
       </ScrollView>
 
       {/* No Photo Confirmation Modal (Exact match to workwize-teal #noPhotoModal) */}
@@ -1178,4 +1436,189 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
+  /* Stats Card in NewJobView */
+  statsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: Colors.line,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  statsTopBar: {
+    flexDirection: 'column',
+    gap: 8,
+    marginBottom: 14,
+  },
+  statsHeading: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.ink,
+  },
+  statsSubHeading: {
+    fontSize: 12,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+  propNameText: {
+    fontWeight: '700',
+    color: Colors.primaryDeep,
+  },
+  statPeriodTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+    padding: 3,
+    gap: 4,
+  },
+  ptab: {
+    flex: 1,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ptabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  ptabText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: Colors.muted,
+  },
+  ptabTextActive: {
+    fontWeight: '800',
+    color: Colors.primaryDeep,
+  },
+  metricGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  mBox: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: Colors.line,
+  },
+  mBoxTotal: {
+    backgroundColor: '#F8FAFC',
+  },
+  mBoxOpen: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FEF3C7',
+  },
+  mBoxAssigned: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#E0E7FF',
+  },
+  mBoxInProgress: {
+    backgroundColor: '#F5F3FF',
+    borderColor: '#EDE9FE',
+  },
+  mBoxClosed: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#DCFCE7',
+  },
+  mIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: Colors.muted,
+    textTransform: 'uppercase',
+  },
+  mNum: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.ink,
+    marginTop: 1,
+  },
+  agingSection: {
+    backgroundColor: '#FFF1F2',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FFE4E6',
+  },
+  agingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  agingTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  agingTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#991B1B',
+  },
+  agingBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  agingBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#991B1B',
+  },
+  agingRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  agingBox: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+  },
+  agingBoxLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: Colors.muted,
+    marginBottom: 2,
+  },
+  agingBoxNum: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  agingBoxSub: {
+    fontSize: 9,
+    color: Colors.muted,
+    marginTop: 2,
+  },
+
 });

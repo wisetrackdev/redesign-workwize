@@ -45,6 +45,8 @@ import {
   canCloseJob,
   canDeleteJob,
   setJobCustomId,
+  getPropertyPrefix,
+  loadStoredJobCustomIds,
 } from './src/api/dailyJobApi';
 import { getStoredUserData, setStoredUserData, clearStoredUserData } from './src/api/config';
 import initialJobsData from './src/data/jobs_data.json';
@@ -692,15 +694,25 @@ export default function App() {
       updatedJob.remarks
     );
   };
-
-  // Actions: Delete Job
+  // Actions: Delete Job (Directly connected to backend DailyJobApi.deleteJob)
   const handlePromptDelete = (job) => {
     setSelectedJobForDelete(job);
     setShowDeleteModal(true);
   };
 
-  const handleConfirmDelete = (job) => {
-    setJobs((prev) => prev.filter((j) => String(j.id) !== String(job.id)));
+  const handleConfirmDelete = async (job) => {
+    if (!job) return;
+    const targetId = job.jobId || job.id;
+    try {
+      await DailyJobApi.deleteJob(targetId, currentPropertyId);
+      setJobs((prev) =>
+        prev.filter((j) => String(j.id) !== String(job.id) && String(j.jobId) !== String(targetId))
+      );
+      Alert.alert('Deleted', `Job ${job.propId || targetId} has been deleted successfully.`);
+    } catch (err) {
+      console.error('API delete error:', err);
+      Alert.alert('Delete Failed', `Could not delete job: ${err.message || 'Server error'}`);
+    }
   };
 
   if (!isLoggedIn) {
@@ -725,6 +737,12 @@ export default function App() {
           onTabChange={(tab) => {
             setActiveTab(tab);
             setPillFilter('all');
+            setFilterState((prev) => ({
+              ...prev,
+              status: 'all',
+              fromDate: '',
+              toDate: '',
+            }));
           }}
           onOpenNewJob={() => setActiveTab('new')}
           onOpenProfile={() => setShowProfileModal(true)}
@@ -750,17 +768,28 @@ export default function App() {
             currentPropertyId={currentPropertyId}
             currentPropertyName={currentPropertyName}
             jobs={jobs}
+            onSelectFilter={(st) => {
+              if (st === 'Closed') {
+                setActiveTab('closed');
+                setFilterState((prev) => ({ ...prev, status: 'all' }));
+              } else {
+                setActiveTab('open');
+                setFilterState((prev) => ({ ...prev, status: st === 'all' ? 'all' : st }));
+              }
+            }}
           />
         ) : activeTab === 'stats' ? (
           <StatsView
             jobs={jobs}
+            currentPropertyId={currentPropertyId}
             currentPropertyName={currentPropertyName}
             onSelectFilter={(st) => {
-              setFilterState((prev) => ({ ...prev, status: st }));
               if (st === 'Closed') {
                 setActiveTab('closed');
+                setFilterState((prev) => ({ ...prev, status: 'all' }));
               } else {
                 setActiveTab('open');
+                setFilterState((prev) => ({ ...prev, status: st === 'all' ? 'all' : st }));
               }
             }}
           />
@@ -1048,6 +1077,7 @@ export default function App() {
           visible={showStatsModal}
           onClose={() => setShowStatsModal(false)}
           allJobs={jobs}
+          currentPropertyId={currentPropertyId}
           onSelectStatusFilter={(st) => {
             setFilterState((prev) => ({ ...prev, status: st }));
             if (st === 'Closed') setActiveTab('closed');

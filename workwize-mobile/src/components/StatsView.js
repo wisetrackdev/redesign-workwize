@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { DailyJobApi } from '../api/dailyJobApi';
 import {
   View,
   Text,
@@ -11,18 +12,71 @@ import { Colors } from '../theme/colors';
 
 export default function StatsView({
   jobs = [],
+  currentPropertyId = 'Testing',
   currentPropertyName = 'Testing',
   onSelectFilter,
 }) {
-  const [statPeriod, setStatPeriod] = useState('today'); // 'today' | 'weekly' | 'monthly'
+  const [statPeriod, setStatPeriod] = useState('today');
 
-  // Filter jobs by period
+  const [dashboardStats, setDashboardStats] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      if (currentPropertyId) {
+        try {
+          const res = await DailyJobApi.getDashboardStats(currentPropertyId);
+          if (isMounted && res) {
+            setDashboardStats(res.data || res);
+          }
+        } catch (e) {
+          console.warn('StatsView dashboard stats fetch error:', e);
+        }
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [currentPropertyId]);
+  // Dynamic statistics: directly powered by DailyJobApi.getDashboardStats
   const stats = useMemo(() => {
+    let root = dashboardStats;
+    if (root && root.data && root.data.today) root = root.data;
+
+    if (root) {
+      const pData = root[statPeriod] || root.today || {};
+      const aging = root.aging || root.agingOverOneWeek || {};
+
+      // Department Breakdown from live jobs
+      const deptMap = {};
+      (jobs || []).forEach((j) => {
+        const dept = j.dept || j.issued_to_team || 'General';
+        deptMap[dept] = (deptMap[dept] || 0) + 1;
+      });
+      const deptBreakdown = Object.keys(deptMap)
+        .map((k) => ({ name: k, count: deptMap[k] }))
+        .sort((a, b) => b.count - a.count);
+
+      return {
+        total: pData.total != null ? pData.total : 0,
+        open: pData.open != null ? pData.open : 0,
+        assigned: pData.assigned != null ? pData.assigned : 0,
+        inProgress: pData.inProgress != null ? pData.inProgress : 0,
+        closed: pData.closed != null ? pData.closed : 0,
+        todayCount: root.today ? (root.today.total != null ? root.today.total : 0) : 0,
+        weeklyCount: root.weekly ? (root.weekly.total != null ? root.weekly.total : 0) : 0,
+        monthlyCount: root.monthly ? (root.monthly.total != null ? root.monthly.total : 0) : 0,
+        agingOpen: aging.open != null ? aging.open : 0,
+        agingAssigned: aging.assigned != null ? aging.assigned : 0,
+        agingInProgress: aging.inProgress != null ? aging.inProgress : 0,
+        deptBreakdown,
+      };
+    }
+
+    // Dynamic calculation from jobs list if API is loading or offline
     const now = new Date();
     const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
-    const filtered = jobs.filter((j) => {
+    const filtered = (jobs || []).filter((j) => {
       const d = new Date(j.opened || j.createdAt || now).getTime();
       if (isNaN(d)) return true;
       if (statPeriod === 'today') {
@@ -38,58 +92,33 @@ export default function StatsView({
       return d >= thirtyDaysAgo;
     });
 
-    const total = filtered.length;
-    const open = filtered.filter((j) => (j.status || '').toLowerCase() === 'open').length;
-    const assigned = filtered.filter(
-      (j) => (j.status || '').toLowerCase() === 'assigned'
-    ).length;
-    const inProgress = filtered.filter((j) =>
-      (j.status || '').toLowerCase().includes('progress')
-    ).length;
-    const closed = filtered.filter(
-      (j) => (j.status || '').toLowerCase() === 'closed'
-    ).length;
-
-    // Aging: > 1 week old
-    const agingOpen = jobs.filter(
-      (j) =>
-        (j.status || '').toLowerCase() === 'open' &&
-        new Date(j.opened || j.createdAt).getTime() < oneWeekAgo
-    ).length;
-    const agingAssigned = jobs.filter(
-      (j) =>
-        (j.status || '').toLowerCase() === 'assigned' &&
-        new Date(j.opened || j.createdAt).getTime() < oneWeekAgo
-    ).length;
-    const agingInProgress = jobs.filter(
-      (j) =>
-        (j.status || '').toLowerCase().includes('progress') &&
-        new Date(j.opened || j.createdAt).getTime() < oneWeekAgo
-    ).length;
-
-    // Department Breakdown
     const deptMap = {};
     filtered.forEach((j) => {
       const dept = j.dept || j.issued_to_team || 'General';
       deptMap[dept] = (deptMap[dept] || 0) + 1;
     });
-
     const deptBreakdown = Object.keys(deptMap)
       .map((k) => ({ name: k, count: deptMap[k] }))
       .sort((a, b) => b.count - a.count);
 
     return {
-      total,
-      open,
-      assigned,
-      inProgress,
-      closed,
-      agingOpen,
-      agingAssigned,
-      agingInProgress,
+      total: filtered.length,
+      open: filtered.filter((j) => (j.status || '').toLowerCase() === 'open').length,
+      assigned: filtered.filter((j) => (j.status || '').toLowerCase() === 'assigned').length,
+      inProgress: filtered.filter((j) => (j.status || '').toLowerCase().includes('progress')).length,
+      closed: filtered.filter((j) => (j.status || '').toLowerCase() === 'closed').length,
+      todayCount: (jobs || []).filter((j) => {
+        const jd = new Date(j.opened || j.createdAt || now);
+        return jd.getDate() === now.getDate() && jd.getMonth() === now.getMonth() && jd.getFullYear() === now.getFullYear();
+      }).length,
+      weeklyCount: (jobs || []).filter((j) => new Date(j.opened || j.createdAt || now).getTime() >= oneWeekAgo).length,
+      monthlyCount: (jobs || []).filter((j) => new Date(j.opened || j.createdAt || now).getTime() >= thirtyDaysAgo).length,
+      agingOpen: (jobs || []).filter((j) => (j.status || '').toLowerCase() === 'open' && new Date(j.opened || j.createdAt || now).getTime() < oneWeekAgo).length,
+      agingAssigned: (jobs || []).filter((j) => (j.status || '').toLowerCase() === 'assigned' && new Date(j.opened || j.createdAt || now).getTime() < oneWeekAgo).length,
+      agingInProgress: (jobs || []).filter((j) => (j.status || '').toLowerCase().includes('progress') && new Date(j.opened || j.createdAt || now).getTime() < oneWeekAgo).length,
       deptBreakdown,
     };
-  }, [jobs, statPeriod]);
+  }, [jobs, statPeriod, dashboardStats]);
 
   const handleCardPress = (status) => {
     if (onSelectFilter) {
@@ -209,6 +238,22 @@ export default function StatsView({
                 <Text style={styles.mLabel}>ASSIGNED</Text>
                 <Text style={[styles.mNum, { color: '#4338CA' }]}>
                   {stats.assigned}
+                </Text>
+              </View>
+            </TouchableOpacity>
+            {/* In Progress */}
+            <TouchableOpacity
+              style={[styles.mBox, styles.mBoxInProgress]}
+              onPress={() => handleCardPress('In-Progress')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.mIconWrap, { backgroundColor: '#EDE9FE' }]}>
+                <Feather name="play-circle" size={18} color={Colors.progressDark} />
+              </View>
+              <View>
+                <Text style={styles.mLabel}>IN PROGRESS</Text>
+                <Text style={[styles.mNum, { color: Colors.progressDark }]}>
+                  {stats.inProgress}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -417,6 +462,10 @@ const styles = StyleSheet.create({
   mBoxOpen: {
     borderColor: '#FEF3C7',
     backgroundColor: '#FFFDF5',
+  },
+  mBoxInProgress: {
+    backgroundColor: '#F5F3FF',
+    borderColor: '#EDE9FE',
   },
   mBoxAssigned: {
     borderColor: '#E0E7FF',

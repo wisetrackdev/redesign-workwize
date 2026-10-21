@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, getStoredJwt, setStoredUserData, decodeJwtPayload } from './config';
 import mockJobsData from '../data/jobs_data.json';
 
@@ -329,6 +330,41 @@ export function getIssuedByDisplay(user, primaryTeamName) {
 
 export const globalJobCustomIdMap = {};
 
+export function getPropertyPrefix(propName, propId) {
+  const name = String(propName || propId || '').trim();
+  if (!name) return 'Testing';
+  const upper = name.toUpperCase();
+  if (upper === 'TESTING' || upper.startsWith('TEST')) return 'Testing';
+  if (upper.includes('BOLIFUSHI') || upper.includes('OZEN RESERVE BOLIFUSHI') || upper === 'ORB') return 'ORB';
+  const words = name.split(/[\s_-]+/).filter(Boolean);
+  if (words.length > 1) {
+    const acronym = words.map((w) => w[0].toUpperCase()).join('');
+    if (acronym.length >= 2 && acronym.length <= 5) return acronym;
+  }
+  return name.replace(/\s+/g, '-');
+}
+
+export async function loadStoredJobCustomIds(propId) {
+  try {
+    const k = `@workwize_job_ids_${propId || 'default'}`;
+    const raw = await AsyncStorage.getItem(k);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        Object.assign(globalJobCustomIdMap, parsed);
+      }
+    }
+  } catch (e) {}
+}
+
+export async function saveStoredJobCustomIds(propId) {
+  try {
+    const k = `@workwize_job_ids_${propId || 'default'}`;
+    await AsyncStorage.setItem(k, JSON.stringify(globalJobCustomIdMap));
+  } catch (e) {}
+}
+
+
 export function setJobCustomId(key, customJobId, serial, dateCode) {
   if (!key || !customJobId) return;
   const k = String(key);
@@ -352,9 +388,12 @@ export function getJobCustomId(key) {
 export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Testing', areaList = [], cachedTeams = []) {
   if (!Array.isArray(rawJobs) || rawJobs.length === 0) return [];
 
-  const groupsByDate = {};
-  const processed = [];
+  const prefix = getPropertyPrefix(activePropName);
+  const takenSerials = new Set();
+  let maxSerial = 0;
+  const items = [];
 
+  // Pass 1: Parse jobs and extract existing/saved serial numbers
   rawJobs.forEach((op, originalIndex) => {
     if (!op) return;
     const jobIdKey = op.jobId != null ? String(op.jobId) : null;
@@ -371,75 +410,71 @@ export function assignDateBasedSerialNumbers(rawJobs = [], activePropName = 'Tes
 
     let explicitSerial = saved?.serial || (parsed && parsed.serial > 0 ? parsed.serial : (op.serial > 0 ? op.serial : null));
 
-    const item = {
+    if (explicitSerial != null && explicitSerial > 0) {
+      takenSerials.add(explicitSerial);
+      if (explicitSerial > maxSerial) maxSerial = explicitSerial;
+    }
+
+    items.push({
       rawJob: op,
       originalIndex,
       dateCode,
       serial: explicitSerial,
       openTime: new Date(op.openDate || op.opened || op.createdAt || 0).getTime() || 0,
       jobIdNum: Number(op.jobId || op.id || 0) || 0,
-    };
+    });
+  });
 
-    if (!groupsByDate[dateCode]) {
-      groupsByDate[dateCode] = [];
+  // Pass 2: Sort unassigned jobs chronologically (earliest to latest)
+  // Older jobs at the bottom get lower serials, newer jobs get higher serials
+  const unassigned = items.filter((item) => item.serial == null);
+  unassigned.sort((a, b) => {
+    if (a.openTime && b.openTime && a.openTime !== b.openTime) {
+      return a.openTime - b.openTime;
     }
-    groupsByDate[dateCode].push(item);
+    if (a.jobIdNum && b.jobIdNum && a.jobIdNum !== b.jobIdNum) {
+      return a.jobIdNum - b.jobIdNum;
+    }
+    return b.originalIndex - a.originalIndex;
   });
 
-  Object.keys(groupsByDate).forEach((dateCode) => {
-    const group = groupsByDate[dateCode];
-    const takenSerials = new Set();
-
-    group.forEach((item) => {
-      if (item.serial != null) {
-        takenSerials.add(item.serial);
-      }
-    });
-
-    const unassigned = group.filter((item) => item.serial == null);
-    unassigned.sort((a, b) => {
-      // 1. Sort by creation time if available
-      if (a.openTime && b.openTime && a.openTime !== b.openTime) {
-        return a.openTime - b.openTime;
-      }
-      // 2. Sort by numeric job ID ascending (in database, earlier jobs have smaller IDs)
-      if (a.jobIdNum && b.jobIdNum && a.jobIdNum !== b.jobIdNum) {
-        return a.jobIdNum - b.jobIdNum;
-      }
-      return a.originalIndex - b.originalIndex;
-    });
-
-    let currentSeq = 1;
-    unassigned.forEach((item) => {
-      while (takenSerials.has(currentSeq)) {
-        currentSeq++;
-      }
-      item.serial = currentSeq;
-      takenSerials.add(currentSeq);
+  // Pass 3: Assign continuous increasing serial numbers across ALL dates (do not restart at 001 per date!)
+  let currentSeq = maxSerial > 0 ? maxSerial + 1 : 1;
+  unassigned.forEach((item) => {
+    while (takenSerials.has(currentSeq)) {
       currentSeq++;
-    });
-
-    group.forEach((item) => {
-      const serialStr = pad3(item.serial);
-      const canonicalPropId = `${activePropName}-${dateCode}-${serialStr}`;
-      item.canonicalPropId = canonicalPropId;
-      item.serialStr = serialStr;
-
-      // Lock in globalJobCustomIdMap permanently
-      const op = item.rawJob;
-      if (op) {
-        if (op.jobId != null) setJobCustomId(op.jobId, canonicalPropId, item.serial, dateCode);
-        if (op.id != null) setJobCustomId(op.id, canonicalPropId, item.serial, dateCode);
-        if (op.propId) setJobCustomId(op.propId, canonicalPropId, item.serial, dateCode);
-      }
-      processed.push(item);
-    });
+    }
+    item.serial = currentSeq;
+    takenSerials.add(currentSeq);
+    if (currentSeq > maxSerial) maxSerial = currentSeq;
+    currentSeq++;
   });
 
-  processed.sort((a, b) => a.originalIndex - b.originalIndex);
+  // Pass 4: Build canonicalPropId with prefix and lock in globalJobCustomIdMap permanently
+  items.forEach((item) => {
+    const serialStr = pad3(item.serial);
+    const canonicalPropId = `${prefix}-${item.dateCode}-${serialStr}`;
+    item.canonicalPropId = canonicalPropId;
+    item.serialStr = serialStr;
 
-  return processed.map((item) => {
-    return mapApiJob(item.rawJob, item, activePropName, areaList, cachedTeams);
+    const op = item.rawJob;
+    if (op) {
+      if (op.jobId != null) setJobCustomId(op.jobId, canonicalPropId, item.serial, item.dateCode);
+      if (op.id != null) setJobCustomId(op.id, canonicalPropId, item.serial, item.dateCode);
+      if (op.propId) setJobCustomId(op.propId, canonicalPropId, item.serial, item.dateCode);
+    }
+  });
+
+  // Persist custom ID map in background
+  try {
+    saveStoredJobCustomIds(activePropName);
+  } catch (e) {}
+
+  // Keep original list ordering
+  items.sort((a, b) => a.originalIndex - b.originalIndex);
+
+  return items.map((item) => {
+    return mapApiJob(item.rawJob, item, prefix, areaList, cachedTeams);
   });
 }
 
@@ -534,7 +569,7 @@ export function mapApiJob(op, serialInfo = 0, activePropName = 'Testing', areaLi
       dateCode = parsed.dateCode || getJobDateCode(op.openDate || op.opened);
       serial = parsed.serial;
       serialStr = pad3(serial);
-      customJobId = `${activePropName}-${dateCode}-${serialStr}`;
+      customJobId = `${getPropertyPrefix(activePropName)}-${dateCode}-${serialStr}`;
     } else {
       dateCode = getJobDateCode(op.openDate || op.opened);
       const fallbackIdx = typeof serialInfo === 'number' ? serialInfo + 1 : 1;
@@ -632,37 +667,36 @@ async function apiFetch(endpoint, options = {}) {
     const response = await fetch(url, options);
     clearTimeout(timeoutId);
 
+    // Consume stream ONCE as text
+    const rawText = await response.text();
+    let data = null;
+    try {
+      data = JSON.parse(rawText);
+    } catch (e) {
+      data = rawText;
+    }
+
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error('UNAUTHORIZED');
       }
       let errorMsg = '';
-      try {
-        const errJson = await response.json();
-        errorMsg = errJson.message || errJson.title || JSON.stringify(errJson);
-      } catch (e) {
-        errorMsg = await response.text();
+      if (data && typeof data === 'object') {
+        errorMsg = data.message || data.title || JSON.stringify(data);
+      } else {
+        errorMsg = String(data || '');
       }
       throw new Error(errorMsg || `Server error (${response.status})`);
     }
 
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.indexOf('application/json') !== -1) {
-      return await response.json();
-    }
-    const text = await response.text();
-    try {
-      return JSON.parse(text);
-    } catch (e) {
-      return text;
-    }
+    return data;
   } catch (err) {
     clearTimeout(timeoutId);
     if (err.name === 'AbortError') {
       throw new Error('Server connection timed out. Please check your internet connection.');
     }
     if (err.message && err.message.toLowerCase().includes('network request failed')) {
-      throw new Error('Network error. Unable to connect to https://api.workwize.in/.');
+      throw new Error(`Network error. Unable to connect to ${BASE_URL}.`);
     }
     throw err;
   }
@@ -753,17 +787,82 @@ export const DailyJobApi = {
    * Matches quickfix qindex.js: fetches both open jobs and close jobs dynamically
    * Endpoint: POST /api/dailyjob/getallquickfixjobs
    */
-  getQuickFixJobs: async function (params = {}) {
+  /**
+   * Get QuickFix Dashboard Statistics (Today, Weekly, Monthly, Aging > 1 week)
+   * Endpoint: POST /api/dailyjob/getdashboardstats
+   * @param {string} propId
+   */
+  getDashboardStats: async function (propId) {
+    const form = new FormData();
+    form.append('propId', propId || '');
+    return await apiFetch('api/dailyjob/getdashboardstats', {
+      method: 'POST',
+      body: form,
+    });
+  },
+
+  /**
+   * Delete Daily Job
+   * Endpoint: POST /api/dailyjob/deletejob
+   */
+  deleteJob: async function (jobId, propId) {
+    const form = new FormData();
+    form.append('jobId', String(jobId));
+    form.append('jobID', String(jobId));
+    if (propId) form.append('propId', propId);
+    return await apiFetch('api/dailyjob/deletejob', {
+      method: 'POST',
+      body: form,
+    });
+  },
+
+  /**
+   * Change Team Assignment for Open Job
+   * Endpoint: POST /api/dailyjob/changeteam
+   * @param {string} jobId
+   * @param {string} propId
+   * @param {string} newTeamId
+   */
+  changeTeam: async function (jobId, propId, newTeamId) {
+    const form = new FormData();
+    form.append('jobId', String(jobId));
+    form.append('jobID', String(jobId));
+    if (propId) form.append('propId', propId);
+    form.append('newTeamId', newTeamId);
+    form.append('teamId', newTeamId);
+    return await apiFetch('api/dailyjob/changeteam', {
+      method: 'POST',
+      body: form,
+    });
+  },
+
+  /**
+   * Move job to TaskMaster
+   * Endpoint: POST /api/dailyjob/quickfixtojobtracker
+   */
+  moveToTaskMaster: async function (propId, jobId) {
+    const form = new FormData();
+    form.append('jobId', String(jobId));
+    form.append('propId', propId || '');
+    return await apiFetch('api/dailyjob/quickfixtojobtracker', {
+      method: 'POST',
+      body: form,
+    });
+  },
+
+    getQuickFixJobs: async function (params = {}) {
     const propId = params.propId || '';
     const activePropName = params.propName || propId || 'Testing';
+    try { await loadStoredJobCustomIds(propId); } catch (e) {}
 
     try {
       // 1. Fetch Open Jobs from API
       const formOpen = new FormData();
       formOpen.append('propId', propId);
       formOpen.append('jobList', 'open');
-      formOpen.append('pageNumber', String(params.pageNumber || 1));
-      formOpen.append('pageSize', String(params.pageSize || 200));
+      formOpen.append('pageNumber', '1');
+      formOpen.append('pageSize', '200');
+      formOpen.append('includeUploads', 'true');
 
       const resOpen = await apiFetch('api/dailyjob/getallquickfixjobs', {
         method: 'POST',
@@ -775,7 +874,8 @@ export const DailyJobApi = {
       formClose.append('propId', propId);
       formClose.append('jobList', 'close');
       formClose.append('pageNumber', '1');
-      formClose.append('pageSize', String(params.pageSize || 200));
+      formClose.append('pageSize', '200');
+      formClose.append('includeUploads', 'true');
 
       let resClose = null;
       try {
@@ -788,18 +888,54 @@ export const DailyJobApi = {
       }
 
       if (resOpen || resClose) {
-        const rawOpen = Array.isArray(resOpen?.open)
-          ? resOpen.open
-          : Array.isArray(resOpen)
-          ? resOpen
-          : [];
-        const rawClose = Array.isArray(resClose?.close)
-          ? resClose.close
-          : Array.isArray(resClose)
-          ? resClose
+        let rawOpen = Array.isArray(resOpen?.open) ? [...resOpen.open] : [];
+        let rawClose = Array.isArray(resClose?.close)
+          ? [...resClose.close]
           : Array.isArray(resOpen?.close)
-          ? resOpen.close
+          ? [...resOpen.close]
           : [];
+
+        // Fetch any remaining open pages if totalOpenPages > 1
+        const totalOpenPages = resOpen?.pagination?.totalOpenPages || 1;
+        if (totalOpenPages > 1) {
+          const extraOpenPromises = [];
+          for (let p = 2; p <= totalOpenPages; p++) {
+            const f = new FormData();
+            f.append('propId', propId);
+            f.append('jobList', 'open');
+            f.append('pageNumber', String(p));
+            f.append('pageSize', '200');
+            f.append('includeUploads', 'true');
+            extraOpenPromises.push(apiFetch('api/dailyjob/getallquickfixjobs', { method: 'POST', body: f }));
+          }
+          const openResults = await Promise.allSettled(extraOpenPromises);
+          openResults.forEach((r) => {
+            if (r.status === 'fulfilled' && r.value && Array.isArray(r.value.open)) {
+              rawOpen.push(...r.value.open);
+            }
+          });
+        }
+
+        // Fetch any remaining closed pages if totalClosePages > 1
+        const totalClosePages = resClose?.pagination?.totalClosePages || resOpen?.pagination?.totalClosePages || 1;
+        if (totalClosePages > 1) {
+          const extraClosePromises = [];
+          for (let p = 2; p <= totalClosePages; p++) {
+            const f = new FormData();
+            f.append('propId', propId);
+            f.append('jobList', 'close');
+            f.append('pageNumber', String(p));
+            f.append('pageSize', '200');
+            f.append('includeUploads', 'true');
+            extraClosePromises.push(apiFetch('api/dailyjob/getallquickfixjobs', { method: 'POST', body: f }));
+          }
+          const closeResults = await Promise.allSettled(extraClosePromises);
+          closeResults.forEach((r) => {
+            if (r.status === 'fulfilled' && r.value && Array.isArray(r.value.close)) {
+              rawClose.push(...r.value.close);
+            }
+          });
+        }
 
         let teams =
           Array.isArray(resOpen?.teams) && resOpen.teams.length > 0

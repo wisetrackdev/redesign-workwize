@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const API_CONFIG = {
-  BASE_URL: 'https://api.workwize.in/',
+  BASE_URL: 'https://oprofase2.workarya.com/',
   LOCAL_URL: 'https://localhost:7151/',
   STORAGE_KEY: 'oproUserData',
   APP_CODE: 'quickfix',

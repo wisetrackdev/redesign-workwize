@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { DailyJobApi } from '../api/dailyJobApi';
 import {
   View,
   Text,
@@ -14,9 +15,28 @@ export default function StatsModal({
   visible,
   onClose,
   allJobs = [],
+  currentPropertyId = 'Testing',
   onSelectStatusFilter,
 }) {
   const [period, setPeriod] = useState('today');
+
+  const [dashboardStats, setDashboardStats] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      if (visible && currentPropertyId) {
+        try {
+          const res = await DailyJobApi.getDashboardStats(currentPropertyId);
+          if (isMounted && res) {
+            setDashboardStats(res.data || res);
+          }
+        } catch (e) {}
+      }
+    })();
+    return () => { isMounted = false; };
+  }, [visible, currentPropertyId]);
+
 
   const now = new Date();
   const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -61,6 +81,35 @@ export default function StatsModal({
     return !isNaN(d.getTime()) && d < oneWeekAgo;
   }).length;
 
+  
+  let apiPData = null;
+  let apiAging = null;
+  const rootStats = dashboardStats ? ((dashboardStats.data && dashboardStats.data.today) ? dashboardStats.data : dashboardStats) : null;
+  if (rootStats) {
+    apiPData = rootStats[period] || rootStats.today || null;
+    apiAging = rootStats.aging || rootStats.agingOverOneWeek || null;
+  }
+
+  const todayTabCount = rootStats?.today?.total != null ? rootStats.today.total : allJobs.filter(j => {
+    const d = new Date(j.opened || j.createdAt || now);
+    return d.toDateString() === now.toDateString();
+  }).length;
+  const weeklyTabCount = rootStats?.weekly?.total != null ? rootStats.weekly.total : allJobs.filter(j => {
+    const d = new Date(j.opened || j.createdAt || now);
+    return d >= oneWeekAgo;
+  }).length;
+  const monthlyTabCount = rootStats?.monthly?.total != null ? rootStats.monthly.total : allJobs.length;
+
+  const finalTotalCount = apiPData && apiPData.total != null ? apiPData.total : totalCount;
+  const finalOpenCount = apiPData && apiPData.open != null ? apiPData.open : openCount;
+  const finalAssignedCount = apiPData && apiPData.assigned != null ? apiPData.assigned : assignedCount;
+  const finalInProgressCount = apiPData && apiPData.inProgress != null ? apiPData.inProgress : inProgressCount;
+  const finalClosedCount = apiPData && apiPData.closed != null ? apiPData.closed : closedCount;
+
+  const finalOpenAging = apiAging && apiAging.open != null ? apiAging.open : openAging;
+  const finalAssignedAging = apiAging && apiAging.assigned != null ? apiAging.assigned : assignedAging;
+  const finalInProgressAging = apiAging && apiAging.inProgress != null ? apiAging.inProgress : inProgressAging;
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
@@ -83,25 +132,19 @@ export default function StatsModal({
                 style={[styles.pTab, period === 'today' && styles.pTabActive]}
                 onPress={() => setPeriod('today')}
               >
-                <Text style={[styles.pTabText, period === 'today' && styles.pTabTextActive]}>
-                  Today
-                </Text>
+                <Text style={[styles.pTabText, period === 'today' && styles.pTabTextActive]}>Today {todayTabCount > 0 ? `(${todayTabCount})` : ''}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.pTab, period === 'weekly' && styles.pTabActive]}
                 onPress={() => setPeriod('weekly')}
               >
-                <Text style={[styles.pTabText, period === 'weekly' && styles.pTabTextActive]}>
-                  Weekly
-                </Text>
+                <Text style={[styles.pTabText, period === 'weekly' && styles.pTabTextActive]}>Weekly {weeklyTabCount > 0 ? `(${weeklyTabCount})` : ''}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.pTab, period === 'monthly' && styles.pTabActive]}
                 onPress={() => setPeriod('monthly')}
               >
-                <Text style={[styles.pTabText, period === 'monthly' && styles.pTabTextActive]}>
-                  Monthly
-                </Text>
+                <Text style={[styles.pTabText, period === 'monthly' && styles.pTabTextActive]}>Monthly {monthlyTabCount > 0 ? `(${monthlyTabCount})` : ''}</Text>
               </TouchableOpacity>
             </View>
 
@@ -121,7 +164,7 @@ export default function StatsModal({
                 <View>
                   <Text style={styles.boxLabel}>TOTAL NEW JOBS</Text>
                   <Text style={[styles.boxNumber, { color: Colors.primaryDeep }]}>
-                    {totalCount}
+                    {finalTotalCount}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -140,7 +183,7 @@ export default function StatsModal({
                 <View>
                   <Text style={styles.boxLabel}>OPEN</Text>
                   <Text style={[styles.boxNumber, { color: '#B45309' }]}>
-                    {openCount}
+                    {finalOpenCount}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -159,7 +202,7 @@ export default function StatsModal({
                 <View>
                   <Text style={styles.boxLabel}>ASSIGNED</Text>
                   <Text style={[styles.boxNumber, { color: '#3730A3' }]}>
-                    {assignedCount}
+                    {finalAssignedCount}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -178,7 +221,7 @@ export default function StatsModal({
                 <View>
                   <Text style={styles.boxLabel}>IN PROGRESS</Text>
                   <Text style={[styles.boxNumber, { color: '#0369A1' }]}>
-                    {inProgressCount}
+                    {finalInProgressCount}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -197,7 +240,7 @@ export default function StatsModal({
                 <View>
                   <Text style={styles.boxLabel}>CLOSED</Text>
                   <Text style={[styles.boxNumber, { color: '#15803D' }]}>
-                    {closedCount}
+                    {finalClosedCount}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -222,7 +265,7 @@ export default function StatsModal({
                     <Text style={styles.agingBoxLabel}>Open</Text>
                   </View>
                   <Text style={[styles.agingBoxNum, { color: '#B45309' }]}>
-                    {openAging}
+                    {finalOpenAging}
                   </Text>
                   <Text style={styles.agingBoxSub}>{'>'} 7 days</Text>
                 </View>
@@ -233,7 +276,7 @@ export default function StatsModal({
                     <Text style={styles.agingBoxLabel}>Assigned</Text>
                   </View>
                   <Text style={[styles.agingBoxNum, { color: '#4338CA' }]}>
-                    {assignedAging}
+                    {finalAssignedAging}
                   </Text>
                   <Text style={styles.agingBoxSub}>{'>'} 7 days</Text>
                 </View>
@@ -244,7 +287,7 @@ export default function StatsModal({
                     <Text style={styles.agingBoxLabel}>In-Progress</Text>
                   </View>
                   <Text style={[styles.agingBoxNum, { color: '#0369A1' }]}>
-                    {inProgressAging}
+                    {finalInProgressAging}
                   </Text>
                   <Text style={styles.agingBoxSub}>{'>'} 7 days</Text>
                 </View>
