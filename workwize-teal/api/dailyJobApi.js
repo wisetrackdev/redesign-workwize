@@ -268,19 +268,19 @@
      * @param {string} propId
      * @param {string} newTeamId
      */
-    changeTeam: async function (jobId, propId, newTeamId) {
-      var form = new FormData();
-      form.append('jobId', jobId);
-      form.append('jobID', jobId);
-      if (propId) form.append('propId', propId);
-      form.append('newTeamId', newTeamId);
-      form.append('teamId', newTeamId);
+    // changeTeam: async function (jobId, propId, newTeamId) {
+    //   var form = new FormData();
+    //   form.append('jobId', jobId);
+    //   form.append('jobID', jobId);
+    //   if (propId) form.append('propId', propId);
+    //   form.append('newTeamId', newTeamId);
+    //   form.append('teamId', newTeamId);
 
-      return await apiFetch('api/dailyjob/changeteam', {
-        method: 'POST',
-        body: form
-      });
-    },
+    //   return await apiFetch('api/dailyjob/changeteam', {
+    //     method: 'POST',
+    //     body: form
+    //   });
+    // },
 
     /**
      * Delete Daily Job (Point 16)

@@ -21,6 +21,22 @@
   // Persistent Job ID / Serial Number map to ensure a job's serial never changes between Open and Closed tabs
   var globalJobCustomIdMap = {};
 
+  function isPropertyNameOrId(val) {
+    if (!val) return false;
+    var s = String(val).trim().toUpperCase();
+    if (s === 'TESTING' || s === 'ORB' || s === 'DEFAULT') return true;
+    if (s.indexOf('BOLIFUSHI') !== -1 || s.indexOf('OZEN') !== -1) return true;
+    if (Array.isArray(allProperties)) {
+      for (var i = 0; i < allProperties.length; i++) {
+        var p = allProperties[i];
+        if (p && (String(p.propId).toUpperCase() === s || String(p.propName).toUpperCase() === s)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   function loadJobCustomIdMap() {
     globalJobCustomIdMap = {};
     try {
@@ -29,26 +45,20 @@
       if (raw) {
         var parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object') {
-          var serialCount = {};
-          var hasDuplicates = false;
+          var onesCount = 0;
+          var clean = {};
           Object.keys(parsed).forEach(function (key) {
-            var val = parsed[key];
-            if (val && typeof val === 'string') {
-              var m = val.match(/-(\d+)$/);
-              if (m) {
-                var s = m[1];
-                if (serialCount[s]) {
-                  hasDuplicates = true;
-                }
-                serialCount[s] = (serialCount[s] || 0) + 1;
-              }
-            }
+            if (isPropertyNameOrId(key)) return;
+            var item = parsed[key];
+            if (item && item.serial === 1) onesCount++;
+            clean[key] = item;
           });
-          if (hasDuplicates) {
-            try { localStorage.removeItem(k); } catch (e) {}
-          } else {
-            Object.assign(globalJobCustomIdMap, parsed);
+          // If more than 2 jobs have serial === 1, previous bug poisoned storage -> clear it
+          if (onesCount > 2) {
+            clean = {};
+            try { localStorage.removeItem(k); } catch (ex) {}
           }
+          globalJobCustomIdMap = clean;
         }
       }
     } catch (e) {}
@@ -59,6 +69,18 @@
       var k = 'workwize_job_prop_ids_' + (currentPropertyId || 'default');
       localStorage.setItem(k, JSON.stringify(globalJobCustomIdMap));
     } catch (e) {}
+  }
+
+  function setJobCustomId(key, customJobId, serial, dateCode) {
+    if (!key || !customJobId) return;
+    var k = String(key).trim();
+    if (isPropertyNameOrId(k)) return; // Never key by property name
+    globalJobCustomIdMap[k] = {
+      canonicalPropId: customJobId,
+      serial: Number(serial) || 1,
+      serialStr: pad3(serial),
+      dateCode: dateCode
+    };
   }
 
   var state = {
@@ -208,6 +230,47 @@
     return parts.dd + parts.mm + parts.yy;
   }
 
+  function getPropertyPrefix(propName, propId) {
+    var name = String(propName || propId || '').trim();
+    if (!name) return 'Testing';
+    var upper = name.toUpperCase();
+    if (upper === 'TESTING' || upper.indexOf('TEST') === 0) return 'Testing';
+    if (upper.indexOf('BOLIFUSHI') !== -1 || upper.indexOf('OZEN RESERVE BOLIFUSHI') !== -1 || upper === 'ORB') return 'ORB';
+    var words = name.split(/[\s_-]+/).filter(Boolean);
+    if (words.length > 1) {
+      var acronym = words.map(function (w) { return w[0].toUpperCase(); }).join('');
+      if (acronym.length >= 2 && acronym.length <= 5) return acronym;
+    }
+    return name.replace(/\s+/g, '-');
+  }
+
+  function getActivePropertyPrefix() {
+    var name = '';
+    if (Array.isArray(allProperties) && allProperties.length > 0) {
+      if (currentPropertyId) {
+        var found = allProperties.find(function (p) {
+          return String(p.propId) === String(currentPropertyId) || String(p.id) === String(currentPropertyId);
+        });
+        if (found && found.propName) name = found.propName;
+      }
+      if (!name && currentUser && currentUser.prop) {
+        var foundUser = allProperties.find(function (p) {
+          return String(p.propId) === String(currentUser.prop) || String(p.propName) === String(currentUser.prop);
+        });
+        if (foundUser && foundUser.propName) name = foundUser.propName;
+      }
+    }
+    if (!name) {
+      var sv = $('#pdSelectedValue');
+      if (sv && sv.textContent.trim()) name = sv.textContent.trim();
+    }
+    if (!name && currentUser && currentUser.prop) {
+      name = currentUser.prop;
+    }
+    if (!name) name = 'Testing';
+    return getPropertyPrefix(name, currentPropertyId);
+  }
+
   function getActivePropertyName() {
     var name = '';
     if (Array.isArray(allProperties) && allProperties.length > 0) {
@@ -232,11 +295,131 @@
       name = currentUser.prop;
     }
     if (!name) name = 'Testing';
-    return name.trim().replace(/\s+/g, '-');
+    return name.trim();
   }
 
   function getActivePropertySlug() {
-    return getActivePropertyName();
+    return getActivePropertyPrefix();
+  }
+
+  function assignDateBasedSerialNumbers(rawJobs, activePrefix) {
+    if (!Array.isArray(rawJobs) || rawJobs.length === 0) return [];
+    var prefix = activePrefix || getActivePropertyPrefix();
+    var takenSerials = new Set();
+    var maxSerial = 0;
+    var items = [];
+
+    // Pass 1: Parse jobs and extract existing/saved serial numbers
+    rawJobs.forEach(function (op, originalIndex) {
+      if (!op) return;
+      var jobIdKey = op.jobId != null ? String(op.jobId) : null;
+      var idKey = op.id != null ? String(op.id) : null;
+      var parsedProp = parseFormattedPropId(op.propId);
+      var propIdKey = parsedProp ? String(op.propId).trim() : null;
+
+      var saved = (jobIdKey && globalJobCustomIdMap[jobIdKey]) ||
+                  (idKey && globalJobCustomIdMap[idKey]) ||
+                  (propIdKey && globalJobCustomIdMap[propIdKey]) || null;
+
+      var savedSerial = null;
+      var savedDateCode = null;
+      if (saved) {
+        if (typeof saved === 'object') {
+          savedSerial = saved.serial;
+          savedDateCode = saved.dateCode;
+        } else if (typeof saved === 'string') {
+          var pSaved = parseFormattedPropId(saved);
+          if (pSaved) {
+            savedSerial = pSaved.serial;
+            savedDateCode = pSaved.dateCode;
+          }
+        }
+      }
+
+      var dateCode = savedDateCode || (parsedProp && parsedProp.dateCode) || getJobDateCode(op.openDate || op.opened || op.createdAt);
+      if (!dateCode) dateCode = getJobDateCode(new Date());
+
+      var explicitSerial = savedSerial || (parsedProp && parsedProp.serial > 0 ? parsedProp.serial : (op.serial > 0 ? op.serial : null));
+
+      if (explicitSerial != null && explicitSerial > 0) {
+        takenSerials.add(explicitSerial);
+        if (explicitSerial > maxSerial) maxSerial = explicitSerial;
+      }
+
+      var openTime = new Date(op.openDate || op.opened || op.createdAt || 0).getTime() || 0;
+      var jobIdNum = Number(op.jobId || op.id || 0) || 0;
+
+      items.push({
+        rawJob: op,
+        originalIndex: originalIndex,
+        dateCode: dateCode,
+        serial: explicitSerial,
+        openTime: openTime,
+        jobIdNum: jobIdNum
+      });
+    });
+
+    // Also include any other serials already recorded in globalJobCustomIdMap
+    Object.keys(globalJobCustomIdMap).forEach(function (k) {
+      var item = globalJobCustomIdMap[k];
+      if (item) {
+        var s = typeof item === 'object' ? item.serial : (parseFormattedPropId(item) ? parseFormattedPropId(item).serial : null);
+        if (s != null && s > 0) {
+          takenSerials.add(s);
+          if (s > maxSerial) maxSerial = s;
+        }
+      }
+    });
+
+    // Pass 2: Sort unassigned jobs chronologically (earliest to latest)
+    // Older jobs at the bottom get lower serials, newer jobs get higher serials
+    var unassigned = items.filter(function (item) { return item.serial == null; });
+    unassigned.sort(function (a, b) {
+      if (a.openTime && b.openTime && a.openTime !== b.openTime) {
+        return a.openTime - b.openTime;
+      }
+      if (a.jobIdNum && b.jobIdNum && a.jobIdNum !== b.jobIdNum) {
+        return a.jobIdNum - b.jobIdNum;
+      }
+      return b.originalIndex - a.originalIndex;
+    });
+
+    // Pass 3: Assign continuous increasing serial numbers across ALL dates (do not restart at 001 per date!)
+    var currentSeq = maxSerial > 0 ? maxSerial + 1 : 1;
+    unassigned.forEach(function (item) {
+      while (takenSerials.has(currentSeq)) {
+        currentSeq++;
+      }
+      item.serial = currentSeq;
+      takenSerials.add(currentSeq);
+      if (currentSeq > maxSerial) maxSerial = currentSeq;
+      currentSeq++;
+    });
+
+    // Pass 4: Build canonicalPropId with prefix and lock in globalJobCustomIdMap permanently
+    items.forEach(function (item) {
+      var serialStr = pad3(item.serial);
+      var canonicalPropId = prefix + '-' + item.dateCode + '-' + serialStr;
+      item.canonicalPropId = canonicalPropId;
+      item.serialStr = serialStr;
+
+      var op = item.rawJob;
+      if (op) {
+        if (op.jobId != null) setJobCustomId(op.jobId, canonicalPropId, item.serial, item.dateCode);
+        if (op.id != null) setJobCustomId(op.id, canonicalPropId, item.serial, item.dateCode);
+        if (parseFormattedPropId(op.propId)) setJobCustomId(op.propId, canonicalPropId, item.serial, item.dateCode);
+      }
+    });
+
+    // Persist custom ID map in background
+    try {
+      saveJobCustomIdMap();
+    } catch (e) {}
+
+    // Keep original list ordering
+    items.sort(function (a, b) { return a.originalIndex - b.originalIndex; });
+
+    return items;
   }
 
   function parseFormattedPropId(str) {
@@ -496,7 +679,7 @@
   }
 
   /* ================= API Data Mapping ================= */
-  function mapApiJob(op, index, jobCustomIdMap) {
+  function mapApiJob(op, serialInfo) {
     if (!op) return null;
     var photoBefore = '';
     if (op.open_uploads && op.open_uploads.length > 0 && op.open_uploads[0].fileurl) {
@@ -528,40 +711,37 @@
       closedBy = (cfn + ' ' + cln).trim() || assignedName || 'Staff';
     }
 
-    var key = op.jobId != null ? String(op.jobId) : (op.id != null ? String(op.id) : ('idx_' + index));
-    var activePrefix = getActivePropertyName();
+    var prefix = getActivePropertyPrefix();
+    var canonicalPropId = '';
+    var serialNum = 1;
+    var dateCode = '';
 
-    var existingId = (jobCustomIdMap && jobCustomIdMap[key])
-      || (globalJobCustomIdMap && (
-           (op.jobId != null && globalJobCustomIdMap[String(op.jobId)])
-        || (op.id != null && globalJobCustomIdMap[String(op.id)])
-        || globalJobCustomIdMap[key]
-      ));
-
-    var customJobId = '';
-    var parsedExisting = parseFormattedPropId(existingId);
-    if (parsedExisting) {
-      customJobId = activePrefix + '-' + parsedExisting.dateCode + '-' + pad3(parsedExisting.serial);
+    if (typeof serialInfo === 'object' && serialInfo !== null) {
+      canonicalPropId = serialInfo.canonicalPropId || '';
+      serialNum = serialInfo.serial || 1;
+      dateCode = serialInfo.dateCode || '';
     } else {
-      var parsedOp = parseFormattedPropId(op.propId);
-      if (parsedOp) {
-        customJobId = activePrefix + '-' + parsedOp.dateCode + '-' + pad3(parsedOp.serial);
-      } else {
-        customJobId = activePrefix + '-' + getJobDateCode(op.openDate) + '-' + pad3(index != null ? index + 1 : 1);
-      }
+      var key = op.jobId != null ? String(op.jobId) : (op.id != null ? String(op.id) : '');
+      var saved = (key && globalJobCustomIdMap[key]) || null;
+      var parsed = parseFormattedPropId(op.propId);
+      dateCode = (saved && saved.dateCode) || (parsed && parsed.dateCode) || getJobDateCode(op.openDate || op.opened || op.createdAt);
+      serialNum = (saved && saved.serial) || (parsed && parsed.serial > 0 ? parsed.serial : (typeof serialInfo === 'number' && serialInfo > 0 ? serialInfo : 1));
+      canonicalPropId = prefix + '-' + dateCode + '-' + pad3(serialNum);
     }
 
-    if (customJobId) {
-      if (key) globalJobCustomIdMap[key] = customJobId;
-      if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = customJobId;
-      if (op.id != null) globalJobCustomIdMap[String(op.id)] = customJobId;
+    if (canonicalPropId) {
+      if (op.jobId != null) setJobCustomId(op.jobId, canonicalPropId, serialNum, dateCode);
+      if (op.id != null) setJobCustomId(op.id, canonicalPropId, serialNum, dateCode);
+      if (parseFormattedPropId(op.propId)) setJobCustomId(op.propId, canonicalPropId, serialNum, dateCode);
     }
 
     return {
-      id: op.jobId || (index + 1),
+      id: op.jobId || (typeof serialInfo === 'number' ? serialInfo + 1 : 1),
       jobId: op.jobId,
-      propId: customJobId,
-      customJobId: customJobId,
+      propId: canonicalPropId,
+      customJobId: canonicalPropId,
+      serial: serialNum,
+      dateCode: dateCode,
       details: op.job_detail || '',
       by: op.issued_by_team_details || op.creator_name || 'Staff',
       issued_by_team_details: op.issued_by_team_details || op.creator_name || 'Staff',
@@ -850,10 +1030,10 @@
       editBtn = '<button data-act="edit" data-id="' + j.id + '">' + I.edit + ' Edit Job</button>';
     }
 
-    var changeTeamBtn = '';
-    if (canChangeTeam(j)) {
-      changeTeamBtn = '<button data-act="change-team" data-id="' + j.id + '">' + I.dept + ' Change Team</button>';
-    }
+    // var changeTeamBtn = '';
+    // if (canChangeTeam(j)) {
+    //   changeTeamBtn = '<button data-act="change-team" data-id="' + j.id + '">' + I.dept + ' Change Team</button>';
+    // }
 
     var assignBtn = '';
     if (!closed) {
@@ -878,7 +1058,7 @@
       '<button data-act="view" data-id="' + j.id + '">' + I.eye + ' View Details</button>' +
       shareBtn +
       editBtn +
-      changeTeamBtn +
+      // changeTeamBtn +
       assignBtn +
       closeBtn +
       deleteBtn +
@@ -1223,6 +1403,99 @@
     renderFilters();
   }
 
+  /* ================= Global Property Serial Indexing =================
+   * Fetches all open and closed jobs across the property, sorts chronologically,
+   * assigns permanent increasing serial numbers (001, 002... up to total jobs e.g. 250),
+   * and persists them in globalJobCustomIdMap and localStorage.
+   */
+  var isSyncingSerials = false;
+  async function syncPropertyJobSerials(targetPropId) {
+    var pid = targetPropId || currentPropertyId;
+    if (!pid || isSyncingSerials) return;
+    isSyncingSerials = true;
+    try {
+      loadJobCustomIdMap();
+      var activePrefix = getActivePropertyPrefix();
+
+      // 1. Fetch all open jobs (pageSize: 200)
+      var resOpen = await api.getQuickFixJobs({
+        propId: pid,
+        jobList: 'open',
+        pageNumber: 1,
+        pageSize: 200,
+        sortBy: 'old',
+        sortOrder: 'asc'
+      });
+      var allOpen = (resOpen && Array.isArray(resOpen.open)) ? resOpen.open.slice() : [];
+      var totalOpenPages = (resOpen && resOpen.pagination && resOpen.pagination.totalOpenPages) || 1;
+      if (totalOpenPages > 1) {
+        var openPromises = [];
+        for (var p = 2; p <= totalOpenPages; p++) {
+          openPromises.push(api.getQuickFixJobs({
+            propId: pid,
+            jobList: 'open',
+            pageNumber: p,
+            pageSize: 200,
+            sortBy: 'old',
+            sortOrder: 'asc'
+          }));
+        }
+        var extraOpen = await Promise.allSettled(openPromises);
+        extraOpen.forEach(function (r) {
+          if (r.status === 'fulfilled' && r.value && Array.isArray(r.value.open)) {
+            allOpen = allOpen.concat(r.value.open);
+          }
+        });
+      }
+
+      // 2. Fetch all closed jobs (pageSize: 200)
+      var resClose = null;
+      try {
+        resClose = await api.getQuickFixJobs({
+          propId: pid,
+          jobList: 'close',
+          pageNumber: 1,
+          pageSize: 200,
+          sortBy: 'old',
+          sortOrder: 'asc'
+        });
+      } catch (e) {}
+
+      var allClose = (resClose && Array.isArray(resClose.close)) ? resClose.close.slice() : [];
+      var totalClosePages = (resClose && resClose.pagination && (resClose.pagination.totalClosePages || resClose.pagination.totalClosedPages)) || 1;
+      if (totalClosePages > 1) {
+        var closePromises = [];
+        for (var cp = 2; cp <= totalClosePages; cp++) {
+          closePromises.push(api.getQuickFixJobs({
+            propId: pid,
+            jobList: 'close',
+            pageNumber: cp,
+            pageSize: 200,
+            sortBy: 'old',
+            sortOrder: 'asc'
+          }));
+        }
+        var extraClose = await Promise.allSettled(closePromises);
+        extraClose.forEach(function (r) {
+          if (r.status === 'fulfilled' && r.value && Array.isArray(r.value.close)) {
+            allClose = allClose.concat(r.value.close);
+          }
+        });
+      }
+
+      // 3. Combine open and closed jobs across property
+      var allJobs = allOpen.concat(allClose);
+      if (allJobs.length > 0) {
+        assignDateBasedSerialNumbers(allJobs, activePrefix);
+        saveJobCustomIdMap();
+      }
+    } catch (err) {
+      console.warn('syncPropertyJobSerials note:', err);
+    } finally {
+      isSyncingSerials = false;
+    }
+  }
+
   /* ================= Dynamic Server-Side Job Fetching ================= */
   async function fetchJobs(tab, pageNumber, preserveFilter) {
     if (!currentPropertyId) return;
@@ -1278,31 +1551,15 @@
         }
       });
 
-      // Maintain persistent job IDs and serial numbers
-      var activePropName = getActivePropertyName();
-      var jobCustomIdMap = {};
-      uniqueList.forEach(function (op) {
-        var key = op.jobId != null ? String(op.jobId) : (op.id != null ? String(op.id) : '');
-        var existing = (op.jobId != null && globalJobCustomIdMap[String(op.jobId)])
-          || (op.id != null && globalJobCustomIdMap[String(op.id)])
-          || (op.propId && parseFormattedPropId(op.propId) ? op.propId : null);
-        if (existing) {
-          jobCustomIdMap[key] = existing;
-          if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = existing;
-          if (op.id != null) globalJobCustomIdMap[String(op.id)] = existing;
-        } else {
-          var dateCode = getJobDateCode(op.openDate);
-          var sNum = op.jobId || op.id || 1;
-          var newId = activePropName + '-' + dateCode + '-' + pad3(sNum);
-          jobCustomIdMap[key] = newId;
-          if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = newId;
-          if (op.id != null) globalJobCustomIdMap[String(op.id)] = newId;
-        }
-      });
-      saveJobCustomIdMap();
-
-      var mappedItems = uniqueList.map(function (op, index) {
-        return mapApiJob(op, index, jobCustomIdMap);
+      // Maintain persistent job IDs and serial numbers matching workwize-mobile
+      loadJobCustomIdMap();
+      if (Object.keys(globalJobCustomIdMap).length === 0) {
+        await syncPropertyJobSerials(currentPropertyId);
+      }
+      var activePrefix = getActivePropertyPrefix();
+      var serialItems = assignDateBasedSerialNumbers(uniqueList, activePrefix);
+      var mappedItems = serialItems.map(function (item) {
+        return mapApiJob(item.rawJob, item);
       });
 
       var totalCount = mappedItems.length;
@@ -2218,18 +2475,26 @@
     }
 
     // Permanently remember this job's exact propId (serial) so it never changes in Closed tab
-    if (closeTargetJob.propId) {
-      var parsed = parseFormattedPropId(closeTargetJob.propId);
-      var canonicalPropId = parsed
-        ? (getActivePropertyName() + '-' + parsed.dateCode + '-' + pad3(parsed.serial))
-        : closeTargetJob.propId;
-      closeTargetJob.propId = canonicalPropId;
-      closeTargetJob.customJobId = canonicalPropId;
-      if (closeTargetJob.id != null) globalJobCustomIdMap[String(closeTargetJob.id)] = canonicalPropId;
-      if (closeTargetJob.jobId != null) globalJobCustomIdMap[String(closeTargetJob.jobId)] = canonicalPropId;
-      if (closeTargetJob.raw && closeTargetJob.raw.jobId != null) globalJobCustomIdMap[String(closeTargetJob.raw.jobId)] = canonicalPropId;
-      saveJobCustomIdMap();
-    }
+    var parsed = parseFormattedPropId(closeTargetJob.propId) || parseFormattedPropId(closeTargetJob.customJobId);
+    var saved = (closeTargetJob.jobId != null && globalJobCustomIdMap[String(closeTargetJob.jobId)]) ||
+                (closeTargetJob.id != null && globalJobCustomIdMap[String(closeTargetJob.id)]) || null;
+
+    var serialNum = closeTargetJob.serial || (saved && saved.serial) || (parsed ? parsed.serial : null);
+    var dateCode = closeTargetJob.dateCode || (saved && saved.dateCode) || (parsed ? parsed.dateCode : getJobDateCode(closeTargetJob.opened));
+    var prefix = (parsed && parsed.prefix) || getActivePropertyPrefix();
+
+    var canonicalPropId = (saved && saved.canonicalPropId) ||
+                          (serialNum != null && dateCode ? (prefix + '-' + dateCode + '-' + pad3(serialNum)) : closeTargetJob.propId);
+
+    closeTargetJob.propId = canonicalPropId;
+    closeTargetJob.customJobId = canonicalPropId;
+    if (serialNum != null) closeTargetJob.serial = serialNum;
+    if (dateCode) closeTargetJob.dateCode = dateCode;
+
+    if (closeTargetJob.id != null) setJobCustomId(closeTargetJob.id, canonicalPropId, serialNum, dateCode);
+    if (closeTargetJob.jobId != null) setJobCustomId(closeTargetJob.jobId, canonicalPropId, serialNum, dateCode);
+    if (closeTargetJob.raw && closeTargetJob.raw.jobId != null) setJobCustomId(closeTargetJob.raw.jobId, canonicalPropId, serialNum, dateCode);
+    saveJobCustomIdMap();
 
     // Move closeTargetJob from openJobs to closedJobs
     var openIdx = openJobs.findIndex(function (j) { return j.id === closeTargetJob.id || String(j.jobId) === String(closeTargetJob.jobId); });
@@ -2659,17 +2924,23 @@
       var eClosedBy = $('#eClosedBy');
       editTargetJob.closedBy = (eClosedBy && eClosedBy.value.trim()) || (currentUser && currentUser.name) || 'User';
       if (!editTargetJob.closedAt) editTargetJob.closedAt = new Date().toISOString();
-      if (editTargetJob.propId) {
-        var parsed = parseFormattedPropId(editTargetJob.propId);
-        var canonicalPropId = parsed
-          ? (getActivePropertyName() + '-' + parsed.dateCode + '-' + pad3(parsed.serial))
-          : editTargetJob.propId;
-        editTargetJob.propId = canonicalPropId;
-        editTargetJob.customJobId = canonicalPropId;
-        if (editTargetJob.id != null) globalJobCustomIdMap[String(editTargetJob.id)] = canonicalPropId;
-        if (editTargetJob.jobId != null) globalJobCustomIdMap[String(editTargetJob.jobId)] = canonicalPropId;
-        saveJobCustomIdMap();
-      }
+      var parsed = parseFormattedPropId(editTargetJob.propId) || parseFormattedPropId(editTargetJob.customJobId);
+      var saved = (editTargetJob.jobId != null && globalJobCustomIdMap[String(editTargetJob.jobId)]) ||
+                  (editTargetJob.id != null && globalJobCustomIdMap[String(editTargetJob.id)]) || null;
+      var serialNum = editTargetJob.serial || (saved && saved.serial) || (parsed ? parsed.serial : null);
+      var dateCode = editTargetJob.dateCode || (saved && saved.dateCode) || (parsed ? parsed.dateCode : getJobDateCode(editTargetJob.opened));
+      var prefix = (parsed && parsed.prefix) || getActivePropertyPrefix();
+      var canonicalPropId = (saved && saved.canonicalPropId) ||
+                            (serialNum != null && dateCode ? (prefix + '-' + dateCode + '-' + pad3(serialNum)) : editTargetJob.propId);
+
+      editTargetJob.propId = canonicalPropId;
+      editTargetJob.customJobId = canonicalPropId;
+      if (serialNum != null) editTargetJob.serial = serialNum;
+      if (dateCode) editTargetJob.dateCode = dateCode;
+
+      if (editTargetJob.id != null) setJobCustomId(editTargetJob.id, canonicalPropId, serialNum, dateCode);
+      if (editTargetJob.jobId != null) setJobCustomId(editTargetJob.jobId, canonicalPropId, serialNum, dateCode);
+      saveJobCustomIdMap();
       if (oldStatus !== 'Closed') {
         var opIdx = openJobs.findIndex(function (j) { return j.id === editTargetJob.id || String(j.jobId) === String(editTargetJob.jobId); });
         if (opIdx !== -1) {
@@ -2920,6 +3191,9 @@
         }
 
         toast('Switched property to ' + propName);
+
+        // Pre-sync serials for the newly selected property
+        await syncPropertyJobSerials(propId);
 
         // Reset pagination for both tabs
         if (pagination.open) pagination.open.page = 1;
@@ -4413,6 +4687,9 @@
 
         renderPropertySelector(props);
 
+        // Pre-sync all property jobs to assign continuous serials (bottom 001 to top 250)
+        await syncPropertyJobSerials(currentPropertyId);
+
         // Default to Open tab (loads live open jobs on start!)
         await setTab('open');
         // Pre-fetch dynamic dashboard statistics to update tab badges & cache
@@ -4434,6 +4711,7 @@
     currentPropertyId = fallbackPropId;
     loadJobCustomIdMap();
     renderPropertySelector(allProperties);
+    await syncPropertyJobSerials(currentPropertyId);
     setTab('open');
   }
 
