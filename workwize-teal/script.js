@@ -574,6 +574,8 @@
       assigned_supervisor: op.assigned_supervisor,
       opened: op.openDate || '',
       closedAt: op.closeDate || '',
+      assignDate: op.assignDate || op.assignedDate || '',
+      assignedDate: op.assignDate || op.assignedDate || '',
       photoBefore: photoBefore,
       photoAfter: photoAfter,
       assignDept: assignDept,
@@ -919,7 +921,8 @@
           '<span>Closed by</span><b title="' + esc(j.closedBy) + '">' + na(j.closedBy) + (j.closedAt ? ' &middot; ' + fmt(j.closedAt) : '') + '</b>' +
           '<span>Remarks</span><b title="' + esc(j.remarks || 'NA') + '">' + (j.remarks ? hl(j.remarks) : '<span class="na">NA</span>') + '</b>'
         : '<span>Assigned Sub Dept</span><b title="' + esc(j.assignDept || 'NA') + '">' + (j.assignDept && j.assignDept !== 'NA' ? hl(j.assignDept) : '<span class="na">NA</span>') + '</b>' +
-          '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) : '<span class="na">Not assigned</span>') + '</b>');
+          '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) : '<span class="na">Not assigned</span>') + '</b>' +
+          (j.assignedDate ? '<span>Assigned Date</span><b title="' + esc(fmt(j.assignedDate)) + '">' + fmt(j.assignedDate) + '</b>' : ''));
 
     var canClose = canCloseJob(j);
     var statusTag = !closed && canClose
@@ -983,7 +986,7 @@
       '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
       '<div class="rc"><span>Photo Before</span>' + photoBeforePreview(j) + '</div>' +
       '<div class="rc" title="' + esc(j.assignDept || 'NA') + '"><span>Assign Sub-Dept.</span>' + assignDeptVal + '</div>' +
-      '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assign To</span>' + assignedVal + '</div>' +
+      '<div class="rc" title="' + esc(assignedPerson || 'Not assigned') + '"><span>Assign To</span>' + assignedVal + (j.assignedDate ? '<small style="display:block;color:var(--text-muted);font-size:11px;">' + fmt(j.assignedDate) + '</small>' : '') + '</div>' +
       '<div class="rs">' + statusTag + '</div>' +
       menuHTML(j) +
     '</article>';
@@ -1424,11 +1427,11 @@
   async function renderRecentStats() {
     var curPeriod = state.period || 'today';
 
-    // Point 2: Dynamic Dashboard stats from backend API
+    // Dynamic Dashboard stats from backend API
     if (currentPropertyId && api.getDashboardStats) {
       try {
         var resp = await api.getDashboardStats(currentPropertyId);
-        if (resp && (resp.status === 'success' || resp.data) && (resp.data || resp.today)) {
+        if (resp && (resp.success === true || resp.status === 'success' || resp.today || resp.data)) {
           cachedDashboardStats = resp.data || resp;
         }
       } catch (e) {
@@ -1438,6 +1441,10 @@
 
     var stats = cachedDashboardStats;
     if (stats) {
+      if (stats.data && stats.data.today) {
+        stats = stats.data;
+      }
+
       var pData = stats[curPeriod] || stats.today || {};
       var elTotal = $('#statBoxTotal');
       var elOpen = $('#statBoxOpen');
@@ -1451,6 +1458,7 @@
       if (elInProgress) elInProgress.textContent = pData.inProgress != null ? pData.inProgress : 0;
       if (elClosed) elClosed.textContent = pData.closed != null ? pData.closed : 0;
 
+      // Tab badges on Job Statistics card: Today, Weekly (Sat-Fri), Monthly
       var cToday = $('#pCountToday');
       var cWeekly = $('#pCountWeekly');
       var cMonthly = $('#pCountMonthly');
@@ -1459,26 +1467,86 @@
       if (cMonthly && stats.monthly) cMonthly.textContent = stats.monthly.total != null ? stats.monthly.total : 0;
 
       // Aging jobs (> 1 week old) from dynamic stats API
+      var agingData = stats.aging || stats.agingOverOneWeek || {};
       var elAgingOpen = $('#agingOpenCount');
       var elAgingAssigned = $('#agingAssignedCount');
       var elAgingInProgress = $('#agingInProgressCount');
 
-      if (stats.agingOverOneWeek) {
-        if (elAgingOpen) elAgingOpen.textContent = stats.agingOverOneWeek.open != null ? stats.agingOverOneWeek.open : 0;
-        if (elAgingAssigned) elAgingAssigned.textContent = stats.agingOverOneWeek.assigned != null ? stats.agingOverOneWeek.assigned : 0;
-        if (elAgingInProgress) elAgingInProgress.textContent = stats.agingOverOneWeek.inProgress != null ? stats.agingOverOneWeek.inProgress : 0;
+      if (elAgingOpen) elAgingOpen.textContent = agingData.open != null ? agingData.open : 0;
+      if (elAgingAssigned) elAgingAssigned.textContent = agingData.assigned != null ? agingData.assigned : 0;
+      if (elAgingInProgress) elAgingInProgress.textContent = agingData.inProgress != null ? agingData.inProgress : 0;
+
+      // Ensure header navigation badges (Open and Closed tabs) reflect all-time counts from dashboard API
+      var ob = $('#openBadge');
+      var cb = $('#closedBadge');
+      if (stats.all) {
+        var totalOpen = stats.openCounts ? stats.openCounts.total : ((stats.all.open || 0) + (stats.all.assigned || 0) + (stats.all.inProgress || 0));
+        var totalClosed = stats.closedCounts ? stats.closedCounts.total : stats.all.closed;
+        if (ob && totalOpen != null && (!pagination.open || pagination.open.total === undefined || pagination.open.total === 0)) {
+          ob.textContent = totalOpen;
+        }
+        if (cb && totalClosed != null) {
+          cb.textContent = totalClosed;
+        }
       }
     } else {
-      // Local fallback calculation if API is offline
-      var oCount = (pagination.open && pagination.open.total) || openJobs.length;
-      var cCount = (pagination.closed && pagination.closed.total) || closedJobs.length;
-      var tCount = oCount + cCount;
+      // Local fallback calculation if API is offline (respecting Maldives time & Saturday-Friday week)
+      var mvtNow = new Date(Date.now() + 5 * 60 * 60 * 1000);
+      var yyyy = mvtNow.getUTCFullYear();
+      var mm = pad(mvtNow.getUTCMonth() + 1);
+      var dd = pad(mvtNow.getUTCDate());
+      var todayStr = yyyy + '-' + mm + '-' + dd;
 
-      var assignedCount = openJobs.filter(function (j) { return j.status === 'Assigned'; }).length;
-      var inProgressCount = openJobs.filter(function (j) {
-        return j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress';
-      }).length;
-      var openOnlyCount = openJobs.filter(function (j) { return j.status === 'Open'; }).length;
+      var dow = mvtNow.getUTCDay();
+      var diffToSat = (dow + 1) % 7;
+      var satMvt = new Date(mvtNow.getTime() - diffToSat * 24 * 60 * 60 * 1000);
+      var friMvt = new Date(satMvt.getTime() + 6 * 24 * 60 * 60 * 1000);
+      var satStr = satMvt.getUTCFullYear() + '-' + pad(satMvt.getUTCMonth() + 1) + '-' + pad(satMvt.getUTCDate());
+      var friStr = friMvt.getUTCFullYear() + '-' + pad(friMvt.getUTCMonth() + 1) + '-' + pad(friMvt.getUTCDate());
+
+      var monthStartStr = yyyy + '-' + mm + '-01';
+      var lastDay = new Date(Date.UTC(yyyy, mvtNow.getUTCMonth() + 1, 0)).getUTCDate();
+      var monthEndStr = yyyy + '-' + mm + '-' + pad(lastDay);
+
+      var allJobsList = openJobs.concat(closedJobs);
+
+      var isJobInPeriod = function (j, period) {
+        var opParts = toMaldivesParts(j.opened);
+        var opYmd = opParts ? opParts.ymd : '';
+        if (!opYmd) return false;
+        if (period === 'today') return opYmd === todayStr;
+        if (period === 'weekly') return opYmd >= satStr && opYmd <= friStr;
+        if (period === 'monthly') return opYmd >= monthStartStr && opYmd <= monthEndStr;
+        return true;
+      };
+
+      var isJobClosedInPeriod = function (j, period) {
+        if (j.status !== 'Closed') return false;
+        var clParts = j.closedAt ? toMaldivesParts(j.closedAt) : toMaldivesParts(j.opened);
+        var clYmd = clParts ? clParts.ymd : '';
+        if (!clYmd) return false;
+        if (period === 'today') return clYmd === todayStr;
+        if (period === 'weekly') return clYmd >= satStr && clYmd <= friStr;
+        if (period === 'monthly') return clYmd >= monthStartStr && clYmd <= monthEndStr;
+        return true;
+      };
+
+      var countPeriod = function (period) {
+        var pJobs = allJobsList.filter(function (j) { return isJobInPeriod(j, period); });
+        var pClosed = allJobsList.filter(function (j) { return isJobClosedInPeriod(j, period); });
+        return {
+          total: pJobs.length,
+          open: pJobs.filter(function (j) { return j.status === 'Open'; }).length,
+          assigned: pJobs.filter(function (j) { return j.status === 'Assigned'; }).length,
+          inProgress: pJobs.filter(function (j) { return j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress'; }).length,
+          closed: pClosed.length
+        };
+      };
+
+      var tData = countPeriod('today');
+      var wData = countPeriod('weekly');
+      var mData = countPeriod('monthly');
+      var curData = curPeriod === 'weekly' ? wData : (curPeriod === 'monthly' ? mData : tData);
 
       var elTotalFallback = $('#statBoxTotal');
       var elOpenFallback = $('#statBoxOpen');
@@ -1486,18 +1554,18 @@
       var elInProgressFallback = $('#statBoxInProgress');
       var elClosedFallback = $('#statBoxClosed');
 
-      if (elTotalFallback) elTotalFallback.textContent = tCount;
-      if (elOpenFallback) elOpenFallback.textContent = openOnlyCount;
-      if (elAssignedFallback) elAssignedFallback.textContent = assignedCount;
-      if (elInProgressFallback) elInProgressFallback.textContent = inProgressCount;
-      if (elClosedFallback) elClosedFallback.textContent = cCount;
+      if (elTotalFallback) elTotalFallback.textContent = curData.total;
+      if (elOpenFallback) elOpenFallback.textContent = curData.open;
+      if (elAssignedFallback) elAssignedFallback.textContent = curData.assigned;
+      if (elInProgressFallback) elInProgressFallback.textContent = curData.inProgress;
+      if (elClosedFallback) elClosedFallback.textContent = curData.closed;
 
       var cTodayF = $('#pCountToday');
       var cWeeklyF = $('#pCountWeekly');
       var cMonthlyF = $('#pCountMonthly');
-      if (cTodayF) cTodayF.textContent = tCount;
-      if (cWeeklyF) cWeeklyF.textContent = tCount;
-      if (cMonthlyF) cMonthlyF.textContent = tCount;
+      if (cTodayF) cTodayF.textContent = tData.total;
+      if (cWeeklyF) cWeeklyF.textContent = wData.total;
+      if (cMonthlyF) cMonthlyF.textContent = mData.total;
 
       var now = new Date();
       var sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
@@ -1840,7 +1908,8 @@
       issued_to_team: issuedTo,
       issued_by_team: issuedBy,
       issued_by_team_details: fBy ? fBy.value : '',
-      creator_name: (currentUser && currentUser.name) || 'User',
+      creator_name: (currentUser && (currentUser.name || currentUser.username)) || 'User',
+      creator_email: (currentUser && (currentUser.email || currentUser.username)) || '',
       creator_position: (currentUser && currentUser.role && currentUser.role[0]) || 'Staff',
       job_detail: fDetails.value.trim(),
       assigned_dept: teamAssigned,
@@ -2014,6 +2083,9 @@
     assignTargetJob.status = 'Assigned';
     assignTargetJob.assigned = memberName || memberEmail;
     assignTargetJob.assigned_member = memberEmail;
+    var nowIso = new Date().toISOString();
+    assignTargetJob.assignDate = nowIso;
+    assignTargetJob.assignedDate = nowIso;
     if (subteamName && subteamName !== 'Select sub-team') {
       assignTargetJob.assignDept = subteamName;
     }
@@ -2698,7 +2770,7 @@
 
     var steps = [
       { done: true, cur: false, t: 'Job Created', s: fmt(j.opened), x: 'by ' + esc(j.by) },
-      { done: isAssigned, cur: !isAssigned && !closed, t: isAssigned ? 'Assigned to ' + esc(j.assigned) : 'Waiting for assignment', s: isAssigned ? (j.assignDept && j.assignDept !== 'NA' ? esc(j.assignDept) : 'Assigned') : 'Not assigned yet', x: '' },
+      { done: isAssigned, cur: !isAssigned && !closed, t: isAssigned ? 'Assigned to ' + esc(j.assigned) : 'Waiting for assignment', s: isAssigned ? (j.assignedDate ? fmt(j.assignedDate) : (j.assignDept && j.assignDept !== 'NA' ? esc(j.assignDept) : 'Assigned')) : 'Not assigned yet', x: isAssigned && j.assignDept && j.assignDept !== 'NA' ? esc(j.assignDept) : '' },
       { done: closed, cur: !closed && isAssigned, t: closed ? 'Closed' : 'In progress', s: closed ? (j.closedAt ? fmt(j.closedAt) : 'Closed') : 'Pending resolution', x: closed ? 'by ' + esc(j.closedBy || 'Staff') : '' }
     ];
 
@@ -2713,6 +2785,7 @@
       field('Area', esc(j.area)) + field('Sub-Area', na(j.sub)) +
       field('Open Date/Time', fmt(j.opened)) + field('Status', '<span class="tag st-' + j.status + '">' + j.status + '</span>') +
       field('Assign Sub-Dept.', na(j.assignDept)) + field('Assign To', na(j.assigned)) +
+      (j.assignedDate ? field('Assigned Date/Time', fmt(j.assignedDate)) : '') +
       (closed ? field('Closed By', na(j.closedBy)) + field('Closed Date/Time', fmt(j.closedAt)) : '') +
       // Remarks strictly shown for closed job
       (closed ? field('Remarks', na(j.remarks), true) : '');
@@ -3851,20 +3924,55 @@
     var btnPrint = $('#btnPrint');
     if (btnPrint) btnPrint.addEventListener('click', function () { window.print(); });
 
-    // Period boxes
+    // Period boxes: filter jobs according to active period (Today, Weekly [Sat-Fri], Monthly)
     var periodStatBoxes = $('#periodStatBoxes');
     if (periodStatBoxes) {
       periodStatBoxes.addEventListener('click', function (e) {
         var box = e.target.closest('.sbox');
         if (!box) return;
         var f = box.dataset.statusFilter;
+        var curP = state.period || 'today';
+
+        // Compute Maldives date range for the active period
+        var mvtNow = new Date(Date.now() + 5 * 60 * 60 * 1000);
+        var yyyy = mvtNow.getUTCFullYear();
+        var mm = pad(mvtNow.getUTCMonth() + 1);
+        var dd = pad(mvtNow.getUTCDate());
+        var todayStr = yyyy + '-' + mm + '-' + dd;
+        var fromDateStr = '';
+        var toDateStr = '';
+
+        if (curP === 'today') {
+          fromDateStr = todayStr;
+          toDateStr = todayStr;
+        } else if (curP === 'weekly') {
+          var dow = mvtNow.getUTCDay();
+          var diffToSat = (dow + 1) % 7;
+          var satDate = new Date(mvtNow.getTime() - diffToSat * 24 * 60 * 60 * 1000);
+          var friDate = new Date(satDate.getTime() + 6 * 24 * 60 * 60 * 1000);
+          fromDateStr = satDate.getUTCFullYear() + '-' + pad(satDate.getUTCMonth() + 1) + '-' + pad(satDate.getUTCDate());
+          toDateStr = friDate.getUTCFullYear() + '-' + pad(friDate.getUTCMonth() + 1) + '-' + pad(friDate.getUTCDate());
+        } else if (curP === 'monthly') {
+          fromDateStr = yyyy + '-' + mm + '-01';
+          var lastDay = new Date(Date.UTC(yyyy, mvtNow.getUTCMonth() + 1, 0)).getUTCDate();
+          toDateStr = yyyy + '-' + mm + '-' + pad(lastDay);
+        }
+
         if (f === 'Closed') {
-          setTab('closed');
+          setTab('closed').then(function () {
+            state.status = 'all';
+            state.fromDate = fromDateStr;
+            state.toDate = toDateStr;
+            renderFilters();
+            fetchJobs('closed', 1, true);
+          });
         } else {
           setTab('open').then(function () {
             state.status = (f === 'all' ? 'all' : f);
+            state.fromDate = fromDateStr;
+            state.toDate = toDateStr;
             renderFilters();
-            renderList('open');
+            fetchJobs('open', 1, true);
           });
         }
       });
@@ -4307,6 +4415,8 @@
 
         // Default to Open tab (loads live open jobs on start!)
         await setTab('open');
+        // Pre-fetch dynamic dashboard statistics to update tab badges & cache
+        renderRecentStats();
         return;
       }
     } catch (err) {
