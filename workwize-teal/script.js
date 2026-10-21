@@ -341,6 +341,7 @@
    * ONLY Superadmin and Oproadmin can delete jobs
    */
   function canDeleteJob() {
+    if (isAtmosphereAdmin()) return false;
     if (!currentUser) return false;
     if (isSuperAdmin()) return true;
     var desg = String(currentUser.desg || currentUser.designation || '').toUpperCase().trim();
@@ -727,8 +728,19 @@
     return false;
   }
 
+  // Atmosphere Admin view-only check (Point 14)
+  function isAtmosphereAdmin() {
+    if (!currentUser) return false;
+    var email = String(currentUser.email || currentUser.username || '').toLowerCase().trim();
+    var role = (currentUser.role && (Array.isArray(currentUser.role) ? currentUser.role[0] : currentUser.role)) || '';
+    var roleLower = String(role).toLowerCase().trim();
+    var desg = String(currentUser.desg || currentUser.designation || '').toLowerCase().trim();
+    return email.includes('atmosphere') || roleLower.includes('atmosphere') || desg.includes('atmosphere');
+  }
+
   // QuickFix condition: only assigned team (or Admin) can assign team members
   function canAssignJob(j) {
+    if (isAtmosphereAdmin()) return false;
     if (!j) return false;
     var closed = (j.status === 'Closed') || (state.tab === 'closed');
     if (closed) return false;
@@ -741,6 +753,7 @@
   // 2. MANAGER of the team to whom the job was issued ((issued_to_team === UserCurrentTeamId) && UserRoles.includes('MANAGER'))
   // 3. Supervisor assigned to this specific job (assigned_supervisor === userEmail)
   function canCloseJob(j) {
+    if (isAtmosphereAdmin()) return false;
     if (!j) return false;
     var closed = (j.status === 'Closed') || (state.tab === 'closed');
     if (closed) return false;
@@ -763,20 +776,81 @@
     return false;
   }
 
+  // Point 6: If wrongly assigned to a team, 'Issued By' can change team while job is in 'OPEN' status
+  function canChangeTeam(j) {
+    if (isAtmosphereAdmin()) return false;
+    if (!j) return false;
+    if (state.tab === 'closed' || j.status === 'Closed') return false;
+    if (j.status !== 'Open') return false;
+    if (isAdmin() || isSuperAdmin()) return true;
+    var userTeamId = userCurrentTeamId;
+    var userEmail = String((currentUser && (currentUser.email || currentUser.username)) || '').toLowerCase().trim();
+    var userName = String((currentUser && currentUser.name) || '').toLowerCase().trim();
+    var jBy = String(j.by || '').toLowerCase().trim();
+    var jDetails = String(j.issued_by_team_details || '').toLowerCase().trim();
+    if (userEmail && (jBy.includes(userEmail) || jDetails.includes(userEmail))) return true;
+    if (userName && (jBy.includes(userName) || jDetails.includes(userName))) return true;
+    if (userTeamId && String(j.issued_by_team) === String(userTeamId)) return true;
+    return false;
+  }
+
+  // Point 3: Complete job details sharing via WhatsApp
+  function shareJobWhatsApp(job) {
+    if (!job) return;
+    var lines = [
+      '🔧 *WorkWize - QuickFix Job Details*',
+      '--------------------------------',
+      '🆔 *Job ID:* ' + (job.propId || job.id || 'NA'),
+      '📌 *Status:* ' + (job.status || 'Open'),
+      '🏢 *Property:* ' + getActivePropertyName(),
+      '📍 *Area:* ' + (job.area || 'NA') + (job.sub ? ' (' + job.sub + ')' : ''),
+      '👥 *Issued To:* ' + (job.dept || 'NA'),
+      '👤 *Issued By:* ' + (job.by || job.issued_by_team_details || 'NA'),
+      '👷 *Assigned To:* ' + (job.assigned || 'Not assigned') + (job.assignDept ? ' [' + job.assignDept + ']' : ''),
+      '📅 *Opened:* ' + fmt(job.opened),
+      (job.closedAt ? '🏁 *Closed:* ' + fmt(job.closedAt) : ''),
+      (job.closedBy ? '👤 *Closed By:* ' + job.closedBy : ''),
+      (job.remarks ? '📝 *Remarks:* ' + job.remarks : ''),
+      '📝 *Details:* ' + (job.details || 'NA'),
+      (job.photoBefore && job.photoBefore !== 'NA' && job.photoBefore !== 'na' ? '📷 *Photo Before:* ' + job.photoBefore : ''),
+      (job.photoAfter && job.photoAfter !== 'NA' && job.photoAfter !== 'na' ? '📷 *Photo After:* ' + job.photoAfter : ''),
+      '--------------------------------',
+      'Sent via WorkWize QuickFix'
+    ].filter(Boolean).join('\n');
+
+    var url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(lines);
+    window.open(url, '_blank');
+  }
+
   /* ================= 3-Dot Actions Menu ================= */
   function menuHTML(j) {
     var closed = (j.status === 'Closed') || (state.tab === 'closed');
     var isAssigned = j.status === 'Assigned';
+    var isAtmAdmin = isAtmosphereAdmin();
 
-    // Assignment rule: Only the team to whom the job was issued (or SuperAdmin/Admin) can assign team members!
+    var shareBtn = '<button data-act="share-wa" data-id="' + j.id + '" style="color:#25d366;">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg> Share via WhatsApp</button>';
+
+    // Atmosphere Admin has strictly view-only access across all resorts (Point 14)
+    if (isAtmAdmin) {
+      return '<div class="dots"><button type="button" data-act="menu" aria-label="More options">' + I.dots + '</button><div class="menu">' +
+        '<button data-act="view" data-id="' + j.id + '">' + I.eye + ' View Details</button>' +
+        shareBtn +
+        '</div></div>';
+    }
+
     var canAssign = canAssignJob(j);
-    // Status change / close permission: only authorized team manager, assigned supervisor, or Admin
     var canClose = canCloseJob(j);
 
     var editBtn = '';
     // Edit Job ONLY for jobs with status 'Open' in Open tab (not Assigned or Closed)
     if (state.tab === 'open' && j.status === 'Open') {
       editBtn = '<button data-act="edit" data-id="' + j.id + '">' + I.edit + ' Edit Job</button>';
+    }
+
+    var changeTeamBtn = '';
+    if (canChangeTeam(j)) {
+      changeTeamBtn = '<button data-act="change-team" data-id="' + j.id + '">' + I.dept + ' Change Team</button>';
     }
 
     var assignBtn = '';
@@ -800,7 +874,9 @@
 
     return '<div class="dots"><button type="button" data-act="menu" aria-label="More options">' + I.dots + '</button><div class="menu">' +
       '<button data-act="view" data-id="' + j.id + '">' + I.eye + ' View Details</button>' +
+      shareBtn +
       editBtn +
+      changeTeamBtn +
       assignBtn +
       closeBtn +
       deleteBtn +
@@ -1114,30 +1190,24 @@
   }
 
   function renderList(tab) {
-    var all = listFor(tab);
+    tab = tab || state.tab;
     var cont = $('#' + tab + 'Cards');
     if (!cont) return;
 
     var ps = state.pageSize || (pagination[tab] && pagination[tab].pageSize) || 25;
-    var total = all.length;
-    var pages = Math.max(1, Math.ceil(total / ps));
-    var cur = Math.min(Math.max(1, (pagination[tab] && pagination[tab].page) || 1), pages);
+    var total = (pagination[tab] && pagination[tab].total != null) ? pagination[tab].total : 0;
+    var pages = (pagination[tab] && pagination[tab].totalPages != null) ? pagination[tab].totalPages : Math.max(1, Math.ceil(total / ps));
+    var cur = (pagination[tab] && pagination[tab].page) || 1;
 
-    pagination[tab] = {
-      page: cur,
-      pageSize: ps,
-      totalPages: pages,
-      total: total
-    };
-
-    var start = (cur - 1) * ps;
-    var pageItems = all.slice(start, start + ps);
+    // Use current server-fetched paged items directly
+    var currentList = (tab === 'closed') ? closedJobs : openJobs;
+    var pageItems = currentList;
 
     cont.className = 'cards' + (state.layout === 'list' ? ' list' : '');
     cont.innerHTML = pageItems.length
       ? pageItems.map(state.layout === 'list' ? rowHTML : cardHTML).join('')
       : '<div class="empty"><div class="big">&#128269;</div>' +
-        (words().length || state.area !== 'all' || state.status !== 'all' || state.issuedBy !== 'all' || state.issuedTo !== 'all' || state.assignedTo !== 'all' || state.fromDate || state.toDate
+        (state.q || state.area !== 'all' || state.status !== 'all' || state.issuedBy !== 'all' || state.issuedTo !== 'all' || state.assignedTo !== 'all' || state.fromDate || state.toDate
           ? 'No jobs match your filters.<br><button class="link" data-act="clearAll">Clear filters</button>'
           : 'No ' + tab + ' jobs found for this property.') +
         '</div>';
@@ -1150,208 +1220,141 @@
     renderFilters();
   }
 
-  /* ================= Fetch All API Jobs Helper ================= */
-  async function fetchAllJobsFromApi(jobList) {
-    var BATCH_SIZE = 500;
-    var firstRes = await api.getQuickFixJobs({
-      propId: currentPropertyId,
-      jobList: jobList,
-      pageNumber: 1,
-      pageSize: BATCH_SIZE
-    });
+  /* ================= Dynamic Server-Side Job Fetching ================= */
+  async function fetchJobs(tab, pageNumber, preserveFilter) {
+    if (!currentPropertyId) return;
+    tab = tab || state.tab;
+    pageNumber = pageNumber || (pagination[tab] && pagination[tab].page) || 1;
+    var ps = state.pageSize || 25;
+    setLoading(true, tab);
 
-    if (!firstRes) return null;
+    try {
+      var sortParam = state.sort || 'new';
+      var sortOrder = (sortParam === 'old') ? 'asc' : 'desc';
 
-    if (firstRes.teams && firstRes.teams.length > 0) cachedTeams = firstRes.teams;
-    if (firstRes.areas && firstRes.areas.length > 0) cachedAreas = firstRes.areas;
-    if (firstRes.userTeam) cachedUserTeams = firstRes.userTeam;
-    updateUserTeamContext();
+      var queryParams = {
+        propId: currentPropertyId,
+        jobList: (tab === 'closed' || tab === 'close') ? 'close' : 'open',
+        pageNumber: pageNumber,
+        pageSize: ps,
+        search: (state.q || '').trim(),
+        status: (tab === 'closed' ? 'Closed' : state.status) || 'all',
+        areaId: state.area || 'all',
+        issuedBy: state.issuedBy || 'all',
+        issuedTo: state.issuedTo || 'all',
+        assignedTo: state.assignedTo || 'all',
+        fromDate: state.fromDate || '',
+        toDate: state.toDate || '',
+        sortBy: sortParam,
+        sortOrder: sortOrder,
+        includeUploads: true
+      };
 
-    var rawList = ((jobList === 'close' ? firstRes.close : firstRes.open) || []).slice();
-    var totalPagesKey = (jobList === 'close') ? 'totalClosePages' : 'totalOpenPages';
-    var totalPages = (firstRes.pagination && firstRes.pagination[totalPagesKey])
-      ? parseInt(firstRes.pagination[totalPagesKey], 10)
-      : 1;
+      var res = await api.getQuickFixJobs(queryParams);
+      if (!res) return;
 
-    if (totalPages > 1) {
-      var pagePromises = [];
-      for (var p = 2; p <= totalPages; p++) {
-        pagePromises.push(
-          api.getQuickFixJobs({
-            propId: currentPropertyId,
-            jobList: jobList,
-            pageNumber: p,
-            pageSize: BATCH_SIZE
-          })
-        );
-      }
-      var moreResponses = await Promise.all(pagePromises);
-      moreResponses.forEach(function (r) {
-        if (!r) return;
-        var list = (jobList === 'close' ? r.close : r.open) || [];
-        rawList = rawList.concat(list);
+      if (res.teams && res.teams.length > 0) cachedTeams = res.teams;
+      if (res.areas && res.areas.length > 0) cachedAreas = res.areas;
+      if (res.userTeam) cachedUserTeams = res.userTeam;
+      updateUserTeamContext();
+
+      var rawList = ((tab === 'closed' || tab === 'close') ? res.close : res.open) || [];
+
+      // Filter out deleted jobs
+      var uniqueList = [];
+      var seen = {};
+      rawList.forEach(function (item) {
+        if (!item) return;
+        var key = item.jobId != null ? String(item.jobId) : (item.id != null ? String(item.id) : null);
+        if (key && deletedJobIds.has(key)) return;
+        if (item.id != null && deletedJobIds.has(String(item.id))) return;
+        if (item.jobId != null && deletedJobIds.has(String(item.jobId))) return;
+        if (!key || !seen[key]) {
+          if (key) seen[key] = true;
+          uniqueList.push(item);
+        }
       });
-    }
 
-    // Deduplicate by jobId / id and filter out deleted jobs
-    var seen = {};
-    var uniqueList = [];
-    rawList.forEach(function (item) {
-      if (!item) return;
-      var key = item.jobId != null ? String(item.jobId) : (item.id != null ? String(item.id) : null);
-      if (key && deletedJobIds.has(key)) return;
-      if (item.id != null && deletedJobIds.has(String(item.id))) return;
-      if (item.jobId != null && deletedJobIds.has(String(item.jobId))) return;
-      if (!key || !seen[key]) {
-        if (key) seen[key] = true;
-        uniqueList.push(item);
-      }
-    });
+      // Maintain persistent job IDs and serial numbers
+      var activePropName = getActivePropertyName();
+      var jobCustomIdMap = {};
+      uniqueList.forEach(function (op) {
+        var key = op.jobId != null ? String(op.jobId) : (op.id != null ? String(op.id) : '');
+        var existing = (op.jobId != null && globalJobCustomIdMap[String(op.jobId)])
+          || (op.id != null && globalJobCustomIdMap[String(op.id)])
+          || (op.propId && parseFormattedPropId(op.propId) ? op.propId : null);
+        if (existing) {
+          jobCustomIdMap[key] = existing;
+          if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = existing;
+          if (op.id != null) globalJobCustomIdMap[String(op.id)] = existing;
+        } else {
+          var dateCode = getJobDateCode(op.openDate);
+          var sNum = op.jobId || op.id || 1;
+          var newId = activePropName + '-' + dateCode + '-' + pad3(sNum);
+          jobCustomIdMap[key] = newId;
+          if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = newId;
+          if (op.id != null) globalJobCustomIdMap[String(op.id)] = newId;
+        }
+      });
+      saveJobCustomIdMap();
 
-    // Generate custom daily job ID: [PropertyPrefix]-[openDate (DDMMYY)]-[seq (001)]
-    // Example: Testing-141026-001
-    var activePropName = getActivePropertyName();
+      var mappedItems = uniqueList.map(function (op, index) {
+        return mapApiJob(op, index, jobCustomIdMap);
+      });
 
-    // 1. Populate globalJobCustomIdMap with existing propIds from memory
-    openJobs.concat(closedJobs).forEach(function (j) {
-      if (j && j.propId) {
-        var parsed = parseFormattedPropId(j.propId);
-        if (parsed) {
-          var idStr = activePropName + '-' + parsed.dateCode + '-' + pad3(parsed.serial);
-          if (j.id != null) globalJobCustomIdMap[String(j.id)] = idStr;
-          if (j.jobId != null) globalJobCustomIdMap[String(j.jobId)] = idStr;
+      var totalCount = mappedItems.length;
+      var totalPages = Math.max(1, Math.ceil(totalCount / ps));
+
+      if (res.pagination) {
+        if (tab === 'closed' || tab === 'close') {
+          if (res.pagination.totalClose != null) totalCount = parseInt(res.pagination.totalClose, 10);
+          if (res.pagination.totalClosePages != null) totalPages = parseInt(res.pagination.totalClosePages, 10);
+          else totalPages = Math.max(1, Math.ceil(totalCount / ps));
+        } else {
+          if (res.pagination.totalOpen != null) totalCount = parseInt(res.pagination.totalOpen, 10);
+          if (res.pagination.totalOpenPages != null) totalPages = parseInt(res.pagination.totalOpenPages, 10);
+          else totalPages = Math.max(1, Math.ceil(totalCount / ps));
         }
       }
-    });
 
-    // 2. Pre-seed any formatted propIds already provided in raw API / mock items
-    uniqueList.forEach(function (op) {
-      if (op && op.propId) {
-        var parsed = parseFormattedPropId(op.propId);
-        if (parsed) {
-          var idStr = activePropName + '-' + parsed.dateCode + '-' + pad3(parsed.serial);
-          if (op.id != null) globalJobCustomIdMap[String(op.id)] = idStr;
-          if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = idStr;
-        }
-      }
-    });
-
-    // 3. Find highest continuous sequence number currently used
-    var maxSeq = 0;
-    Object.keys(globalJobCustomIdMap).forEach(function (k) {
-      var val = globalJobCustomIdMap[k];
-      var parsed = parseFormattedPropId(val);
-      if (parsed && parsed.serial > maxSeq) {
-        maxSeq = parsed.serial;
-      }
-    });
-
-    // 4. Sort chronologically ascending to assign continuous sequence numbers (001, 002... 005, 006...)
-    var sortedByDate = uniqueList.slice().sort(function (a, b) {
-      var da = parseJobDate(a.openDate) || new Date(0);
-      var db = parseJobDate(b.openDate) || new Date(0);
-      if (da - db !== 0) return da - db;
-      var ida = String(a.jobId != null ? a.jobId : (a.id != null ? a.id : ''));
-      var idb = String(b.jobId != null ? b.jobId : (b.id != null ? b.id : ''));
-      return ida.localeCompare(idb);
-    });
-
-    var jobCustomIdMap = {};
-    sortedByDate.forEach(function (op, idx) {
-      var key = op.jobId != null ? String(op.jobId) : (op.id != null ? String(op.id) : ('idx_' + idx));
-      var existingId = (op.jobId != null && globalJobCustomIdMap[String(op.jobId)])
-        || (op.id != null && globalJobCustomIdMap[String(op.id)])
-        || globalJobCustomIdMap[key];
-
-      var parsedExisting = parseFormattedPropId(existingId);
-      if (parsedExisting) {
-        var refreshedId = activePropName + '-' + parsedExisting.dateCode + '-' + pad3(parsedExisting.serial);
-        jobCustomIdMap[key] = refreshedId;
-        globalJobCustomIdMap[key] = refreshedId;
-        if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = refreshedId;
-        if (op.id != null) globalJobCustomIdMap[String(op.id)] = refreshedId;
+      if (tab === 'closed' || tab === 'close') {
+        closedJobs = mappedItems;
+        pagination.closed = {
+          total: totalCount,
+          page: pageNumber,
+          pageSize: ps,
+          totalPages: totalPages
+        };
+        var cb = $('#closedBadge');
+        if (cb) cb.textContent = totalCount;
       } else {
-        maxSeq++;
-        var dateCode = getJobDateCode(op.openDate);
-        var newId = activePropName + '-' + dateCode + '-' + pad3(maxSeq);
-        jobCustomIdMap[key] = newId;
-        globalJobCustomIdMap[key] = newId;
-        if (op.jobId != null) globalJobCustomIdMap[String(op.jobId)] = newId;
-        if (op.id != null) globalJobCustomIdMap[String(op.id)] = newId;
+        openJobs = mappedItems;
+        pagination.open = {
+          total: totalCount,
+          page: pageNumber,
+          pageSize: ps,
+          totalPages: totalPages
+        };
+        var ob = $('#openBadge');
+        if (ob) ob.textContent = totalCount;
       }
-    });
-    saveJobCustomIdMap();
 
-    var mappedItems = uniqueList.map(function (op, index) {
-      return mapApiJob(op, index, jobCustomIdMap);
-    });
-
-    return {
-      firstRes: firstRes,
-      items: mappedItems,
-      total: (firstRes.pagination && (jobList === 'close' ? firstRes.pagination.totalClose : firstRes.pagination.totalOpen) !== undefined)
-        ? parseInt(jobList === 'close' ? firstRes.pagination.totalClose : firstRes.pagination.totalOpen, 10)
-        : mappedItems.length
-    };
+      renderList(tab);
+      renderRecentStats();
+    } catch (err) {
+      handleApiError(err, tab);
+    } finally {
+      setLoading(false, tab);
+    }
   }
 
   /* ================= On-Demand Tab-Specific Loading ================= */
-  async function fetchOpenJobs() {
-    if (!currentPropertyId) return;
-    setLoading(true, 'open');
-    try {
-      var res = await fetchAllJobsFromApi('open');
-      if (res) {
-        openJobs = res.items;
-        var total = res.items.length;
-
-        pagination.open = {
-          total: total,
-          page: 1,
-          pageSize: state.pageSize || 25,
-          totalPages: Math.max(1, Math.ceil(total / (state.pageSize || 25)))
-        };
-
-        var ob = $('#openBadge');
-        if (ob) ob.textContent = total;
-
-        renderList('open');
-        renderRecentStats();
-      }
-    } catch (err) {
-      handleApiError(err, 'open');
-    } finally {
-      setLoading(false, 'open');
-    }
+  async function fetchOpenJobs(page, preserve) {
+    return fetchJobs('open', page, preserve);
   }
 
-  async function fetchClosedJobs() {
-    if (!currentPropertyId) return;
-    setLoading(true, 'closed');
-    try {
-      var res = await fetchAllJobsFromApi('close');
-      if (res) {
-        closedJobs = res.items;
-        var total = res.items.length;
-
-        pagination.closed = {
-          total: total,
-          page: 1,
-          pageSize: state.pageSize || 25,
-          totalPages: Math.max(1, Math.ceil(total / (state.pageSize || 25)))
-        };
-
-        var cb = $('#closedBadge');
-        if (cb) cb.textContent = total;
-
-        renderList('closed');
-        renderRecentStats();
-      }
-    } catch (err) {
-      handleApiError(err, 'closed');
-    } finally {
-      setLoading(false, 'closed');
-    }
+  async function fetchClosedJobs(page, preserve) {
+    return fetchJobs('closed', page, preserve);
   }
 
   function setLoading(loading, tab) {
@@ -1378,26 +1381,25 @@
   }
 
   window.WorkWizeReloadTab = function () {
-    if (state.tab === 'open') fetchOpenJobs(1);
-    else if (state.tab === 'closed') fetchClosedJobs(1);
+    if (state.tab === 'open') fetchJobs('open', (pagination.open && pagination.open.page) || 1, true);
+    else if (state.tab === 'closed') fetchJobs('closed', (pagination.closed && pagination.closed.page) || 1, true);
   };
 
   /**
    * Tab click handler:
-   * "our tab click krna pa data reload honga tab accoridng ek sath data reload nhi honga"
    * Only loads the data for the clicked tab!
+   * Preserves filters so user does not need to reapply them (Point 21).
    */
-  async function setTab(tab) {
+  async function setTab(tab, preserveFilters) {
     state.tab = tab;
-    state.status = 'all';
-    state.issuedBy = 'all';
-    state.issuedTo = 'all';
-    state.assignedTo = 'all';
-    state.fromDate = '';
-    state.toDate = '';
+    if (!preserveFilters) {
+      if (tab === 'closed') {
+        state.status = 'Closed';
+      } else if (state.status === 'Closed') {
+        state.status = 'all';
+      }
+    }
     state.highlightedJobId = null;
-    var fd = $('#fltFromDate'); if (fd) { fd.value = ''; fd.removeAttribute('max'); }
-    var td = $('#fltToDate'); if (td) { td.value = ''; td.removeAttribute('min'); }
     closeFilterSidebar();
 
     $$('.tab').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
@@ -1409,74 +1411,115 @@
       initNewJobForm();
       renderRecentStats();
     } else if (tab === 'open') {
-      // Reload ONLY Open tab data
-      await fetchOpenJobs(1, state.pageSize);
+      await fetchJobs('open', 1, true);
     } else if (tab === 'closed') {
-      // Reload ONLY Closed tab data
-      await fetchClosedJobs(1, state.pageSize);
+      await fetchJobs('closed', 1, true);
     }
     window.scrollTo(0, 0);
   }
 
-  /* ================= Job Statistics Box (New Job View) ================= */
-  function renderRecentStats() {
+  /* ================= Job Statistics Box (Dynamic Dashboard API) ================= */
+  var cachedDashboardStats = null;
+
+  async function renderRecentStats() {
     var curPeriod = state.period || 'today';
-    var oCount = pagination.open.total || openJobs.length;
-    var cCount = pagination.closed.total || closedJobs.length;
-    var tCount = oCount + cCount;
 
-    var assignedCount = openJobs.filter(function (j) { return j.status === 'Assigned'; }).length;
-    var inProgressCount = openJobs.filter(function (j) {
-      return j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress';
-    }).length;
-    var openOnlyCount = openJobs.filter(function (j) { return j.status === 'Open'; }).length;
+    // Point 2: Dynamic Dashboard stats from backend API
+    if (currentPropertyId && api.getDashboardStats) {
+      try {
+        var resp = await api.getDashboardStats(currentPropertyId);
+        if (resp && (resp.status === 'success' || resp.data) && (resp.data || resp.today)) {
+          cachedDashboardStats = resp.data || resp;
+        }
+      } catch (e) {
+        console.warn('Dashboard stats API call fallback:', e);
+      }
+    }
 
-    var elTotal = $('#statBoxTotal');
-    var elOpen = $('#statBoxOpen');
-    var elAssigned = $('#statBoxAssigned');
-    var elInProgress = $('#statBoxInProgress');
-    var elClosed = $('#statBoxClosed');
+    var stats = cachedDashboardStats;
+    if (stats) {
+      var pData = stats[curPeriod] || stats.today || {};
+      var elTotal = $('#statBoxTotal');
+      var elOpen = $('#statBoxOpen');
+      var elAssigned = $('#statBoxAssigned');
+      var elInProgress = $('#statBoxInProgress');
+      var elClosed = $('#statBoxClosed');
 
-    if (elTotal) elTotal.textContent = tCount;
-    if (elOpen) elOpen.textContent = openOnlyCount;
-    if (elAssigned) elAssigned.textContent = assignedCount;
-    if (elInProgress) elInProgress.textContent = inProgressCount;
-    if (elClosed) elClosed.textContent = cCount;
+      if (elTotal) elTotal.textContent = pData.total != null ? pData.total : 0;
+      if (elOpen) elOpen.textContent = pData.open != null ? pData.open : 0;
+      if (elAssigned) elAssigned.textContent = pData.assigned != null ? pData.assigned : 0;
+      if (elInProgress) elInProgress.textContent = pData.inProgress != null ? pData.inProgress : 0;
+      if (elClosed) elClosed.textContent = pData.closed != null ? pData.closed : 0;
 
-    var cToday = $('#pCountToday');
-    var cWeekly = $('#pCountWeekly');
-    var cMonthly = $('#pCountMonthly');
-    if (cToday) cToday.textContent = tCount;
-    if (cWeekly) cWeekly.textContent = tCount;
-    if (cMonthly) cMonthly.textContent = tCount;
+      var cToday = $('#pCountToday');
+      var cWeekly = $('#pCountWeekly');
+      var cMonthly = $('#pCountMonthly');
+      if (cToday && stats.today) cToday.textContent = stats.today.total != null ? stats.today.total : 0;
+      if (cWeekly && stats.weekly) cWeekly.textContent = stats.weekly.total != null ? stats.weekly.total : 0;
+      if (cMonthly && stats.monthly) cMonthly.textContent = stats.monthly.total != null ? stats.monthly.total : 0;
 
-    // Aging of Jobs (> 1 week old)
-    var now = new Date();
-    var sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
-    var isWeekOld = function (j) {
-      var opD = parseJobDate(j.opened);
-      return opD ? (now.getTime() - opD.getTime() > sevenDaysMs) : false;
-    };
+      // Aging jobs (> 1 week old) from dynamic stats API
+      var elAgingOpen = $('#agingOpenCount');
+      var elAgingAssigned = $('#agingAssignedCount');
+      var elAgingInProgress = $('#agingInProgressCount');
 
-    var agingOpen = openJobs.filter(function (j) {
-      return j.status === 'Open' && isWeekOld(j);
-    }).length;
+      if (stats.agingOverOneWeek) {
+        if (elAgingOpen) elAgingOpen.textContent = stats.agingOverOneWeek.open != null ? stats.agingOverOneWeek.open : 0;
+        if (elAgingAssigned) elAgingAssigned.textContent = stats.agingOverOneWeek.assigned != null ? stats.agingOverOneWeek.assigned : 0;
+        if (elAgingInProgress) elAgingInProgress.textContent = stats.agingOverOneWeek.inProgress != null ? stats.agingOverOneWeek.inProgress : 0;
+      }
+    } else {
+      // Local fallback calculation if API is offline
+      var oCount = (pagination.open && pagination.open.total) || openJobs.length;
+      var cCount = (pagination.closed && pagination.closed.total) || closedJobs.length;
+      var tCount = oCount + cCount;
 
-    var agingAssigned = openJobs.filter(function (j) {
-      return j.status === 'Assigned' && isWeekOld(j);
-    }).length;
+      var assignedCount = openJobs.filter(function (j) { return j.status === 'Assigned'; }).length;
+      var inProgressCount = openJobs.filter(function (j) {
+        return j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress';
+      }).length;
+      var openOnlyCount = openJobs.filter(function (j) { return j.status === 'Open'; }).length;
 
-    var agingInProgress = openJobs.filter(function (j) {
-      return (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress') && isWeekOld(j);
-    }).length;
+      var elTotalFallback = $('#statBoxTotal');
+      var elOpenFallback = $('#statBoxOpen');
+      var elAssignedFallback = $('#statBoxAssigned');
+      var elInProgressFallback = $('#statBoxInProgress');
+      var elClosedFallback = $('#statBoxClosed');
 
-    var elAgingOpen = $('#agingOpenCount');
-    var elAgingAssigned = $('#agingAssignedCount');
-    var elAgingInProgress = $('#agingInProgressCount');
+      if (elTotalFallback) elTotalFallback.textContent = tCount;
+      if (elOpenFallback) elOpenFallback.textContent = openOnlyCount;
+      if (elAssignedFallback) elAssignedFallback.textContent = assignedCount;
+      if (elInProgressFallback) elInProgressFallback.textContent = inProgressCount;
+      if (elClosedFallback) elClosedFallback.textContent = cCount;
 
-    if (elAgingOpen) elAgingOpen.textContent = agingOpen;
-    if (elAgingAssigned) elAgingAssigned.textContent = agingAssigned;
-    if (elAgingInProgress) elAgingInProgress.textContent = agingInProgress;
+      var cTodayF = $('#pCountToday');
+      var cWeeklyF = $('#pCountWeekly');
+      var cMonthlyF = $('#pCountMonthly');
+      if (cTodayF) cTodayF.textContent = tCount;
+      if (cWeeklyF) cWeeklyF.textContent = tCount;
+      if (cMonthlyF) cMonthlyF.textContent = tCount;
+
+      var now = new Date();
+      var sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+      var isWeekOld = function (j) {
+        var opD = parseJobDate(j.opened);
+        return opD ? (now.getTime() - opD.getTime() > sevenDaysMs) : false;
+      };
+
+      var agingOpen = openJobs.filter(function (j) { return j.status === 'Open' && isWeekOld(j); }).length;
+      var agingAssigned = openJobs.filter(function (j) { return j.status === 'Assigned' && isWeekOld(j); }).length;
+      var agingInProgress = openJobs.filter(function (j) {
+        return (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress') && isWeekOld(j);
+      }).length;
+
+      var elAgingOpenF = $('#agingOpenCount');
+      var elAgingAssignedF = $('#agingAssignedCount');
+      var elAgingInProgressF = $('#agingInProgressCount');
+
+      if (elAgingOpenF) elAgingOpenF.textContent = agingOpen;
+      if (elAgingAssignedF) elAgingAssignedF.textContent = agingAssigned;
+      if (elAgingInProgressF) elAgingInProgressF.textContent = agingInProgress;
+    }
 
     $$('.rtab').forEach(function (btn) {
       btn.classList.toggle('on', btn.dataset.period === curPeriod);
@@ -1857,6 +1900,9 @@
     if (job.issued_to_team !== userCurrentTeamId && cachedTeams) {
       targetTeam = cachedTeams.find(function (t) { return t.teamId === job.issued_to_team || t.teamName === job.dept; });
       if (targetTeam && targetTeam.propsubteams) subTeams = targetTeam.propsubteams;
+    } else if (cachedTeams) {
+      targetTeam = cachedTeams.find(function (t) { return t.teamId === userCurrentTeamId || t.teamName === job.dept; });
+      if (targetTeam && targetTeam.propsubteams) subTeams = targetTeam.propsubteams;
     }
 
     var deptHtml = '';
@@ -1864,8 +1910,15 @@
       subTeams.forEach(function (st) {
         deptHtml += '<option value="' + esc(st.subteamId) + '">' + esc(st.subteamName) + '</option>';
       });
-      asDept.innerHTML = deptHtml;
-      populateAssignMembers(subTeams[0].subteamId);
+      // Point 17: Super Admin can assign to any member belonging to target team
+      if (isSuperAdmin() && targetTeam) {
+        deptHtml = '<option value="__all__">All ' + esc(targetTeam.teamName || job.dept) + ' Members</option>' + deptHtml;
+        asDept.innerHTML = deptHtml;
+        populateAssignMembers('__all__');
+      } else {
+        asDept.innerHTML = deptHtml;
+        populateAssignMembers(subTeams[0].subteamId);
+      }
     } else if (targetTeam && targetTeam.members && targetTeam.members.length > 0) {
       asDept.innerHTML = '<option value="' + esc(targetTeam.teamId) + '">' + esc(targetTeam.teamName) + '</option>';
       var mHtml = '<option value="">-- Select Member to Assign --</option>';
@@ -1887,9 +1940,35 @@
     var asMember = $('#asMember');
     if (!asMember) return;
     var subTeams = userSubTeamData;
+    var targetTeam = null;
     if (assignTargetJob && assignTargetJob.issued_to_team !== userCurrentTeamId && cachedTeams) {
-      var targetTeam = cachedTeams.find(function (t) { return t.teamId === assignTargetJob.issued_to_team || t.teamName === assignTargetJob.dept; });
+      targetTeam = cachedTeams.find(function (t) { return t.teamId === assignTargetJob.issued_to_team || t.teamName === assignTargetJob.dept; });
       if (targetTeam && targetTeam.propsubteams) subTeams = targetTeam.propsubteams;
+    } else if (cachedTeams) {
+      targetTeam = cachedTeams.find(function (t) { return t.teamId === userCurrentTeamId || (assignTargetJob && t.teamName === assignTargetJob.dept); });
+      if (targetTeam && targetTeam.propsubteams) subTeams = targetTeam.propsubteams;
+    }
+
+    if (subteamId === '__all__' && targetTeam) {
+      var allMembers = [];
+      if (targetTeam.members) allMembers = allMembers.concat(targetTeam.members);
+      if (targetTeam.propsubteams) {
+        targetTeam.propsubteams.forEach(function (pst) {
+          if (pst.subteams) allMembers = allMembers.concat(pst.subteams);
+        });
+      }
+      var seen = {};
+      var allHtml = '<option value="">-- Select Member to Assign --</option>';
+      allMembers.forEach(function (m) {
+        var em = m.email || m.userName;
+        if (em && !seen[em]) {
+          seen[em] = true;
+          var fullName = ((m.firstName || '') + ' ' + (m.lastName || '')).trim() || m.name || em;
+          allHtml += '<option value="' + esc(em) + '">' + esc(fullName) + ' (' + esc(em) + ')</option>';
+        }
+      });
+      asMember.innerHTML = allHtml;
+      return;
     }
 
     var st = (subTeams || []).find(function (item) { return item.subteamId === subteamId; });
@@ -1898,6 +1977,11 @@
     if (st && st.subteams && st.subteams.length > 0) {
       st.subteams.forEach(function (m) {
         var fullName = (m.firstName + ' ' + m.lastName).trim();
+        html += '<option value="' + esc(m.email) + '">' + esc(fullName) + ' (' + esc(m.email) + ')</option>';
+      });
+    } else if (targetTeam && targetTeam.members && targetTeam.members.length > 0) {
+      targetTeam.members.forEach(function (m) {
+        var fullName = ((m.firstName || '') + ' ' + (m.lastName || '')).trim() || m.name || m.email;
         html += '<option value="' + esc(m.email) + '">' + esc(fullName) + ' (' + esc(m.email) + ')</option>';
       });
     }
@@ -2636,13 +2720,21 @@
     var viewActions = '';
     var canAssign = canAssignJob(j);
     var canClose = canCloseJob(j);
+    var canChange = canChangeTeam(j);
 
-    if (!closed) {
-      if (canAssign) {
-        viewActions += '<button class="btn p" data-vact="assign">' + I.user + (isAssigned ? ' Reassign' : ' Assign Job') + '</button>';
+    viewActions += '<button type="button" class="btn" data-vact="share-wa" style="background:#25D366;color:#fff;border-color:#25D366;display:inline-flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg> Share via WhatsApp</button>';
+
+    if (!isAtmosphereAdmin()) {
+      if (canChange) {
+        viewActions += '<button type="button" class="btn s" data-vact="change-team">' + I.dept + ' Change Team</button>';
       }
-      if (canClose) {
-        viewActions += '<button class="btn g" data-vact="close">' + I.check + ' Close Job</button>';
+      if (!closed) {
+        if (canAssign) {
+          viewActions += '<button class="btn p" data-vact="assign">' + I.user + (isAssigned ? ' Reassign' : ' Assign Job') + '</button>';
+        }
+        if (canClose) {
+          viewActions += '<button class="btn g" data-vact="close">' + I.check + ' Close Job</button>';
+        }
       }
     }
 
@@ -2673,7 +2765,7 @@
 
   /* ================= Modals Management ================= */
   function closeModals() {
-    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#noPhotoConfirmModal', '#noPhotoModal', '#viewModal'];
+    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#noPhotoConfirmModal', '#noPhotoModal', '#viewModal', '#changeTeamModal'];
     modals.forEach(function (m) {
       var el = $(m);
       if (el) el.hidden = true;
@@ -2691,10 +2783,10 @@
     if (!menu) return;
 
     // Role-based visibility rule from quickfix (qindex.js):
-    // If SUPERADMIN / OPROADMIN (or it@workwise.in): show ALL properties
+    // If SUPERADMIN / OPROADMIN (or it@workwise.in) or Atmosphere Admin: show ALL properties
     // If other email ID / user: show ONLY their assigned property (currentUser.prop)
     var visibleProps = props || [];
-    if (!isSuperAdmin()) {
+    if (!isSuperAdmin() && !isAtmosphereAdmin()) {
       var userPropId = (currentUser && currentUser.prop) || null;
       var matchedProp = null;
       if (userPropId && Array.isArray(props)) {
@@ -3183,14 +3275,14 @@
     state.issuedBy = 'all';
     state.issuedTo = 'all';
     state.assignedTo = 'all';
-    state.status = 'all';
+    state.status = (state.tab === 'closed') ? 'Closed' : 'all';
     state.fromDate = '';
     state.toDate = '';
     state.sort = 'new';
     if (pagination[state.tab]) pagination[state.tab].page = 1;
     var sInput = $('#search'); if (sInput) sInput.value = '';
     var cs = $('#clearSearch'); if (cs) cs.hidden = true;
-    var fltStatus = $('#fltStatus'); if (fltStatus) fltStatus.value = 'all';
+    var fltStatus = $('#fltStatus'); if (fltStatus) fltStatus.value = state.status;
     var fltArea = $('#fltArea'); if (fltArea) fltArea.value = 'all';
     var fltIssuedBy = $('#fltIssuedBy'); if (fltIssuedBy) fltIssuedBy.value = 'all';
     var fltIssuedTo = $('#fltIssuedTo'); if (fltIssuedTo) fltIssuedTo.value = 'all';
@@ -3199,7 +3291,152 @@
     var fltToDate = $('#fltToDate'); if (fltToDate) { fltToDate.value = ''; fltToDate.removeAttribute('min'); }
     var sortBy = $('#sortBy'); if (sortBy) sortBy.value = 'new';
     renderFilters();
-    renderList(state.tab);
+    fetchJobs(state.tab, 1, false);
+  }
+
+  /* ================= Lightbox Zoom & Scroll Preservation (Points 8 & 10) ================= */
+  var savedScrollY = 0;
+  var lbZoomScale = 1;
+
+  function openPhotoLightbox(src, jobElement) {
+    savedScrollY = window.pageYOffset || document.documentElement.scrollTop || window.scrollY || 0;
+    if (jobElement && jobElement.dataset.id) {
+      highlightJob(jobElement.dataset.id);
+    }
+    lbZoomScale = 1;
+    var lb = $('#lightbox');
+    var lbImg = $('#lbImg');
+    if (lb && lbImg) {
+      lbImg.src = src;
+      lbImg.style.transform = 'scale(1)';
+      lb.hidden = false;
+    }
+  }
+
+  function closePhotoLightbox() {
+    var lb = $('#lightbox');
+    if (lb && !lb.hidden) {
+      lb.hidden = true;
+      // Point 8: Remain at same scroll position when closing photograph
+      window.scrollTo(0, savedScrollY);
+    }
+  }
+
+  function setupLightboxEvents() {
+    var lb = $('#lightbox');
+    var lbImg = $('#lbImg');
+    var lbIn = $('#lbZoomIn');
+    var lbOut = $('#lbZoomOut');
+    var lbReset = $('#lbZoomReset');
+    var lbClose = $('#lbClose');
+    var lbContainer = $('#lbImgContainer');
+
+    if (lbIn) {
+      lbIn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        lbZoomScale = Math.min(4, lbZoomScale + 0.25);
+        if (lbImg) lbImg.style.transform = 'scale(' + lbZoomScale + ')';
+      });
+    }
+    if (lbOut) {
+      lbOut.addEventListener('click', function (e) {
+        e.stopPropagation();
+        lbZoomScale = Math.max(0.5, lbZoomScale - 0.25);
+        if (lbImg) lbImg.style.transform = 'scale(' + lbZoomScale + ')';
+      });
+    }
+    if (lbReset) {
+      lbReset.addEventListener('click', function (e) {
+        e.stopPropagation();
+        lbZoomScale = 1;
+        if (lbImg) lbImg.style.transform = 'scale(1)';
+      });
+    }
+    if (lbClose) {
+      lbClose.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closePhotoLightbox();
+      });
+    }
+    if (lbContainer) {
+      lbContainer.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          lbZoomScale = Math.min(4, lbZoomScale + 0.15);
+        } else {
+          lbZoomScale = Math.max(0.5, lbZoomScale - 0.15);
+        }
+        if (lbImg) lbImg.style.transform = 'scale(' + lbZoomScale + ')';
+      }, { passive: false });
+    }
+    if (lb) {
+      lb.addEventListener('click', function (e) {
+        if (e.target === lb || e.target.classList.contains('lightbox-img-container')) {
+          closePhotoLightbox();
+        }
+      });
+    }
+  }
+
+  /* ================= Change Team Assignment Modal (Point 6) ================= */
+  var changeTeamTargetJob = null;
+
+  function openChangeTeam(job) {
+    closeView();
+    if (!job) return;
+    changeTeamTargetJob = job;
+    highlightJob(job.id);
+
+    var ctJobId = $('#ctJobId');
+    if (ctJobId) ctJobId.textContent = job.propId || job.id;
+
+    var sel = $('#changeTeamSelect');
+    if (sel) {
+      var html = '<option value="">Select team</option>';
+      if (cachedTeams && cachedTeams.length) {
+        cachedTeams.forEach(function (t) {
+          var isCur = t.teamId === job.issued_to_team || t.teamName === job.dept;
+          html += '<option value="' + esc(t.teamId) + '"' + (isCur ? ' selected' : '') + '>' + esc(t.teamName) + '</option>';
+        });
+      }
+      sel.innerHTML = html;
+    }
+
+    var m = $('#changeTeamModal');
+    if (m) m.hidden = false;
+  }
+
+  function closeChangeTeamModal() {
+    var m = $('#changeTeamModal');
+    if (m) m.hidden = true;
+    changeTeamTargetJob = null;
+  }
+
+  async function saveChangeTeam() {
+    if (!changeTeamTargetJob) return;
+    var sel = $('#changeTeamSelect');
+    var newTeamId = sel ? sel.value : null;
+    if (!newTeamId) {
+      toast('Please select a department team');
+      return;
+    }
+    var btn = $('#btnSaveChangeTeam');
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+    try {
+      var jobId = changeTeamTargetJob.jobId || changeTeamTargetJob.id;
+      var res = await api.changeTeam(jobId, currentPropertyId, newTeamId);
+      if (res && res.success !== false) {
+        toast('Team successfully updated');
+        closeChangeTeamModal();
+        fetchJobs(state.tab, (pagination[state.tab] && pagination[state.tab].page) || 1, true);
+      } else {
+        toast('Failed to change team: ' + (res && res.message ? res.message : 'Unknown error'));
+      }
+    } catch (err) {
+      toast('Error changing team: ' + err.message);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+    }
   }
 
   /* ================= Global Events & Click Delegation ================= */
@@ -3219,7 +3456,7 @@
         if (pagination[state.tab]) {
           pagination[state.tab].page = newPage;
         }
-        renderList(state.tab);
+        fetchJobs(state.tab, newPage, true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
       return;
@@ -3253,6 +3490,8 @@
       else if (act === 'assign') openAssign(job);
       else if (act === 'close') openClose(job);
       else if (act === 'del') openDel(job);
+      else if (act === 'change-team') openChangeTeam(job);
+      else if (act === 'share-wa') shareJobWhatsApp(job);
       return;
     }
 
@@ -3279,14 +3518,11 @@
       return;
     }
 
-    // Lightbox image zoom
+    // Lightbox image zoom (Points 8 & 10)
     var z = t.closest('[data-zoom]');
     if (z) {
-      var lb2 = $('#lightbox');
-      if (lb2) {
-        lb2.innerHTML = '<img src="' + esc(z.src) + '" alt=""><button class="x" id="lbClose">&times;</button>';
-        lb2.hidden = false;
-      }
+      var parentRow = t.closest('.jcard, .jrow');
+      openPhotoLightbox(z.src, parentRow);
       return;
     }
   });
@@ -3308,7 +3544,7 @@
         return;
       }
       var lb = $('#lightbox');
-      if (lb && !lb.hidden) { lb.hidden = true; return; }
+      if (lb && !lb.hidden) { closePhotoLightbox(); return; }
       if (!$('#viewModal').hidden) { closeView(); return; }
       closeModals();
       closeMenus();
@@ -3347,12 +3583,11 @@
         else if (act === 'close') { closeView(); openClose(job); }
         else if (act === 'edit') { closeView(); openEdit(job); }
         else if (act === 'del') { openDel(job); }
+        else if (act === 'change-team') { closeView(); openChangeTeam(job); }
+        else if (act === 'share-wa') { shareJobWhatsApp(job); }
       }
     });
   }
-
-  var lb = $('#lightbox');
-  if (lb) lb.addEventListener('click', function () { this.hidden = true; });
 
   /* ================= Event Listeners Initialization ================= */
   function setupEventListeners() {
@@ -3365,15 +3600,19 @@
       });
     }
 
-    // Search bar
+    // Search bar (debounced dynamic search)
     var sInput = $('#search');
+    var searchTimer = null;
     if (sInput) {
       sInput.addEventListener('input', function (e) {
         state.q = e.target.value.trim();
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         var cs = $('#clearSearch');
         if (cs) cs.hidden = !state.q;
-        renderList(state.tab);
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+          fetchJobs(state.tab, 1, true);
+        }, 350);
       });
     }
 
@@ -3384,7 +3623,7 @@
         state.q = '';
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         this.hidden = true;
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
         if (sInput) sInput.focus();
       });
     }
@@ -3417,7 +3656,7 @@
         if (toEl) state.toDate = toEl.value || '';
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
         closeFilterSidebar();
       });
     }
@@ -3448,7 +3687,7 @@
         state.status = e.target.value;
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
 
@@ -3461,7 +3700,7 @@
           state.status = b.dataset.status;
           if (pagination[state.tab]) pagination[state.tab].page = 1;
           renderFilters();
-          renderList(state.tab);
+          fetchJobs(state.tab, 1, true);
         }
       });
     }
@@ -3473,7 +3712,7 @@
         state.area = e.target.value;
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
 
@@ -3484,7 +3723,7 @@
         state.issuedBy = e.target.value;
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
 
@@ -3495,7 +3734,7 @@
         state.issuedTo = e.target.value;
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
 
@@ -3506,7 +3745,7 @@
         state.assignedTo = e.target.value;
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
 
@@ -3522,7 +3761,7 @@
         }
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
 
@@ -3537,7 +3776,7 @@
         }
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
 
@@ -3548,7 +3787,7 @@
         state.sort = e.target.value;
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
 
@@ -3558,9 +3797,26 @@
       pageSize.addEventListener('change', function (e) {
         state.pageSize = parseInt(e.target.value, 10);
         if (pagination[state.tab]) pagination[state.tab].page = 1;
-        renderList(state.tab);
+        fetchJobs(state.tab, 1, true);
       });
     }
+
+    // Lightbox zoom and pan events
+    setupLightboxEvents();
+
+    // Top-left X icon for Close Dialog Box (Point 22)
+    var modalCloseJobTopLeft = $('#modalCloseJobTopLeft');
+    if (modalCloseJobTopLeft) {
+      modalCloseJobTopLeft.addEventListener('click', closeModals);
+    }
+
+    // Change Team Modal Buttons (Point 6)
+    var modalChangeTeamClose = $('#modalChangeTeamClose');
+    if (modalChangeTeamClose) modalChangeTeamClose.addEventListener('click', closeChangeTeamModal);
+    var btnCancelChangeTeam = $('#btnCancelChangeTeam');
+    if (btnCancelChangeTeam) btnCancelChangeTeam.addEventListener('click', closeChangeTeamModal);
+    var btnSaveChangeTeam = $('#btnSaveChangeTeam');
+    if (btnSaveChangeTeam) btnSaveChangeTeam.addEventListener('click', saveChangeTeam);
 
     // Layout buttons
     var vg = $('#viewGrid');

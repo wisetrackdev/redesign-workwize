@@ -561,8 +561,9 @@
   <div class="modal" id="closeModal" hidden>
     <form class="dialog" id="closeForm" novalidate>
       <div class="dhead">
+        <button type="button" class="x-top-left" data-close title="Close dialog" aria-label="Close dialog">&times;</button>
         <h3>Close Job <span id="closeId" class="muted"></span></h3>
-        <button type="button" class="x" data-close>&times;</button>
+        <button type="button" class="x" data-close title="Close dialog">&times;</button>
       </div>
       <div class="job-brief" id="closeBrief"></div>
       <div class="team-rule-note">
@@ -621,8 +622,45 @@
     </form>
   </div>
 
-  <!-- ===== PHOTO LIGHTBOX ===== -->
-  <div class="lightbox" id="lightbox" hidden><img alt=""><button class="x" id="lbClose">&times;</button></div>
+  <!-- ===== CHANGE TEAM MODAL (Point 6) ===== -->
+  <div class="modal" id="changeTeamModal" hidden>
+    <form class="dialog small" id="changeTeamForm" novalidate>
+      <div class="dhead">
+        <button type="button" class="x-top-left" data-close title="Close dialog">&times;</button>
+        <h3>Change Team Assignment <span id="changeTeamJobId" class="muted"></span></h3>
+        <button type="button" class="x" data-close>&times;</button>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">
+        If a job was wrongly assigned, the 'Issued By' user can reassign it to the correct department while it is in OPEN status.
+      </p>
+      <div class="job-brief" id="changeTeamBrief"></div>
+      <div class="fgrid">
+        <div class="fld full">
+          <label for="chNewTeam">Select New Team / Department</label>
+          <select id="chNewTeam" required>
+            <option value="">Select Department</option>
+          </select>
+        </div>
+      </div>
+      <div class="btns" style="margin-top:20px;">
+        <button type="button" class="btn s" data-close>Cancel</button>
+        <button type="submit" class="btn p">Update Team</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ===== PHOTO LIGHTBOX WITH ZOOM CONTROLS (Points 8 & 10) ===== -->
+  <div class="lightbox" id="lightbox" hidden>
+    <div class="lb-toolbar">
+      <button type="button" class="lb-tool" id="lbZoomIn" title="Zoom In">+</button>
+      <button type="button" class="lb-tool" id="lbZoomOut" title="Zoom Out">&minus;</button>
+      <button type="button" class="lb-tool" id="lbZoomReset" title="Reset Zoom">100%</button>
+      <button type="button" class="x lb-close" id="lbClose" title="Close photo">&times;</button>
+    </div>
+    <div class="lb-img-container" id="lbImgContainer">
+      <img id="lbImg" alt="Preview Photo">
+    </div>
+  </div>
   <input type="file" accept="image/*" id="quickPhoto" hidden>
 
   <button class="totop" id="toTop" aria-label="Back to top" hidden>&uarr;</button>

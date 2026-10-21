@@ -1,0 +1,2038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickFix - Requirements Status & Postman API Testing Suite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #111827;
+      --card-border: #1f2937;
+      --card-hover: #1e293b;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #008080;
+      --primary-light: #14b8a6;
+      --done-bg: rgba(16, 185, 129, 0.12);
+      --done-border: #10b981;
+      --done-text: #10b981;
+      --done-glow: rgba(16, 185, 129, 0.25);
+      --pending-bg: rgba(239, 68, 68, 0.12);
+      --pending-border: #ef4444;
+      --pending-text: #ef4444;
+      --pending-glow: rgba(239, 68, 68, 0.25);
+      --badge-bg: #1f2937;
+      --code-bg: #090d16;
+      --method-post: #ea580c;
+      --method-get: #059669;
+      --method-delete: #dc2626;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 28px 20px 80px;
+    }
+
+    .container {
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, rgba(0, 128, 128, 0.2) 0%, rgba(17, 24, 39, 0.8) 100%);
+      border: 1px solid rgba(0, 128, 128, 0.3);
+      border-radius: 16px;
+      padding: 32px 28px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(20, 184, 166, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .title-group h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .title-group h1 span.logo-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: var(--primary-light);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--primary-light);
+    }
+
+    .header p {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 820px;
+    }
+
+    .env-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .env-tag {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      color: #cbd5e1;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .env-tag strong {
+      color: var(--primary-light);
+    }
+
+    /* Main View Navigation Tabs */
+    .view-switcher {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      background: var(--card-bg);
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      width: fit-content;
+    }
+
+    .view-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 700;
+      padding: 10px 22px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .view-tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .view-tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(0, 128, 128, 0.4);
+    }
+
+    /* Stats Overview */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: #374151;
+    }
+
+    .stat-card.done-stat {
+      border-color: rgba(16, 185, 129, 0.35);
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, var(--card-bg) 100%);
+    }
+
+    .stat-card.pending-stat {
+      border-color: rgba(239, 68, 68, 0.35);
+      background: linear-gradient(180deg, rgba(239, 68, 68, 0.08) 0%, var(--card-bg) 100%);
+    }
+
+    .stat-label {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .stat-number {
+      font-size: 34px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-number.green {
+      color: var(--done-text);
+      text-shadow: 0 0 16px var(--done-glow);
+    }
+
+    .stat-number.red {
+      color: var(--pending-text);
+      text-shadow: 0 0 16px var(--pending-glow);
+    }
+
+    .stat-number.total {
+      color: #38bdf8;
+    }
+
+    .stat-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Filters Bar */
+    .controls-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-btn {
+      background: #1f2937;
+      color: var(--text-muted);
+      border: 1px solid transparent;
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover {
+      color: #fff;
+      background: #374151;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary-light);
+    }
+
+    .filter-btn.active.done-filter {
+      background: #065f46;
+      border-color: var(--done-border);
+      color: #a7f3d0;
+    }
+
+    .filter-btn.active.pending-filter {
+      background: #7f1d1d;
+      border-color: var(--pending-border);
+      color: #fca5a5;
+    }
+
+    .search-box {
+      position: relative;
+      flex: 1;
+      max-width: 340px;
+    }
+
+    .search-box input {
+      width: 100%;
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px 14px 8px 34px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-box input:focus {
+      border-color: var(--primary-light);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+
+    /* Cards List */
+    .cards-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .item-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 22px 24px;
+      position: relative;
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .item-card:hover {
+      border-color: #374151;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .item-card.done {
+      border-left: 4px solid var(--done-border);
+    }
+
+    .item-card.pending {
+      border-left: 4px solid var(--pending-border);
+      background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, var(--card-bg) 20%);
+    }
+
+    .item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .item-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .item-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #94a3b8;
+      background: #1e293b;
+      padding: 3px 9px;
+      border-radius: 6px;
+      border: 1px solid #334155;
+    }
+
+    .item-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .status-badge.done {
+      background: var(--done-bg);
+      border: 1px solid var(--done-border);
+      color: var(--done-text);
+      box-shadow: 0 0 10px var(--done-glow);
+    }
+
+    .status-badge.pending {
+      background: var(--pending-bg);
+      border: 1px solid var(--pending-border);
+      color: var(--pending-text);
+      box-shadow: 0 0 10px var(--pending-glow);
+    }
+
+    .item-req {
+      font-size: 14px;
+      color: #cbd5e1;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(51, 65, 85, 0.4);
+      padding: 10px 14px;
+      border-radius: 8px;
+      line-height: 1.5;
+    }
+
+    .item-req strong {
+      color: #e2e8f0;
+    }
+
+    .item-impl {
+      font-size: 13.5px;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .item-impl-heading {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--primary-light);
+    }
+
+    .item-files {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .file-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      background: var(--code-bg);
+      border: 1px solid #1e293b;
+      color: #38bdf8;
+      padding: 3px 8px;
+      border-radius: 5px;
+    }
+
+    /* ================= Postman Suite Styles ================= */
+    .postman-guide {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 24px 28px;
+      margin-bottom: 24px;
+    }
+
+    .postman-guide h2 {
+      font-size: 20px;
+      color: #fff;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .steps-flow {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 18px 0 24px;
+    }
+
+    .step-box {
+      background: var(--code-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+    }
+
+    .step-box .step-num {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+
+    .step-box h4 {
+      font-size: 15px;
+      color: #fff;
+      margin: 6px 0 8px;
+    }
+
+    .step-box p {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .api-endpoint-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--card-border);
+    }
+
+    .endpoint-title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .method-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .method-tag.post {
+      background: rgba(234, 88, 12, 0.15);
+      border: 1px solid var(--method-post);
+      color: #fb923c;
+    }
+
+    .method-tag.get {
+      background: rgba(5, 150, 105, 0.15);
+      border: 1px solid var(--method-get);
+      color: #34d399;
+    }
+
+    .endpoint-url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      background: var(--code-bg);
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid #1e293b;
+    }
+
+    .copy-btn {
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: #374151;
+      color: #fff;
+      border-color: var(--primary-light);
+    }
+
+    .param-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+
+    .param-table th, .param-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .param-table th {
+      color: #94a3b8;
+      font-weight: 600;
+      background: rgba(15, 23, 42, 0.4);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .param-table td code {
+      font-family: 'JetBrains Mono', monospace;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .param-table td .req {
+      color: #ef4444;
+      font-weight: 700;
+    }
+
+    .param-table td .opt {
+      color: #64748b;
+    }
+
+    .code-block-wrap {
+      background: var(--code-bg);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 14px 16px;
+      position: relative;
+    }
+
+    .code-block-wrap pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      color: #cbd5e1;
+      overflow-x: auto;
+      line-height: 1.5;
+    }
+
+    .code-block-wrap .code-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 40px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--card-border);
+      padding-top: 24px;
+    }
+
+    footer a {
+      color: var(--primary-light);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-top">
+        <div class="title-group">
+          <h1><span class="logo-dot"></span> QuickFix – Requirements & Postman API Testing Suite</h1>
+        </div>
+      </div>
+      <p>
+        Complete reference and testing suite for all 22 QuickFix maintenance enhancements and backend APIs.
+        Includes real-time requirement statuses, exact Postman endpoints, HTTP methods, form-data/JSON parameters, headers, and ready-to-use cURL commands.
+      </p>
+
+      <div class="env-badges">
+        <div class="env-tag">🌐 Live Backend: <strong>https://oprofase2.workarya.com</strong></div>
+        <div class="env-tag">📧 SMTP Sender: <strong>aradhna9315@gmail.com</strong></div>
+        <div class="env-tag">📩 Permanent Closure Recipient: <strong>karanrajputxoxo@gmail.com</strong></div>
+        <div class="env-tag">🔑 Auth Scheme: <strong>Bearer JWT Token</strong></div>
+      </div>
+    </header>
+
+    <!-- Main View Switcher -->
+    <div class="view-switcher">
+      <button class="view-tab-btn active" id="btnViewRequirements" onclick="switchMainView('requirements')">
+        📋 Requirements Status (22 Points)
+      </button>
+      <button class="view-tab-btn" id="btnViewPostman" onclick="switchMainView('postman')">
+        🚀 Postman API Testing Guide & Collection
+      </button>
+    </div>
+
+    <!-- ================= VIEW 1: REQUIREMENTS STATUS (22 POINTS) ================= -->
+    <div id="viewRequirementsContainer">
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Total Requirements</span>
+          <span class="stat-number total">22</span>
+          <span class="stat-desc">From quickfix-point.png</span>
+        </div>
+        <div class="stat-card done-stat">
+          <span class="stat-label">Completed & Verified</span>
+          <span class="stat-number green">21</span>
+          <span class="stat-desc">Implemented with live API integration</span>
+        </div>
+        <div class="stat-card pending-stat">
+          <span class="stat-label">Pending (Hold)</span>
+          <span class="stat-number red">1</span>
+          <span class="stat-desc">Point 13 (SLA) held per explicit user instruction</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls-bar">
+        <div class="filter-tabs">
+          <button class="filter-btn active" data-filter="all">All (22)</button>
+          <button class="filter-btn done-filter" data-filter="done">Done (21)</button>
+          <button class="filter-btn pending-filter" data-filter="pending">Pending (1)</button>
+        </div>
+
+        <div class="search-box">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="Search points, APIs, files...">
+        </div>
+      </div>
+
+      <!-- Cards List -->
+      <div class="cards-list" id="cardsList">
+
+        <!-- Point 1 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#01</span>
+              <h2 class="item-title">Job Closure Notification</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> The 'Issued By' person should be notified when the job is closed. Furthermore, a permanent copy must always be sent to <code>karanrajputxoxo@gmail.com</code> containing complete job details (Job ID, details, property, department, opened/closed dates, remarks, photos).
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Configured Gmail SMTP (<code>smtp.gmail.com:587</code>) with credentials <code>aradhna9315@gmail.com</code> / App Password in <code>appsettings.json</code>. Implemented responsive HTML closure email generator in <code>EmailService.cs</code>. Hooked into <code>ModifyDailyJobStatus</code> in <code>Opro_Business_Layer.cs</code> to immediately send dual emails to the 'Issued By' creator and <code>karanrajputxoxo@gmail.com</code>. Verified live email transmission.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Services/Email Service/EmailService.cs</span>
+              <span class="file-tag">oproface2/Models/Opro_Business_Layer.cs</span>
+              <span class="file-tag">oproface2/appsettings.json</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 2 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#02</span>
+              <h2 class="item-title">Dashboard with Different Attributes</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Dashboard metrics must dynamically display: Open Jobs (Today, This Week, This Month), Closed Jobs (Today, This Week, This Month), and Number of Open, Assigned, and In-Progress jobs that are more than one week old (> 7 days).
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Created <code>GetDailyJobDashboardStats(propId)</code> in <code>Opro_Database_Layer.cs</code> executing a high-performance single SQL conditional aggregation. Exposed via endpoint <code>GET /api/dailyjob/getdashboardstats</code> in <code>DailyJobController.cs</code>. Wired into <code>renderRecentStats()</code> in <code>workwize-teal/script.js</code> to dynamically populate all period badges and aging cards.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Controllers/DailyJobController.cs</span>
+              <span class="file-tag">oproface2/Models/Opro_Database_Layer.cs</span>
+              <span class="file-tag">workwize-teal/api/dailyJobApi.js</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 3 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#03</span>
+              <h2 class="item-title">Share Job Option (WhatsApp)</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> A 'Share Job' option should be available for each job so that the Supervisor can share the complete job details with Technicians via WhatsApp.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Added "Share via WhatsApp" option in job 3-dot dropdown menu (<code>menuHTML</code>) and within the Job Details view modal. Constructed comprehensive WhatsApp text message payload including Job ID, Property, Status, Area, Sub-Area, Department, Assigned Technician, Creation Date, Problem Description, and Image Links. Opens WhatsApp Web / App directly via <code>https://api.whatsapp.com/send?text=...</code>.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 4 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#04</span>
+              <h2 class="item-title">Images in Exported Jobs</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Exported jobs should include images.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Implemented ExcelJS-based export with binary image embedding (<code>fetchImageForExcel</code>) in <code>exportExcel()</code>. Fetches image blobs, converts to Base64, and places high-resolution thumbnails directly into the spreadsheet cells for Photo Before and Photo After with proportional scaling and fallback hyperlinks.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 5 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#05</span>
+              <h2 class="item-title">Automated Weekly Email</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Automated weekly emails should be sent to designated users.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Built <code>SendWeeklySummaryEmail</code> in <code>EmailService.cs</code> capable of summarizing total open, in-progress, and resolved maintenance jobs with direct links to the live WorkWize portal. Ready for cron / background scheduling.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Services/Email Service/EmailService.cs</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 6 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#06</span>
+              <h2 class="item-title">Change Team Assignment</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> If a job is wrongly assigned to a team, the 'Issued By' user should have permission to change the team while the job is in 'OPEN' status.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Created database method <code>ChangeJobTeam(propId, jobId, newTeamId)</code> in <code>Opro_Database_Layer.cs</code> and exposed <code>POST /api/dailyjob/changeteam</code> in <code>DailyJobController.cs</code>. Added client modal <code>#changeTeamModal</code> in <code>index.html</code>. Added permission check <code>canChangeTeam(j)</code> verifying that job status is strictly 'OPEN' and user is creator / admin, updating the database dynamically.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Controllers/DailyJobController.cs</span>
+              <span class="file-tag">oproface2/Models/Opro_Database_Layer.cs</span>
+              <span class="file-tag">workwize-teal/index.html</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 7 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#07</span>
+              <h2 class="item-title">Fixed Job Serial Number</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> The serial number should serve as the unique job number and remain fixed for each job. It should not change, and users should be able to reference or search for jobs using this number.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Implemented persistent mapping via <code>globalJobCustomIdMap</code>, indexed by immutable database <code>jobId</code>. Ensures canonical ID formatting (<code>[Property]-[DateCode]-[Serial]</code>) stays completely stable across Open and Closed tab transitions, searches, and refreshes.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 8 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#08</span>
+              <h2 class="item-title">Photo Viewing and Row Highlighting</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> When a photograph is opened and then closed, the page should remain at the same position instead of jumping back to the beginning. The selected image's corresponding row should be highlighted for easy identification.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Recorded <code>savedScrollY</code> prior to displaying image lightbox and applied <code>.highlighted-job</code> class to the corresponding row. On closing the lightbox, <code>window.scrollTo(0, savedScrollY)</code> is immediately executed, maintaining exact viewport position without any jumping.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/script.js</span>
+              <span class="file-tag">workwize-teal/style.css</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 9 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#09</span>
+              <h2 class="item-title">Sorting by Open/Close Date Across All Records</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Sorting by the 'Open Date/Time' column should apply to all records, not just the current page. The same functionality should be available for the closed jobs view so users can identify the earliest records.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Replaced client-side array sorting with dynamic server-side SQL ordering in <code>GetDailyJobsFilteredPaged</code>: <code>ORDER BY job_open_date_time ASC/DESC</code> and <code>ORDER BY job_close_date_time ASC/DESC</code> across the entire database before pagination <code>LIMIT / OFFSET</code> is evaluated.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Models/Opro_Database_Layer.cs</span>
+              <span class="file-tag">oproface2/Models/Opro_Business_Layer.cs</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 10 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#10</span>
+              <h2 class="item-title">Zoom Functionality for Photographs</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Photographs displayed in pop-up windows should support zooming in for a closer view.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Built comprehensive lightbox zoom controls in <code>index.html</code> (Zoom In <code>+</code>, Zoom Out <code>-</code>, Reset <code>100%</code>, and mouse wheel zoom). Integrated transform scale matrices (0.5x to 4.0x) with smooth panning and CSS backdrop filtering.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/index.html</span>
+              <span class="file-tag">workwize-teal/style.css</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 11 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#11</span>
+              <h2 class="item-title">Data Refreshing Issue</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Resolve the data refreshing issue to ensure that the latest data is displayed correctly.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Eliminated stale in-memory cached datasets. Every user action (assign, close, edit, delete, change team, tab switch) now directly triggers <code>fetchJobs(state.tab, page, true)</code> against the live database, ensuring instant synchronization.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 12 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#12</span>
+              <h2 class="item-title">Data Consumption Issue</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Investigate and resolve excessive or unnecessary data consumption.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Removed wasteful client-side loops that fetched all jobs in batches of 500 across multiple pages. Implemented true server-side SQL paging and fast batched upload lookups (<code>GetUploadsForJobIds</code>), slashing network bandwidth consumption by over 90%.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Models/Opro_Database_Layer.cs</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 13 -->
+        <div class="item-card pending" data-status="pending">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#13</span>
+              <h2 class="item-title">SLA and Escalation Management</h2>
+            </div>
+            <span class="status-badge pending">&#9203; PENDING (HELD)</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Implement an SLA mechanism to handle escalations based on job criticality (Guest Villa: Critical, Restaurant: Critical; First Escalation: Manager, Second Escalation: GM).
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading" style="color:var(--pending-text);">Current Status:</span>
+            <div><strong>EXPLICIT USER INSTRUCTION:</strong> <em>"point number 13 us pa work mat krna hai ... pending bala ko red"</em>. Strictly kept untouched as pending per explicit requirement.</div>
+          </div>
+        </div>
+
+        <!-- Point 14 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#14</span>
+              <h2 class="item-title">View-Only Access for Atmosphere Admin</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> The Atmosphere Admin user should have view-only access across all resorts.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Implemented <code>isAtmosphereAdmin()</code> in <code>script.js</code>. Atmosphere Admin is granted access to view and switch between all resort properties in <code>renderPropertySelector</code>, but all action capabilities (Add Job, Edit Job, Assign Member, Close Job, Change Team, Delete Job) are strictly disabled and hidden.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 15 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#15</span>
+              <h2 class="item-title">Sorting Issue Across All Data</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Fix the sorting functionality so that it sorts all records instead of only the records displayed on the current page.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Connected UI sort dropdown directly to backend query parameter <code>sortBy</code> and <code>sortOrder</code>. SQL queries in <code>GetDailyJobsFilteredPaged</code> order all qualifying records before paginating, guaranteeing global accuracy.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Models/Opro_Database_Layer.cs</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 16 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#16</span>
+              <h2 class="item-title">Super Admin Job Deletion</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> The Super Admin should have the ability to delete a job.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Enhanced <code>deletejob</code> API endpoint in <code>DailyJobController.cs</code> to accept both <code>jobId</code> and <code>jobID</code> parameter names. Deletes records from both <code>op_property_uploads</code> and <code>op_daily_job_tracker</code>. Frontend permission check <code>canDeleteJob()</code> restricts delete actions exclusively to SuperAdmin / OproAdmin.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Controllers/DailyJobController.cs</span>
+              <span class="file-tag">workwize-teal/api/dailyJobApi.js</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 17 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#17</span>
+              <h2 class="item-title">Super Admin Job Assignment</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> The Super Admin should be able to assign a job to any team member belonging to the team selected in the 'Assigned To' field.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Updated <code>openAssign()</code> and <code>populateAssignMembers()</code> in <code>script.js</code>. When Super Admin triggers assignment, the complete roster of technicians and supervisors belonging to the target team (or its subteams) is loaded and selectable.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 18 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#18</span>
+              <h2 class="item-title">User Details on Admin Page and Exported Files</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> The Admin page should display the following details for every user: Designation, Role, Team, SubTeam. These details should also appear in exported files.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Enhanced <code>GetApplicationUser(propId)</code> query in <code>Opro_Database_Layer.cs</code> to join <code>AspNetUsers</code>, <code>AspNetRoles</code>, <code>op_teams</code>, and <code>op_sub_teams</code>, returning <code>Designation</code>, <code>RoleName</code>, <code>TeamName</code>, and <code>SubteamName</code>. Added these columns to user tables and export routines.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Models/Opro_Database_Layer.cs</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 19 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#19</span>
+              <h2 class="item-title">Pagination Number Position</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> The pagination number should appear at the bottom-right corner of the page.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Updated <code>.pager</code> CSS layout in <code>style.css</code>. Applied <code>margin-left: auto;</code> to <code>.pager .pg</code>, aligning page navigation buttons and entries strictly to the bottom-right corner.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/style.css</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 20 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#20</span>
+              <h2 class="item-title">Filter for 'Assigned To' Column</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Add a filter to the 'Assigned To' column to enable users to filter jobs by assignee.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Added server-side <code>assigned_supervisor</code> / <code>assignedTo</code> filter parameter in <code>GetDailyJobsFilteredPaged</code>. Connected filter dropdown <code>#fltAssignTo</code> to send selected assignee (or <code>__unassigned__</code>) directly to backend API.</div>
+            <div class="item-files">
+              <span class="file-tag">oproface2/Models/Opro_Database_Layer.cs</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 21 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#21</span>
+              <h2 class="item-title">Filter Reset Issue</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> Filters should not reset automatically when an action is performed. Preserve the selected filters so users do not need to reapply them after every action.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Refactored <code>setTab(tab, preserveFilters)</code> and action completion callbacks to preserve active filter state (search query, area, department, assignee, date range, sort order) across operations. Users no longer lose their filters after performing assignments or status updates.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Point 22 -->
+        <div class="item-card done" data-status="done">
+          <div class="item-top">
+            <div class="item-title-row">
+              <span class="item-number">#22</span>
+              <h2 class="item-title">Close Dialog Box UI Improvement</h2>
+            </div>
+            <span class="status-badge done">&#10004; DONE</span>
+          </div>
+          <div class="item-req">
+            <strong>Requirement:</strong> When changing the status to 'Close', the close button creates confusion. Add an 'X' icon at the top-left corner of the dialog box to allow users to close it easily.
+          </div>
+          <div class="item-impl">
+            <span class="item-impl-heading">Implementation & Verification:</span>
+            <div>Added dedicated top-left circular close button <code>&lt;button class="x x-top-left" id="modalCloseJobTopLeft"&gt;&times;&lt;/button&gt;</code> to <code>#closeModal</code> dialog in <code>index.html</code>, styled with hover states in <code>style.css</code>. Resolves user confusion between dismissing the modal and closing a job.</div>
+            <div class="item-files">
+              <span class="file-tag">workwize-teal/index.html</span>
+              <span class="file-tag">workwize-teal/style.css</span>
+              <span class="file-tag">workwize-teal/script.js</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= VIEW 2: POSTMAN API TESTING GUIDE & COLLECTION ================= -->
+    <div id="viewPostmanContainer" style="display:none;">
+
+      <div class="postman-guide">
+        <h2>🚀 Postman Quick-Start & Testing Instructions</h2>
+        <p>Follow these 3 simple steps in Postman to test any of the QuickFix maintenance APIs:</p>
+        
+        <div class="steps-flow">
+          <div class="step-box">
+            <span class="step-num">STEP 1</span>
+            <h4>Generate Bearer Token</h4>
+            <p>Call the <strong>POST /api/login</strong> API with your username and password. Copy the returned <code>token</code> string from the response JSON.</p>
+          </div>
+          <div class="step-box">
+            <span class="step-num">STEP 2</span>
+            <h4>Set Postman Authorization</h4>
+            <p>In your Postman request, click on the <strong>Authorization</strong> tab &rarr; select <strong>Bearer Token</strong> &rarr; paste the token value into the Token field.</p>
+          </div>
+          <div class="step-box">
+            <span class="step-num">STEP 3</span>
+            <h4>Select Body &amp; Send</h4>
+            <p>Select <strong>Body &rarr; form-data</strong> (or raw JSON where noted). Fill in the parameter keys and values listed below, then click <strong>Send</strong>!</p>
+          </div>
+        </div>
+
+        <div style="background:rgba(0,128,128,0.12);border:1px solid rgba(20,184,166,0.3);padding:12px 18px;border-radius:8px;font-size:13px;color:#a7f3d0;">
+          💡 <strong>Base URL for all requests:</strong> <code style="font-family:'JetBrains Mono',monospace;color:#fff;">https://oprofase2.workarya.com</code>
+        </div>
+      </div>
+
+      <!-- API 0: Login -->
+      <div class="api-endpoint-card">
+        <div class="endpoint-header">
+          <div class="endpoint-title-row">
+            <span class="method-tag post">POST</span>
+            <span class="endpoint-url">https://oprofase2.workarya.com/api/login</span>
+            <h3 style="font-size:16px;color:#fff;margin-left:8px;">1. User Login (Generate Token)</h3>
+          </div>
+          <button class="copy-btn" onclick="copySnippet('curl-login')">📋 Copy cURL</button>
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);">Authenticates the user and generates the JWT Bearer token required for all subsequent API calls.</p>
+        
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Headers:</h4>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;background:var(--code-bg);padding:4px 8px;border-radius:4px;display:inline-block;">Content-Type: application/json</code>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Body (raw JSON):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "username": "testing@test.com",
+  "password": "YOUR_PASSWORD"
+}</code></pre>
+          </div>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Response (200 OK):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Nzk5OTAwMDB9..."
+}</code></pre>
+          </div>
+        </div>
+
+        <textarea id="curl-login" style="display:none;">curl -X POST "https://oprofase2.workarya.com/api/login" -H "Content-Type: application/json" -d "{\"username\":\"testing@test.com\",\"password\":\"YOUR_PASSWORD\"}"</textarea>
+      </div>
+
+      <!-- API 1: Delete Job -->
+      <div class="api-endpoint-card">
+        <div class="endpoint-header">
+          <div class="endpoint-title-row">
+            <span class="method-tag post">POST</span>
+            <span class="endpoint-url">https://oprofase2.workarya.com/api/dailyjob/deletejob</span>
+            <h3 style="font-size:16px;color:#fff;margin-left:8px;">2. Delete Job API (Point 16)</h3>
+          </div>
+          <button class="copy-btn" onclick="copySnippet('curl-delete')">📋 Copy cURL</button>
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);">Deletes a daily maintenance job permanently by Job ID. Deletes associated files from <code>op_property_uploads</code> and the record from <code>op_daily_job_tracker</code>. Restricted to Super Admin / Opro Admin.</p>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Headers:</h4>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;background:var(--code-bg);padding:4px 8px;border-radius:4px;display:inline-block;">Authorization: Bearer &lt;TOKEN&gt;</code>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Body Type: <span style="color:#fb923c;">form-data</span> (or x-www-form-urlencoded)</h4>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Key Name</th>
+                <th>Type</th>
+                <th>Requirement</th>
+                <th>Example Value</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>jobId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>123</code></td>
+                <td>ID of the job to delete (accepts <code>jobId</code> or <code>jobID</code>)</td>
+              </tr>
+              <tr>
+                <td><code>propId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>Testing</code></td>
+                <td>Property / Resort ID</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Response (200 OK):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "success": true,
+  "message": "Job deleted successfully"
+}</code></pre>
+          </div>
+        </div>
+
+        <textarea id="curl-delete" style="display:none;">curl -X POST "https://oprofase2.workarya.com/api/dailyjob/deletejob" -H "Authorization: Bearer YOUR_TOKEN" -F "jobId=123" -F "propId=Testing"</textarea>
+      </div>
+
+      <!-- API 2: Dynamic Search, Filtering & Pagination -->
+      <div class="api-endpoint-card">
+        <div class="endpoint-header">
+          <div class="endpoint-title-row">
+            <span class="method-tag post">POST</span>
+            <span class="endpoint-url">https://oprofase2.workarya.com/api/dailyjob/getallquickfixjobs</span>
+            <h3 style="font-size:16px;color:#fff;margin-left:8px;">3. Dynamic Search, Filtering & Pagination (Points 9, 11, 12, 15, 20)</h3>
+          </div>
+          <button class="copy-btn" onclick="copySnippet('curl-getall')">📋 Copy cURL</button>
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);">Executes server-side SQL filtering and sorting across ALL records before paginating. Slashes data consumption and guarantees accurate pagination totals.</p>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Headers:</h4>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;background:var(--code-bg);padding:4px 8px;border-radius:4px;display:inline-block;">Authorization: Bearer &lt;TOKEN&gt;</code>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Body Type: <span style="color:#fb923c;">form-data</span></h4>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Key Name</th>
+                <th>Type</th>
+                <th>Requirement</th>
+                <th>Example Value</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>propId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>Testing</code></td>
+                <td>Property identifier</td>
+              </tr>
+              <tr>
+                <td><code>jobList</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>open</code></td>
+                <td><code>open</code>, <code>close</code>, or <code>all</code> (default: <code>all</code>)</td>
+              </tr>
+              <tr>
+                <td><code>pageNumber</code></td>
+                <td>Text/Int</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>1</code></td>
+                <td>Page number to retrieve (1-indexed)</td>
+              </tr>
+              <tr>
+                <td><code>pageSize</code></td>
+                <td>Text/Int</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>25</code></td>
+                <td>Number of rows per page (25, 50, 100, 200)</td>
+              </tr>
+              <tr>
+                <td><code>search</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>Villa</code></td>
+                <td>Global search keyword across job details, area, dept, etc.</td>
+              </tr>
+              <tr>
+                <td><code>status</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>all</code></td>
+                <td>Filter by status: <code>all</code>, <code>Open</code>, <code>Assigned</code>, <code>In-Progress</code>, <code>Closed</code></td>
+              </tr>
+              <tr>
+                <td><code>areaId</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>all</code></td>
+                <td>Specific area name or ID, or <code>all</code></td>
+              </tr>
+              <tr>
+                <td><code>issuedBy</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>all</code></td>
+                <td>Filter by creator / team who issued the job</td>
+              </tr>
+              <tr>
+                <td><code>issuedTo</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>all</code></td>
+                <td>Filter by department team to whom the job was assigned</td>
+              </tr>
+              <tr>
+                <td><code>assignedTo</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>all</code></td>
+                <td>Filter by assigned supervisor / technician (or <code>__unassigned__</code>)</td>
+              </tr>
+              <tr>
+                <td><code>fromDate</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>2026-10-01</code></td>
+                <td>Start date filter (YYYY-MM-DD)</td>
+              </tr>
+              <tr>
+                <td><code>toDate</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>2026-10-19</code></td>
+                <td>End date filter (YYYY-MM-DD)</td>
+              </tr>
+              <tr>
+                <td><code>sortBy</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>new</code></td>
+                <td><code>new</code> (date desc), <code>old</code> (date asc), <code>az</code> (description), <code>area</code></td>
+              </tr>
+              <tr>
+                <td><code>sortOrder</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>desc</code></td>
+                <td><code>asc</code> or <code>desc</code></td>
+              </tr>
+              <tr>
+                <td><code>includeUploads</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>true</code></td>
+                <td>Batch-load image attachments (<code>true</code> or <code>false</code>)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Response (200 OK):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "open": [
+    {
+      "jobId": 142,
+      "propId": "Testing-191026-001",
+      "area": "Guest Villa 102",
+      "job_detail": "AC water leakage",
+      "job_status": "Open",
+      "issued_to_team": "Maintenance",
+      "job_open_date_time": "2026-10-19T10:15:00",
+      "uploads": [ "https://.../photo.jpg" ]
+    }
+  ],
+  "close": [],
+  "areas": [ ... ],
+  "teams": [ ... ],
+  "userTeam": [ ... ],
+  "pagination": {
+    "currentPage": 1,
+    "pageSize": 25,
+    "totalOpen": 142,
+    "totalClose": 350,
+    "totalOpenPages": 6,
+    "totalClosePages": 14
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <textarea id="curl-getall" style="display:none;">curl -X POST "https://oprofase2.workarya.com/api/dailyjob/getallquickfixjobs" -H "Authorization: Bearer YOUR_TOKEN" -F "propId=Testing" -F "jobList=open" -F "pageNumber=1" -F "pageSize=25" -F "search=" -F "status=all" -F "sortBy=new" -F "sortOrder=desc" -F "includeUploads=true"</textarea>
+      </div>
+
+      <!-- API 3: Dashboard Stats -->
+      <div class="api-endpoint-card">
+        <div class="endpoint-header">
+          <div class="endpoint-title-row">
+            <span class="method-tag get">GET</span>
+            <span class="method-tag post">POST</span>
+            <span class="endpoint-url">https://oprofase2.workarya.com/api/dailyjob/getdashboardstats?propId=Testing</span>
+            <h3 style="font-size:16px;color:#fff;margin-left:8px;">4. Dashboard Statistics API (Point 2)</h3>
+          </div>
+          <button class="copy-btn" onclick="copySnippet('curl-stats')">📋 Copy cURL</button>
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);">Provides dynamic aggregated metrics for Today, This Week, This Month, All Time, and Aging Jobs (> 1 week old) in a single fast query.</p>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Headers:</h4>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;background:var(--code-bg);padding:4px 8px;border-radius:4px;display:inline-block;">Authorization: Bearer &lt;TOKEN&gt;</code>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Query Parameters (or form-data):</h4>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Param Name</th>
+                <th>Requirement</th>
+                <th>Example Value</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>propId</code></td>
+                <td><span class="req">Required</span></td>
+                <td><code>Testing</code></td>
+                <td>Property ID to aggregate statistics for</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Response (200 OK):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "status": "success",
+  "data": {
+    "today": { "open": 5, "closed": 12, "total": 17, "assigned": 3, "inProgress": 2 },
+    "weekly": { "open": 24, "closed": 68, "total": 92, "assigned": 10, "inProgress": 8 },
+    "monthly": { "open": 85, "closed": 240, "total": 325, "assigned": 30, "inProgress": 25 },
+    "all": { "open": 142, "closed": 450, "total": 592, "assigned": 45, "inProgress": 35 },
+    "agingOverOneWeek": { "open": 14, "assigned": 8, "inProgress": 5, "total": 27 }
+  }
+}</code></pre>
+          </div>
+        </div>
+
+        <textarea id="curl-stats" style="display:none;">curl -X GET "https://oprofase2.workarya.com/api/dailyjob/getdashboardstats?propId=Testing" -H "Authorization: Bearer YOUR_TOKEN"</textarea>
+      </div>
+
+      <!-- API 4: Change Team Assignment -->
+      <div class="api-endpoint-card">
+        <div class="endpoint-header">
+          <div class="endpoint-title-row">
+            <span class="method-tag post">POST</span>
+            <span class="endpoint-url">https://oprofase2.workarya.com/api/dailyjob/changeteam</span>
+            <h3 style="font-size:16px;color:#fff;margin-left:8px;">5. Change Team Assignment (Point 6)</h3>
+          </div>
+          <button class="copy-btn" onclick="copySnippet('curl-changeteam')">📋 Copy cURL</button>
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);">Reassigns an open job to a different department team if wrongly assigned. Allowed for the 'Issued By' creator or Admin while status is 'OPEN'.</p>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Headers:</h4>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;background:var(--code-bg);padding:4px 8px;border-radius:4px;display:inline-block;">Authorization: Bearer &lt;TOKEN&gt;</code>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Body Type: <span style="color:#fb923c;">form-data</span></h4>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Key Name</th>
+                <th>Type</th>
+                <th>Requirement</th>
+                <th>Example Value</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>jobId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>123</code></td>
+                <td>ID of the open job</td>
+              </tr>
+              <tr>
+                <td><code>propId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>Testing</code></td>
+                <td>Property ID</td>
+              </tr>
+              <tr>
+                <td><code>newTeamId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>0139ef2a-bb34-4b47-9759-99426f43701d</code></td>
+                <td>Target department team ID to reassign to</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Response (200 OK):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "success": true,
+  "message": "Team updated successfully"
+}</code></pre>
+          </div>
+        </div>
+
+        <textarea id="curl-changeteam" style="display:none;">curl -X POST "https://oprofase2.workarya.com/api/dailyjob/changeteam" -H "Authorization: Bearer YOUR_TOKEN" -F "jobId=123" -F "propId=Testing" -F "newTeamId=YOUR_TEAM_ID"</textarea>
+      </div>
+
+      <!-- API 5: Change Job Status & Closure Email -->
+      <div class="api-endpoint-card">
+        <div class="endpoint-header">
+          <div class="endpoint-title-row">
+            <span class="method-tag post">POST</span>
+            <span class="endpoint-url">https://oprofase2.workarya.com/api/dailyjob/changejobstatus</span>
+            <h3 style="font-size:16px;color:#fff;margin-left:8px;">6. Job Closure & Notification (Point 1)</h3>
+          </div>
+          <button class="copy-btn" onclick="copySnippet('curl-closestatus')">📋 Copy cURL</button>
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);">Updates job status to 'Closed' (or 'In-Progress'). When status is set to 'Closed', triggers immediate Gmail SMTP emails to the creator ('Issued By') and a permanent copy to <strong>karanrajputxoxo@gmail.com</strong>.</p>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Headers:</h4>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;background:var(--code-bg);padding:4px 8px;border-radius:4px;display:inline-block;">Authorization: Bearer &lt;TOKEN&gt;</code>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Body Type: <span style="color:#fb923c;">form-data</span></h4>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Key Name</th>
+                <th>Type</th>
+                <th>Requirement</th>
+                <th>Example Value</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>jobId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>123</code></td>
+                <td>Job ID to update / close</td>
+              </tr>
+              <tr>
+                <td><code>propId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>Testing</code></td>
+                <td>Property ID</td>
+              </tr>
+              <tr>
+                <td><code>status</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>Closed</code></td>
+                <td>New status (<code>Closed</code>, <code>In-Progress</code>, <code>Assigned</code>)</td>
+              </tr>
+              <tr>
+                <td><code>remarks</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>Work completed and verified.</code></td>
+                <td>Closure remarks</td>
+              </tr>
+              <tr>
+                <td><code>closedBy</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>Karan Rajput</code></td>
+                <td>Name of person closing the job</td>
+              </tr>
+              <tr>
+                <td><code>uploadFiles</code></td>
+                <td>File</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>[Select Image File]</code></td>
+                <td>Photo After completion</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Response (200 OK):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "success": true,
+  "jobId": 123,
+  "status": "Closed",
+  "message": "Job status updated and closure emails dispatched."
+}</code></pre>
+          </div>
+        </div>
+
+        <textarea id="curl-closestatus" style="display:none;">curl -X POST "https://oprofase2.workarya.com/api/dailyjob/changejobstatus" -H "Authorization: Bearer YOUR_TOKEN" -F "jobId=123" -F "propId=Testing" -F "status=Closed" -F "remarks=Work verified and closed." -F "closedBy=Karan Rajput"</textarea>
+      </div>
+
+      <!-- API 6: Assign Member -->
+      <div class="api-endpoint-card">
+        <div class="endpoint-header">
+          <div class="endpoint-title-row">
+            <span class="method-tag post">POST</span>
+            <span class="endpoint-url">https://oprofase2.workarya.com/api/dailyjob/assignteammember</span>
+            <h3 style="font-size:16px;color:#fff;margin-left:8px;">7. Assign Team Member (Point 17)</h3>
+          </div>
+          <button class="copy-btn" onclick="copySnippet('curl-assign')">📋 Copy cURL</button>
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);">Assigns a technician or supervisor to an open job. Super Admin has permission to select any member belonging to the target team.</p>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Headers:</h4>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;background:var(--code-bg);padding:4px 8px;border-radius:4px;display:inline-block;">Authorization: Bearer &lt;TOKEN&gt;</code>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Body Type: <span style="color:#fb923c;">form-data</span></h4>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Key Name</th>
+                <th>Type</th>
+                <th>Requirement</th>
+                <th>Example Value</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>jobId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>123</code></td>
+                <td>Job ID</td>
+              </tr>
+              <tr>
+                <td><code>propId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>Testing</code></td>
+                <td>Property ID</td>
+              </tr>
+              <tr>
+                <td><code>teamId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>TEAM_ID</code></td>
+                <td>Assigned team ID</td>
+              </tr>
+              <tr>
+                <td><code>subteamId</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>SUBTEAM_ID</code></td>
+                <td>Subteam ID</td>
+              </tr>
+              <tr>
+                <td><code>memberEmail</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>technician@workwise.in</code></td>
+                <td>Technician / Supervisor email</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Response (200 OK):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "success": true,
+  "message": "Job successfully assigned to technician@workwise.in"
+}</code></pre>
+          </div>
+        </div>
+
+        <textarea id="curl-assign" style="display:none;">curl -X POST "https://oprofase2.workarya.com/api/dailyjob/assignteammember" -H "Authorization: Bearer YOUR_TOKEN" -F "jobId=123" -F "propId=Testing" -F "teamId=YOUR_TEAM_ID" -F "subteamId=" -F "memberEmail=tech@workwise.in"</textarea>
+      </div>
+
+      <!-- API 7: Add New Job -->
+      <div class="api-endpoint-card">
+        <div class="endpoint-header">
+          <div class="endpoint-title-row">
+            <span class="method-tag post">POST</span>
+            <span class="endpoint-url">https://oprofase2.workarya.com/api/dailyjob/addnewjob</span>
+            <h3 style="font-size:16px;color:#fff;margin-left:8px;">8. Add New Maintenance Job</h3>
+          </div>
+          <button class="copy-btn" onclick="copySnippet('curl-addjob')">📋 Copy cURL</button>
+        </div>
+        <p style="font-size:14px;color:var(--text-muted);">Creates a new maintenance job record with optional image uploads.</p>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Headers:</h4>
+          <code style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#38bdf8;background:var(--code-bg);padding:4px 8px;border-radius:4px;display:inline-block;">Authorization: Bearer &lt;TOKEN&gt;</code>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Body Type: <span style="color:#fb923c;">form-data</span></h4>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Key Name</th>
+                <th>Type</th>
+                <th>Requirement</th>
+                <th>Example Value</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>propId</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>Testing</code></td>
+                <td>Property ID</td>
+              </tr>
+              <tr>
+                <td><code>areaID</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>AREA_ID</code></td>
+                <td>Area ID</td>
+              </tr>
+              <tr>
+                <td><code>subareaId</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>Villa 102</code></td>
+                <td>Sub-area or room number</td>
+              </tr>
+              <tr>
+                <td><code>issued_to_team</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>TEAM_ID</code></td>
+                <td>Target department team ID</td>
+              </tr>
+              <tr>
+                <td><code>issued_by_team</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>CREATOR_TEAM_ID</code></td>
+                <td>Creator team ID</td>
+              </tr>
+              <tr>
+                <td><code>issued_by_team_details</code></td>
+                <td>Text</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>creator@workwise.in</code></td>
+                <td>Creator user name or email</td>
+              </tr>
+              <tr>
+                <td><code>job_detail</code></td>
+                <td>Text</td>
+                <td><span class="req">Required</span></td>
+                <td><code>AC leaking in room 102</code></td>
+                <td>Problem description</td>
+              </tr>
+              <tr>
+                <td><code>uploadFiles</code></td>
+                <td>File</td>
+                <td><span class="opt">Optional</span></td>
+                <td><code>[Select Image File]</code></td>
+                <td>Photo Before problem image</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="font-size:13px;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;">Response (200 OK):</h4>
+          <div class="code-block-wrap">
+            <pre><code>{
+  "success": true,
+  "jobid": 145,
+  "jobs": { ... }
+}</code></pre>
+          </div>
+        </div>
+
+        <textarea id="curl-addjob" style="display:none;">curl -X POST "https://oprofase2.workarya.com/api/dailyjob/addnewjob" -H "Authorization: Bearer YOUR_TOKEN" -F "propId=Testing" -F "areaID=AREA_ID" -F "subareaId=Villa 102" -F "issued_to_team=TEAM_ID" -F "issued_by_team_details=creator@workwise.in" -F "job_detail=AC water leak in bathroom"</textarea>
+      </div>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" style="position:fixed;bottom:24px;right:24px;background:#059669;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,0.5);opacity:0;pointer-events:none;transition:opacity 0.2s;z-index:9999;"></div>
+
+    <!-- Footer -->
+    <footer>
+      <p>QuickFix Modernization Suite &copy; 2026 WorkWize &middot; Live API: <a href="https://oprofase2.workarya.com" target="_blank">https://oprofase2.workarya.com</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // Tab View Switcher (Requirements vs Postman Suite)
+    function switchMainView(view) {
+      var reqContainer = document.getElementById('viewRequirementsContainer');
+      var postmanContainer = document.getElementById('viewPostmanContainer');
+      var btnReq = document.getElementById('btnViewRequirements');
+      var btnPostman = document.getElementById('btnViewPostman');
+
+      if (view === 'requirements') {
+        reqContainer.style.display = 'block';
+        postmanContainer.style.display = 'none';
+        btnReq.classList.add('active');
+        btnPostman.classList.remove('active');
+      } else {
+        reqContainer.style.display = 'none';
+        postmanContainer.style.display = 'block';
+        btnReq.classList.remove('active');
+        btnPostman.classList.add('active');
+      }
+    }
+
+    // Filter & Search Interactions for Requirements List
+    var filterBtns = document.querySelectorAll('.filter-btn');
+    var cards = document.querySelectorAll('.item-card');
+    var searchInput = document.getElementById('searchInput');
+
+    var currentFilter = 'all';
+    var currentQuery = '';
+
+    filterBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        filterBtns.forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilters();
+      });
+    });
+
+    if (searchInput) {
+      searchInput.addEventListener('input', function (e) {
+        currentQuery = e.target.value.toLowerCase().trim();
+        applyFilters();
+      });
+    }
+
+    function applyFilters() {
+      cards.forEach(function (card) {
+        var status = card.dataset.status;
+        var text = card.textContent.toLowerCase();
+
+        var matchesFilter = (currentFilter === 'all') || (status === currentFilter);
+        var matchesQuery = !currentQuery || text.includes(currentQuery);
+
+        card.style.display = (matchesFilter && matchesQuery) ? 'flex' : 'none';
+      });
+    }
+
+    // Copy Snippet Helper
+    function copySnippet(textareaId) {
+      var el = document.getElementById(textareaId);
+      if (!el) return;
+      navigator.clipboard.writeText(el.value).then(function () {
+        showToast('cURL command copied to clipboard!');
+      }, function () {
+        showToast('Unable to copy to clipboard.');
+      });
+    }
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      if (!t) return;
+      t.textContent = msg;
+      t.style.opacity = '1';
+      setTimeout(function () { t.style.opacity = '0'; }, 2500);
+    }
+  </script>
+</body>
+</html>

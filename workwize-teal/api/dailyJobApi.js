@@ -76,9 +76,9 @@
     },
 
     /**
-     * Get QuickFix Jobs for a property
+     * Get QuickFix Jobs for a property with dynamic filters, sorting, search & pagination
      * Endpoint: POST /api/dailyjob/getallquickfixjobs
-     * @param {Object} params - { propId, jobList ('open'|'close'), pageNumber, pageSize }
+     * @param {Object} params - { propId, jobList ('open'|'close'), pageNumber, pageSize, search, status, areaId, issuedBy, issuedTo, assignedTo, fromDate, toDate, sortBy, sortOrder }
      */
     getQuickFixJobs: async function (params) {
       params = params || {};
@@ -88,7 +88,58 @@
       form.append('pageNumber', String(params.pageNumber || 1));
       form.append('pageSize', String(params.pageSize || 25));
 
+      if (params.search || params.q) {
+        form.append('search', params.search || params.q || '');
+      }
+      if (params.status && params.status !== 'all') {
+        form.append('status', params.status);
+      }
+      if (params.areaId && params.areaId !== 'all') {
+        form.append('areaId', params.areaId);
+      }
+      if (params.issuedBy && params.issuedBy !== 'all') {
+        form.append('issued_by_team', params.issuedBy);
+        form.append('issuedBy', params.issuedBy);
+      }
+      if (params.issuedTo && params.issuedTo !== 'all') {
+        form.append('issued_to_team', params.issuedTo);
+        form.append('issuedTo', params.issuedTo);
+      }
+      if (params.assignedTo && params.assignedTo !== 'all') {
+        form.append('assigned_supervisor', params.assignedTo);
+        form.append('assignedTo', params.assignedTo);
+      }
+      if (params.fromDate) {
+        form.append('fromDate', params.fromDate);
+      }
+      if (params.toDate) {
+        form.append('toDate', params.toDate);
+      }
+      if (params.sortBy) {
+        form.append('sortBy', params.sortBy);
+      }
+      if (params.sortOrder) {
+        form.append('sortOrder', params.sortOrder);
+      }
+      if (params.includeUploads !== undefined) {
+        form.append('includeUploads', String(params.includeUploads));
+      }
+
       return await apiFetch('api/dailyjob/getallquickfixjobs', {
+        method: 'POST',
+        body: form
+      });
+    },
+
+    /**
+     * Get QuickFix Dashboard Statistics (Today, Weekly, Monthly, Aging > 1 week)
+     * Endpoint: POST /api/dailyjob/getdashboardstats
+     * @param {string} propId
+     */
+    getDashboardStats: async function (propId) {
+      var form = new FormData();
+      form.append('propId', propId || '');
+      return await apiFetch('api/dailyjob/getdashboardstats', {
         method: 'POST',
         body: form
       });
@@ -110,6 +161,7 @@
       form.append('issued_by_team_details', data.issued_by_team_details || '');
       form.append('creator_name', data.creator_name || '');
       form.append('creator_position', data.creator_position || '');
+      form.append('creator_email', data.creator_email || '');
       form.append('job_detail', data.job_detail || '');
 
       // Assign fields (only if assigning within own team)
@@ -210,13 +262,35 @@
     },
 
     /**
-     * Delete Daily Job
+     * Change Team Assignment for Open Job (Point 6)
+     * Endpoint: POST /api/dailyjob/changeteam
+     * @param {string} jobId
+     * @param {string} propId
+     * @param {string} newTeamId
+     */
+    changeTeam: async function (jobId, propId, newTeamId) {
+      var form = new FormData();
+      form.append('jobId', jobId);
+      form.append('jobID', jobId);
+      if (propId) form.append('propId', propId);
+      form.append('newTeamId', newTeamId);
+      form.append('teamId', newTeamId);
+
+      return await apiFetch('api/dailyjob/changeteam', {
+        method: 'POST',
+        body: form
+      });
+    },
+
+    /**
+     * Delete Daily Job (Point 16)
      * Endpoint: POST /api/dailyjob/deletejob
      */
     deleteJob: async function (jobId, propId) {
       try {
         var form = new FormData();
         form.append('jobId', jobId);
+        form.append('jobID', jobId);
         if (propId) form.append('propId', propId);
 
         return await apiFetch('api/dailyjob/deletejob', {

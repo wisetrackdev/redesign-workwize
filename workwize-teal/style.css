@@ -878,3 +878,133 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
   to { transform: rotate(360deg); }
 }
 
+/* Point 19: Pagination numbers aligned to bottom right */
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 18px;
+  color: var(--muted);
+  font-size: 13px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.pager .pg {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+/* Point 22: Top-left close button */
+.x-top-left {
+  border: 0;
+  background: #E8ECF8;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 20px;
+  color: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-right: 12px;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+.x-top-left:hover {
+  background: #dbeafe;
+}
+
+/* Point 8: Row and card highlighting */
+.highlighted-job,
+.jrow.highlighted-job {
+  border: 2px solid var(--primary) !important;
+  background-color: #f0fdf4 !important;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25) !important;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Points 8 & 10: Photo Lightbox & Zoom Controls */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 15, 30, 0.92);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+.lb-toolbar {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 310;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 6px 14px;
+  border-radius: 30px;
+  backdrop-filter: blur(8px);
+}
+.lb-tool {
+  background: #ffffff;
+  color: #0f172a;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.lb-tool:hover {
+  background: #e2e8f0;
+  transform: scale(1.05);
+}
+.lb-close {
+  background: #ef4444 !important;
+  color: #fff !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  cursor: pointer;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.lb-close:hover {
+  background: #dc2626 !important;
+}
+.lb-img-container {
+  max-width: 90vw;
+  max-height: 85vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: grab;
+  user-select: none;
+}
+.lb-img-container:active {
+  cursor: grabbing;
+}
+.lb-img-container img {
+  max-width: 85vw;
+  max-height: 80vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  transition: transform 0.12s ease-out;
+  transform-origin: center center;
+}
+
