@@ -386,6 +386,63 @@ export default function App() {
     return jobs.filter((j) => (j.status || '').toLowerCase() === 'closed').length;
   }, [jobs]);
 
+  // Synchronized Status Filtering (Two-way sync between pill tabs & Filter Drawer)
+  const handleSelectStatusPill = (statusPill) => {
+    setPillFilter(statusPill);
+    let mappedStatus = 'all';
+    if (statusPill === 'open') mappedStatus = 'Open';
+    else if (statusPill === 'assigned') mappedStatus = 'Assigned';
+    else if (statusPill === 'in-progress') mappedStatus = 'In-Progress';
+    setFilterState((prev) => ({
+      ...prev,
+      status: mappedStatus,
+    }));
+  };
+
+  const handleApplyFilters = (newFilters) => {
+    setFilterState(newFilters);
+    const st = (newFilters.status || 'all').toLowerCase();
+    if (st === 'open') {
+      setActiveTab('open');
+      setPillFilter('open');
+    } else if (st === 'assigned') {
+      setActiveTab('open');
+      setPillFilter('assigned');
+    } else if (st.includes('progress')) {
+      setActiveTab('open');
+      setPillFilter('in-progress');
+    } else if (st === 'closed') {
+      setActiveTab('closed');
+      setPillFilter('all');
+    } else {
+      setPillFilter('all');
+    }
+  };
+
+  const handleSelectStatsFilter = (st) => {
+    const lower = (st || '').toLowerCase();
+    if (lower === 'closed') {
+      setActiveTab('closed');
+      setPillFilter('all');
+      setFilterState((prev) => ({ ...prev, status: 'all' }));
+    } else {
+      setActiveTab('open');
+      if (lower === 'open') {
+        setPillFilter('open');
+        setFilterState((prev) => ({ ...prev, status: 'Open' }));
+      } else if (lower === 'assigned') {
+        setPillFilter('assigned');
+        setFilterState((prev) => ({ ...prev, status: 'Assigned' }));
+      } else if (lower.includes('progress')) {
+        setPillFilter('in-progress');
+        setFilterState((prev) => ({ ...prev, status: 'In-Progress' }));
+      } else {
+        setPillFilter('all');
+        setFilterState((prev) => ({ ...prev, status: 'all' }));
+      }
+    }
+  };
+
   // Filtered and Sorted Jobs
   const displayedJobs = useMemo(() => {
     return jobs
@@ -395,19 +452,13 @@ export default function App() {
         if (activeTab === 'open' && isJobClosed) return false;
         if (activeTab === 'closed' && !isJobClosed) return false;
 
-        // Pill filter
-        if (pillFilter !== 'all') {
+        // Unified Status Filter (Synchronized between pill tabs & filter drawer)
+        const targetStatus = pillFilter !== 'all' ? pillFilter : (filterState.status !== 'all' ? filterState.status.toLowerCase() : 'all');
+        if (targetStatus !== 'all') {
           const st = (job.status || '').toLowerCase();
-          if (pillFilter === 'in-progress' && !st.includes('progress')) return false;
-          if (pillFilter === 'assigned' && st !== 'assigned') return false;
-          if (pillFilter === 'open' && st !== 'open') return false;
-        }
-
-        // Drawer Filters: Status
-        if (filterState.status !== 'all') {
-          const st = (job.status || '').toLowerCase();
-          if (filterState.status === 'In-Progress' && !st.includes('progress')) return false;
-          if (filterState.status.toLowerCase() !== st) return false;
+          if ((targetStatus === 'in-progress' || targetStatus.includes('progress')) && !st.includes('progress')) return false;
+          if (targetStatus === 'assigned' && st !== 'assigned') return false;
+          if (targetStatus === 'open' && st !== 'open') return false;
         }
 
         // Drawer Filters: Area
@@ -768,34 +819,18 @@ export default function App() {
             currentPropertyId={currentPropertyId}
             currentPropertyName={currentPropertyName}
             jobs={jobs}
-            onSelectFilter={(st) => {
-              if (st === 'Closed') {
-                setActiveTab('closed');
-                setFilterState((prev) => ({ ...prev, status: 'all' }));
-              } else {
-                setActiveTab('open');
-                setFilterState((prev) => ({ ...prev, status: st === 'all' ? 'all' : st }));
-              }
-            }}
+            onSelectFilter={handleSelectStatsFilter}
           />
         ) : activeTab === 'stats' ? (
           <StatsView
             jobs={jobs}
             currentPropertyId={currentPropertyId}
             currentPropertyName={currentPropertyName}
-            onSelectFilter={(st) => {
-              if (st === 'Closed') {
-                setActiveTab('closed');
-                setFilterState((prev) => ({ ...prev, status: 'all' }));
-              } else {
-                setActiveTab('open');
-                setFilterState((prev) => ({ ...prev, status: st === 'all' ? 'all' : st }));
-              }
-            }}
+            onSelectFilter={handleSelectStatsFilter}
           />
         ) : (
           <View style={styles.contentWrap}>
-            {/* Sticky Search & Filter Toolbar (.sticky-bar .topbar) */}
+            {/* Sticky Search Toolbar (Full Width) */}
             <View style={styles.searchFilterRow}>
               <View style={styles.searchBox}>
                 <Feather name="search" size={16} color={Colors.muted} />
@@ -813,36 +848,13 @@ export default function App() {
                   </TouchableOpacity>
                 )}
               </View>
-
-              <TouchableOpacity
-                style={[
-                  styles.btnFilterChip,
-                  hasActiveFilters && styles.btnFilterChipActive,
-                ]}
-                onPress={() => setShowFilterModal(true)}
-                activeOpacity={0.8}
-              >
-                <Feather
-                  name="sliders"
-                  size={14}
-                  color={hasActiveFilters ? '#FFFFFF' : Colors.primary}
-                />
-                <Text
-                  style={[
-                    styles.btnFilterText,
-                    hasActiveFilters && styles.btnFilterTextActive,
-                  ]}
-                >
-                  Filter{hasActiveFilters ? ' •' : ''}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Status Filter Chips (.chips) */}
             <View style={styles.chipsRow}>
               <TouchableOpacity
                 style={[styles.chip, pillFilter === 'all' && styles.chipActive]}
-                onPress={() => setPillFilter('all')}
+                onPress={() => handleSelectStatusPill('all')}
                 activeOpacity={0.8}
               >
                 <Text style={[styles.chipText, pillFilter === 'all' && styles.chipTextActive]}>
@@ -854,7 +866,7 @@ export default function App() {
                 <>
                   <TouchableOpacity
                     style={[styles.chip, pillFilter === 'open' && styles.chipActive]}
-                    onPress={() => setPillFilter('open')}
+                    onPress={() => handleSelectStatusPill('open')}
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.chipText, pillFilter === 'open' && styles.chipTextActive]}>
@@ -864,7 +876,7 @@ export default function App() {
 
                   <TouchableOpacity
                     style={[styles.chip, pillFilter === 'assigned' && styles.chipActive]}
-                    onPress={() => setPillFilter('assigned')}
+                    onPress={() => handleSelectStatusPill('assigned')}
                     activeOpacity={0.8}
                   >
                     <Text
@@ -879,7 +891,7 @@ export default function App() {
 
                   <TouchableOpacity
                     style={[styles.chip, pillFilter === 'in-progress' && styles.chipActive]}
-                    onPress={() => setPillFilter('in-progress')}
+                    onPress={() => handleSelectStatusPill('in-progress')}
                     activeOpacity={0.8}
                   >
                     <Text
@@ -997,7 +1009,7 @@ export default function App() {
           visible={showFilterModal}
           onClose={() => setShowFilterModal(false)}
           filterState={filterState}
-          onApply={setFilterState}
+          onApply={handleApplyFilters}
           areaList={areaList}
           teamList={teamList}
           issuedByList={issuedByList}
@@ -1078,11 +1090,7 @@ export default function App() {
           onClose={() => setShowStatsModal(false)}
           allJobs={jobs}
           currentPropertyId={currentPropertyId}
-          onSelectStatusFilter={(st) => {
-            setFilterState((prev) => ({ ...prev, status: st }));
-            if (st === 'Closed') setActiveTab('closed');
-            else setActiveTab('open');
-          }}
+          onSelectStatusFilter={handleSelectStatsFilter}
         />
 
         {/* Direct Property Selector Modal (Tapped from Header Property Pill) */}

@@ -29,7 +29,7 @@ export default function Header({
 
       {/* Top Header Bar */}
       <View style={styles.topBar}>
-        {/* WorkWize Logo in White Pill (Exact match to workwize-teal) */}
+        {/* WorkWize Logo in White Pill (Increased width) */}
         <TouchableOpacity
           style={styles.logoPill}
           activeOpacity={0.9}
@@ -43,31 +43,8 @@ export default function Header({
           />
         </TouchableOpacity>
 
-        {/* Active Property Badge Pill - Clicking opens Property Switcher */}
-        <TouchableOpacity
-          style={styles.propPill}
-          onPress={onOpenPropertyPicker || onOpenProfile}
-          activeOpacity={0.7}
-          hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-        >
-          <Feather name="layers" size={12} color="#FFFFFF" />
-          <Text style={styles.propPillText} numberOfLines={1}>
-            {propertyName}
-          </Text>
-          <Feather name="chevron-down" size={12} color="rgba(255,255,255,0.85)" />
-        </TouchableOpacity>
-
-        {/* Right Action Icons */}
+        {/* Right Action Icons: Profile Avatar with Active Dot */}
         <View style={styles.rightActions}>
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={onOpenFilter}
-            activeOpacity={0.7}
-            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-          >
-            <Feather name="filter" size={17} color="#FFFFFF" />
-          </TouchableOpacity>
-
           {/* User Avatar with Green Active Dot - Clicking opens Profile Modal */}
           <TouchableOpacity
             style={styles.avatarWrap}
@@ -155,9 +132,9 @@ const styles = StyleSheet.create({
   },
   logoPill: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -167,8 +144,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoImage: {
-    width: 78,
-    height: 20,
+    width: 135,
+    height: 28,
   },
   propPill: {
     flexDirection: 'row',
