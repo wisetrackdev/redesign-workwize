@@ -145,7 +145,7 @@
       btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xs"></i> <span>Logging In...</span>';
 
       try {
-        // Call Real Backend Login API
+        // Authenticate with Real Backend API via 'taskmaster' app type (Mirrors taskmaster loginUser)
         const response = await WorkWizeAPI.login(username, password, 'taskmaster');
         if (response && response.success) {
           btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i> <span>Success! Redirecting...</span>';
@@ -155,54 +155,12 @@
             window.location.href = 'job-by-area.html';
           }, 400);
           return;
+        } else {
+          throw new Error('Invalid credentials');
         }
       } catch (error) {
-        console.warn('API Login attempt response:', error.message);
-
-        // Allow graceful fallback login with dynamic user email and role
-        const lower = username.toLowerCase();
-        let role = "STAFF";
-        let desg = "Staff";
-
-        if (lower.includes('admin')) {
-          role = "ADMIN";
-          desg = "Admin";
-        } else if (lower.includes('test')) {
-          role = "TEST";
-          desg = "Test";
-        } else if (lower.includes('manager')) {
-          role = "MANAGER";
-          desg = "Manager";
-        }
-
-        const prefix = username.split('@')[0] || "User";
-        const formattedName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
-
-        const mockUser = {
-          username: username,
-          jwt: "mock.jwt.token",
-          name: formattedName,
-          email: username,
-          role: [role],
-          prop: "PROP-001",
-          desg: desg,
-          access: {}
-        };
-        localStorage.setItem('oproUserData', JSON.stringify(mockUser));
-        WorkWizeAPI.setCurrentProperty("PROP-001", "Main Facility");
-        
-        btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i> <span>Welcome! Redirecting...</span>';
-        btn.classList.remove('bg-blue-600');
-        btn.classList.add('bg-emerald-600');
-        setTimeout(() => {
-          window.location.href = 'job-by-area.html';
-        }, 400);
-        return;
-
-        // Show error message
-        err.innerText = error.message && error.message.includes('401') 
-          ? 'Invalid email or password. Please try again.' 
-          : 'Invalid credentials or unable to reach server.';
+        // Exactly mirrors taskmaster: $('#login-errors').text('Invalid credentials')
+        err.innerText = 'Invalid credentials';
         err.classList.remove('hidden');
         btn.disabled = false;
         btn.innerHTML = '<span>Log In</span>';

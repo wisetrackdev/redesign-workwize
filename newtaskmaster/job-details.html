@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WorkWize | Job Details</title>
+  <link rel="icon" type="image/jpeg" href="assets/logo.jpeg">
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -121,7 +122,6 @@
               <p class="text-slate-400 text-[11px] header-menu-user-email">loading@workwize.io</p>
             </div>
             <a href="settings.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-regular fa-user mr-2 text-slate-400"></i> My Profile</a>
-            <a href="settings.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-solid fa-sliders mr-2 text-slate-400"></i> Preferences</a>
             <div class="border-t border-slate-100 my-1"></div>
             <a href="login.html" class="block px-4 py-2 hover:bg-rose-50 text-rose-600"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Log Out</a>
           </div>
@@ -130,35 +130,53 @@
     </header>
 
     <!-- Page Body -->
-    <main class="p-8 max-w-[100rem] w-full mx-auto space-y-6">
+    <main class="p-6 sm:p-8 max-w-[100rem] w-full mx-auto space-y-6">
 
       <!-- Breadcrumbs -->
       <div class="flex items-center gap-2 text-xs text-slate-400">
+        <a href="job-by-area.html" class="hover:text-blue-600 transition-colors">Job by Area</a>
+        <span>/</span>
         <a href="all-jobs.html" class="hover:text-blue-600 transition-colors">All Jobs</a>
         <span>/</span>
-        <span class="text-slate-700 font-semibold dyn-job-id">Tes-313026-10738</span>
+        <span class="text-slate-800 font-semibold" id="breadcrumbJobId">Loading...</span>
+      </div>
+
+      <!-- Hero Property Image Banner (Taskmaster prop-img-banner) -->
+      <div id="propImgBanner" class="hidden rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative h-48 sm:h-64 bg-slate-900 bg-cover bg-center">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent flex items-end p-6">
+          <div class="text-white">
+            <span class="text-[11px] font-semibold tracking-wider uppercase text-blue-200" id="bannerPropSubtitle">Property Overview</span>
+            <h2 class="text-xl sm:text-2xl font-extrabold" id="bannerPropTitle">Property</h2>
+          </div>
+        </div>
       </div>
 
       <!-- Job Title & Top Controls -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
         <div>
-          <div class="flex items-center gap-3">
-            <h1 class="text-2xl font-bold text-slate-900 tracking-tight dyn-job-id">Tes-313026-10738</h1>
-            <span id="dynJobStatus" class="badge-status badge-in-progress">In Progress</span>
-            <span id="dynJobPriority" class="badge-priority badge-priority-high">High</span>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight" id="dynJobOrgId">Loading...</h1>
+            <span id="dynJobActiveBadge" class="badge-status badge-yet-to-commence">Open</span>
+            <span id="dynJobStatus" class="badge-status badge-in-progress cursor-pointer hover:opacity-80 transition-opacity" onclick="openEditModal('JB-STATUS')" title="Click to change Status">Yet to Commence</span>
+            <span id="dynJobPriority" class="badge-priority badge-priority-medium cursor-pointer hover:opacity-80 transition-opacity" onclick="openEditModal('JB-PRIORITY')" title="Click to change Priority">Medium</span>
           </div>
-          <p class="text-xs text-slate-500 mt-1 dyn-job-title">Testing: Expected Inspection & Review</p>
+          <p class="text-xs text-slate-500 mt-1 flex items-center gap-2 flex-wrap">
+            <span class="font-bold text-blue-600" id="dynJobAreaTitle">Area</span>
+            <span class="text-slate-400" id="dynJobPropTitle">[Property]</span>
+          </p>
         </div>
 
-        <div class="flex items-center gap-2">
-          <button id="detailMarkProgressBtn" class="btn-outline text-xs">
-            <i class="fa-solid fa-play text-[10px] text-blue-600"></i> Set In Progress
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Edit Full Job Button (Mirrors taskmaster ShowJobform) -->
+          <button id="detailEditFullJobBtn" type="button" onclick="openEditModal('FULL-JOB')" class="btn-outline text-xs !py-2 !px-3 font-semibold text-slate-700 hover:text-blue-600">
+            <i class="fa-solid fa-pen-to-square mr-1.5 text-blue-600"></i> Edit Job
           </button>
-          <button id="detailMarkClosedBtn" class="btn-primary text-xs !bg-emerald-600 hover:!bg-emerald-700">
-            <i class="fa-solid fa-check text-xs"></i> Complete Job
+          <!-- Close This Job Button (Mirrors taskmaster CloseJob) -->
+          <button id="detailCloseJobBtn" type="button" onclick="openEditModal('JB-CLOSEJOB')" class="btn-primary !bg-rose-600 hover:!bg-rose-700 text-xs !py-2 !px-4 shadow-sm shadow-rose-500/20 hidden">
+            <i class="fa-solid fa-lock text-xs mr-1"></i> Close This Job
           </button>
-          <button onclick="window.print()" class="btn-outline text-xs" title="Print Job Sheet">
-            <i class="fa-solid fa-print"></i>
+          <button type="button" onclick="window.print()" class="btn-outline text-xs !py-2 !px-3" title="Print Job Sheet">
+            <i class="fa-solid fa-print mr-1 text-slate-400"></i> Print
           </button>
         </div>
       </div>
@@ -171,126 +189,172 @@
           
           <!-- Job Scope & Details Card -->
           <div class="ww-card space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm border-b border-slate-100 pb-3">Detailed Scope of Work</h3>
-            <p class="text-xs text-slate-700 leading-relaxed dyn-job-details">
-              Conduct full system testing and review checklist items for operational compliance.
-            </p>
-
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-3 border-t border-slate-100 text-xs">
-              <div>
-                <span class="text-slate-400 block text-[11px]">Primary Area</span>
-                <span class="font-bold text-slate-800 dyn-job-area">Testing</span>
-              </div>
-              <div>
-                <span class="text-slate-400 block text-[11px]">Sub-Area / Section</span>
-                <span class="font-bold text-slate-800 dyn-job-subarea">Testing Routine</span>
-              </div>
-              <div>
-                <span class="text-slate-400 block text-[11px]">Location</span>
-                <span class="font-bold text-slate-800 dyn-job-location">Tower A - Level 4</span>
-              </div>
-              <div>
-                <span class="text-slate-400 block text-[11px]">Villa / Unit No.</span>
-                <span class="font-bold text-slate-800 dyn-job-villa">V-101</span>
-              </div>
-              <div>
-                <span class="text-slate-400 block text-[11px]">Date Created</span>
-                <span class="font-bold text-slate-800 dyn-job-opened">10-03-2026</span>
-              </div>
-              <div>
-                <span class="text-slate-400 block text-[11px]">Target Completion</span>
-                <span class="font-bold text-slate-800 dyn-job-expected">25-03-2026</span>
-              </div>
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-list text-blue-600"></i>
+                <span>Job Details</span>
+              </h3>
+              <button id="editDetailBtn" type="button" onclick="openEditModal('JB-DETAIL')" class="btn-outline text-[11px] !py-1 !px-2.5">
+                <i class="fa-solid fa-pen-to-square mr-1 text-blue-600"></i> Edit Details
+              </button>
             </div>
-          </div>
 
-          <!-- Timeline Progression Tracker -->
-          <div class="ww-card">
-            <h3 class="font-bold text-slate-900 text-sm mb-4">Milestone Progress & Audit Log</h3>
-            <div class="relative pl-6 space-y-6 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-              
-              <!-- Milestone 1 -->
-              <div class="relative">
-                <span class="absolute -left-6 top-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-sm"></span>
-                <div class="flex items-center justify-between text-xs">
-                  <h4 class="font-bold text-slate-800">Job Registered & Dispatched</h4>
-                  <span class="text-[11px] text-slate-400">10-03-2026 09:14 AM</span>
-                </div>
-                <p class="text-[11px] text-slate-500 mt-0.5">Ticket created via portal and routed to assigned specialist.</p>
-              </div>
-
-              <!-- Milestone 2 -->
-              <div class="relative">
-                <span class="absolute -left-6 top-0 w-4 h-4 rounded-full bg-blue-500 border-2 border-white shadow-sm"></span>
-                <div class="flex items-center justify-between text-xs">
-                  <h4 class="font-bold text-slate-800">Field Diagnostics Undertaken</h4>
-                  <span class="text-[11px] text-slate-400">11-03-2026 02:30 PM</span>
-                </div>
-                <p class="text-[11px] text-slate-500 mt-0.5">Pre-inspection checklist passed. Necessary parts and tools gathered.</p>
-              </div>
-
-              <!-- Milestone 3 -->
-              <div class="relative">
-                <span class="absolute -left-6 top-0 w-4 h-4 rounded-full bg-slate-300 border-2 border-white shadow-sm"></span>
-                <div class="flex items-center justify-between text-xs">
-                  <h4 class="font-bold text-slate-500">Supervisory Sign-Off & Close</h4>
-                  <span class="text-[11px] text-slate-400">Pending</span>
-                </div>
-                <p class="text-[11px] text-slate-400 mt-0.5">Final compliance inspection before closing ticket.</p>
-              </div>
-
+            <div class="text-xs text-slate-700 leading-relaxed p-3.5 bg-slate-50/70 rounded-xl border border-slate-100 min-h-[60px]" id="dynJobDetailText">
+              Loading description...
             </div>
-          </div>
 
-          <!-- Attachments -->
-          <div class="ww-card">
-            <h3 class="font-bold text-slate-900 text-sm mb-3">Job Documentation & Photos</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="dynJobUploads">
-              <div class="border border-slate-200 rounded-xl p-3 flex items-center gap-3 bg-slate-50">
-                <i class="fa-regular fa-file-pdf text-2xl text-rose-500"></i>
-                <div class="truncate text-xs">
-                  <span class="font-semibold text-slate-800 block truncate">Audit_Checklist.pdf</span>
-                  <span class="text-[10px] text-slate-400">1.2 MB</span>
-                </div>
+            <!-- Parameters Grid (Mirrors taskmaster job details fields) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-100 text-xs">
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100/80">
+                <span class="text-slate-400 block text-[11px] font-medium mb-0.5">Property</span>
+                <span class="font-bold text-slate-800" id="dynJobPropName">-</span>
               </div>
 
-              <div class="border border-slate-200 rounded-xl p-3 flex items-center gap-3 bg-slate-50">
-                <i class="fa-regular fa-image text-2xl text-blue-500"></i>
-                <div class="truncate text-xs">
-                  <span class="font-semibold text-slate-800 block truncate">Site_Photo_01.jpg</span>
-                  <span class="text-[10px] text-slate-400">3.4 MB</span>
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100/80 flex items-start justify-between">
+                <div>
+                  <span class="text-slate-400 block text-[11px] font-medium mb-0.5">Area</span>
+                  <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-800" id="dynJobAreaName">-</span>
+                    <span id="dynJobVillaBadge" class="hidden px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-extrabold">Villa -</span>
+                  </div>
+                </div>
+                <button id="editAreaBtn" type="button" onclick="openEditModal('JB-AREA')" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit
+                </button>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100/80 flex items-start justify-between">
+                <div>
+                  <span class="text-slate-400 block text-[11px] font-medium mb-0.5">Location</span>
+                  <span class="font-bold text-slate-800" id="dynJobLocation">-</span>
+                </div>
+                <button id="editLocationBtn" type="button" onclick="openEditModal('JB-LOCATION')" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit
+                </button>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100/80 flex items-start justify-between">
+                <div>
+                  <span class="text-slate-400 block text-[11px] font-medium mb-0.5">Job Creation Date</span>
+                  <span class="font-bold text-slate-800" id="dynJobCreatedOn">-</span>
+                </div>
+                <button id="editCreateDateBtn" type="button" onclick="openEditModal('JB-CREATEDATE')" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit
+                </button>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100/80 flex items-start justify-between">
+                <div>
+                  <span class="text-slate-400 block text-[11px] font-medium mb-0.5">Expected Completion Date</span>
+                  <span class="font-bold text-slate-800" id="dynJobExpected">-</span>
+                </div>
+                <button id="editExpDateBtn" type="button" onclick="openEditModal('JB-EXPDATE')" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit
+                </button>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-100/80 flex items-start justify-between">
+                <div>
+                  <span class="text-slate-400 block text-[11px] font-medium mb-0.5">Reference Number</span>
+                  <span class="font-mono text-slate-800 font-semibold" id="dynJobRefNum">-</span>
+                </div>
+                <button id="editRefNumBtn" type="button" onclick="openEditModal('JB-REFNUM')" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold">
+                  <i class="fa-solid fa-pen-to-square"></i> Edit
+                </button>
+              </div>
+
+              <!-- Closed Information (Visible when Job is Closed) -->
+              <div id="closedInfoContainer" class="hidden sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/80">
+                <div>
+                  <span class="text-emerald-800 block text-[11px] font-semibold mb-0.5">Job Closed On</span>
+                  <span class="font-bold text-emerald-900" id="dynJobClosedOn">-</span>
+                </div>
+                <div>
+                  <span class="text-emerald-800 block text-[11px] font-semibold mb-0.5">Job Closed By</span>
+                  <span class="font-bold text-emerald-900" id="dynJobClosedBy">-</span>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Discussion & Comments Section -->
+          <!-- Special Remarks Card -->
+          <div class="ww-card space-y-3" id="remarksCard">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i class="fa-regular fa-comment-dots text-amber-500"></i>
+                <span>Remarks</span>
+              </h3>
+              <button id="editRemarksBtn" type="button" onclick="openEditModal('JB-REMARK')" class="btn-outline text-[11px] !py-1 !px-2.5">
+                <i class="fa-solid fa-pen-to-square mr-1 text-amber-600"></i> Edit Remarks
+              </button>
+            </div>
+            <div class="text-xs text-slate-700 italic bg-amber-50/50 p-3.5 rounded-xl border border-amber-100 min-h-[40px]" id="dynJobRemarks">
+              No remarks entered.
+            </div>
+          </div>
+
+          <!-- Owner's Comment Card (Mirrors taskmaster job-ownercomment-pane-div) -->
+          <div class="ww-card space-y-3 hidden" id="ownerCommentCard">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-crown text-purple-600"></i>
+                <span>Owner's Comment</span>
+              </h3>
+              <button id="editOwnerCommentBtn" type="button" onclick="openEditModal('JB-OWNERCOMMENT')" class="btn-outline text-[11px] !py-1 !px-2.5">
+                <i class="fa-solid fa-pen-to-square mr-1 text-purple-600"></i> Edit
+              </button>
+            </div>
+            <div class="text-xs text-purple-900 bg-purple-50/60 p-3.5 rounded-xl border border-purple-100" id="dynJobOwnerComment">
+              -
+            </div>
+          </div>
+
+          <!-- Job Documentation & Photos (Attachments) -->
           <div class="ww-card space-y-4">
             <div class="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 class="font-bold text-slate-900 text-sm">Comments & Activity Log</h3>
-              <span class="text-xs text-slate-400" id="dynCommentsCount">0 Comments</span>
+              <div class="flex items-center gap-2">
+                <i class="fa-regular fa-images text-blue-600 text-base"></i>
+                <h3 class="font-bold text-slate-900 text-sm">Job Documentation & Photos</h3>
+              </div>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200" id="dynUploadsCount">0 Files</span>
+            </div>
+
+            <!-- Uploads Gallery (Click on any thumbnail to pop up image) -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5" id="dynJobUploads">
+              <!-- Populated dynamically via job-details.js -->
+            </div>
+          </div>
+
+          <!-- Comments & Activity Log Timeline -->
+          <div class="ww-card space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div class="flex items-center gap-2">
+                <i class="fa-regular fa-comments text-blue-600 text-base"></i>
+                <h3 class="font-bold text-slate-900 text-sm">Comments & Activity Log</h3>
+              </div>
+              <span class="text-xs text-slate-400 font-medium" id="dynCommentsCount">0 Comments</span>
             </div>
 
             <!-- Existing comments container -->
-            <div id="dynJobComments" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+            <div id="dynJobComments" class="space-y-3.5 max-h-96 overflow-y-auto pr-1">
               <!-- Dynamically populated comments -->
             </div>
 
-            <!-- New Comment Box -->
-            <div class="pt-3 border-t border-slate-100">
+            <!-- New Comment Box (Hidden if job is closed) -->
+            <div class="pt-4 border-t border-slate-100" id="newCommentBox">
               <div class="flex items-start gap-3">
                 <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
                   <i class="fa-regular fa-user"></i>
                 </div>
                 <div class="flex-1 space-y-2">
-                  <textarea id="newCommentInput" rows="2" placeholder="Write a comment, note or update..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none resize-none"></textarea>
-                  <div class="flex items-center justify-between">
-                    <label class="cursor-pointer text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1.5">
-                      <i class="fa-solid fa-paperclip"></i>
-                      <span class="text-[11px]" id="commentFileLabel">Attach Image</span>
+                  <textarea id="newCommentInput" rows="3" placeholder="Write a comment, report update or activity log..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none resize-none"></textarea>
+                  <div class="flex items-center justify-between flex-wrap gap-2">
+                    <label class="cursor-pointer text-slate-500 hover:text-blue-600 text-xs flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-blue-300 transition-colors bg-white">
+                      <i class="fa-solid fa-paperclip text-slate-400"></i>
+                      <span class="text-[11px] font-medium" id="commentFileLabel">Attach Image</span>
                       <input type="file" id="commentFileInput" accept="image/*" class="hidden">
                     </label>
-                    <button id="submitCommentBtn" class="btn-primary text-xs !py-1.5 !px-3.5">
+                    <button id="submitCommentBtn" type="button" onclick="submitNewComment()" class="btn-primary text-xs !py-1.5 !px-4">
                       <i class="fa-solid fa-paper-plane mr-1 text-[10px]"></i> Send Comment
                     </button>
                   </div>
@@ -305,37 +369,79 @@
         <div class="lg:col-span-4 space-y-6">
           
           <!-- Assigned Staff Card -->
-          <div class="ww-card">
-            <h3 class="font-bold text-slate-900 text-sm mb-3">Assigned Technician</h3>
-            <div class="flex items-center gap-3 mb-4">
-              <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="Avatar" class="w-11 h-11 rounded-full object-cover border border-slate-200">
-              <div>
-                <h4 class="font-bold text-slate-800 text-xs dyn-job-assigned">Testing - IT Admin</h4>
-                <p class="text-[11px] text-slate-400">Lead Officer</p>
+          <div class="ww-card space-y-3">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-users text-blue-600"></i>
+                <span>Assigned To</span>
+              </h3>
+              <button id="editTeamBtn" type="button" onclick="openEditModal('JB-TEAMS')" class="btn-outline text-[11px] !py-1 !px-2.5">
+                <i class="fa-solid fa-user-pen mr-1 text-blue-600"></i> Edit
+              </button>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-sm shrink-0">
+                <i class="fa-solid fa-user-gear"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h4 class="font-bold text-slate-800 text-xs truncate" id="dynJobAssigned">Unassigned</h4>
+                <p class="text-[11px] text-slate-400">Operational Team / Assignee</p>
               </div>
             </div>
-            <a href="teams.html" class="btn-outline text-xs w-full justify-center">View Profile & Queue</a>
           </div>
 
-          <!-- Cost & Budget Card -->
-          <div class="ww-card space-y-3">
-            <h3 class="font-bold text-slate-900 text-sm">Financial Allocation</h3>
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-slate-500">Budgeted Amount</span>
-              <span class="font-extrabold text-slate-900 text-sm dyn-job-budget">$1,200</span>
+          <!-- Financial & Budget Card -->
+          <div class="ww-card space-y-3.5">
+            <div class="border-b border-slate-100 pb-2.5">
+              <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-sack-dollar text-emerald-600"></i>
+                <span>Financial Allocation</span>
+              </h3>
             </div>
-            <div class="flex items-center justify-between text-xs">
-              <span class="text-slate-500">Cost Center Code</span>
-              <span class="font-bold text-blue-600 dyn-job-costcenter">CC-01</span>
+
+            <div class="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+              <div>
+                <span class="text-slate-400 block text-[11px]">Budget ($)</span>
+                <span class="font-extrabold text-slate-900 text-sm" id="dynJobBudget">$0</span>
+              </div>
+              <button id="editBudgetBtn" type="button" onclick="openEditModal('JB-BUDGET')" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+              <div>
+                <span class="text-slate-400 block text-[11px]">Cost Center</span>
+                <span class="font-bold text-slate-800" id="dynJobCostCenter">-</span>
+                <span class="text-[10px] text-slate-400 block" id="dynJobCcfDept"></span>
+              </div>
+              <button id="editCostCenterBtn" type="button" onclick="openEditModal('JB-CCF')" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between text-xs p-2.5 rounded-lg bg-slate-50 border border-slate-100" id="finalExpRow">
+              <div>
+                <span class="text-slate-400 block text-[11px]">Final Expense ($)</span>
+                <span class="font-extrabold text-slate-900 text-sm" id="dynJobFinalExp">$0</span>
+              </div>
+              <button id="editFinalExpBtn" type="button" onclick="openEditModal('JB-FINEXP')" class="text-blue-600 hover:text-blue-800 text-[11px] font-semibold">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
             </div>
           </div>
 
-          <!-- Remarks Card -->
-          <div class="ww-card">
-            <h3 class="font-bold text-slate-900 text-sm mb-2">Special Remarks</h3>
-            <p class="text-xs text-slate-600 italic bg-amber-50/50 p-3 rounded-lg border border-amber-100 dyn-job-remarks">
-              Priority review requested by management.
-            </p>
+          <!-- Quick Navigation / Back Link -->
+          <div class="ww-card bg-slate-50/70 space-y-2 text-center">
+            <p class="text-xs text-slate-500">Need to view all operational areas or all jobs?</p>
+            <div class="flex items-center justify-center gap-2 pt-1">
+              <a href="job-by-area.html" class="btn-outline text-xs !py-1.5 !px-3">
+                <i class="fa-solid fa-layer-group mr-1"></i> Job by Area
+              </a>
+              <a href="all-jobs.html" class="btn-secondary text-xs !py-1.5 !px-3">
+                <i class="fa-solid fa-list-check mr-1"></i> All Jobs
+              </a>
+            </div>
           </div>
 
         </div>
@@ -343,6 +449,69 @@
       </div>
 
     </main>
+  </div>
+
+  <!-- Universal Field Edit Modal (Mirrors taskmaster resetDataModel) -->
+  <div id="editFieldModal" class="modal-backdrop">
+    <div class="modal-container !max-w-xl">
+      <div class="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
+            <i class="fa-solid fa-pen-to-square" id="editModalIcon"></i>
+          </div>
+          <h3 class="font-bold text-slate-900 text-base" id="editModalTitle">Edit Field</h3>
+        </div>
+        <button type="button" onclick="closeEditModal()" class="w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4" id="editModalBody">
+        <!-- Dynamically injected input based on field -->
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 p-4 px-5 border-t border-slate-100 bg-slate-50/70 rounded-b-2xl">
+        <button type="button" onclick="closeEditModal()" class="btn-outline text-xs !py-2 !px-4">Cancel</button>
+        <button type="button" id="saveEditModalBtn" onclick="saveFieldEdit()" class="btn-primary text-xs !py-2 !px-5">
+          <span>Save Changes</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Preview Popup Modal (With Close Button) -->
+  <div id="imagePreviewModal" class="modal-backdrop">
+    <div class="modal-container !max-w-4xl !p-0 overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-3.5 px-5 border-b border-slate-800/80 bg-slate-900/90 text-white">
+        <div class="flex items-center gap-2.5 min-w-0 pr-3">
+          <i class="fa-regular fa-image text-blue-400 text-sm shrink-0"></i>
+          <span class="text-xs font-semibold truncate" id="previewModalTitle">Photo Preview</span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a id="previewModalDownloadBtn" href="#" target="_blank" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs transition-colors inline-flex items-center gap-1.5" title="Open full image in new tab">
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            <span class="hidden sm:inline">Open in new tab</span>
+          </a>
+          <button type="button" onclick="closeImagePreview()" class="w-8 h-8 rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors" title="Close Preview">
+            <i class="fa-solid fa-xmark text-base"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Image Container) -->
+      <div class="p-4 sm:p-6 flex items-center justify-center bg-black/90 max-h-[75vh] overflow-auto">
+        <img id="previewModalImg" src="" alt="Job Preview Photo" class="max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl">
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 px-5 border-t border-slate-800/80 bg-slate-900/90 flex items-center justify-between text-xs text-slate-400">
+        <span id="previewModalCaption">WorkWize Attachment</span>
+        <button type="button" onclick="closeImagePreview()" class="px-3.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->

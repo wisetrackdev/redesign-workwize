@@ -291,10 +291,24 @@ const WorkWizeAPI = (function () {
   }
 
   // 11. Add Comment to Job (api/jobtracker/addcomment)
-  async function addComment(jobId, commentDetail) {
-    const form = new FormData();
-    form.append("jobId", jobId);
-    form.append("commentDetail", commentDetail);
+  async function addComment(jobIdOrFormData, commentDetail, files) {
+    let form;
+    if (jobIdOrFormData instanceof FormData) {
+      form = jobIdOrFormData;
+    } else {
+      form = new FormData();
+      form.append("jobId", jobIdOrFormData);
+      form.append("commentDetail", commentDetail || "");
+      if (files) {
+        if (Array.isArray(files) || files instanceof FileList) {
+          for (let i = 0; i < files.length; i++) {
+            form.append("commentMedia", files[i]);
+          }
+        } else {
+          form.append("commentMedia", files);
+        }
+      }
+    }
 
     return await request("api/jobtracker/addcomment", {
       method: "POST",
@@ -303,8 +317,31 @@ const WorkWizeAPI = (function () {
   }
 
   // 12. Update Job Fields (api/jobtracker/updatejobfields)
-  async function updateJobFields(formData) {
+  async function updateJobFields(formDataOrObj) {
+    let form;
+    if (formDataOrObj instanceof FormData) {
+      form = formDataOrObj;
+    } else {
+      form = new FormData();
+      const propId = formDataOrObj.propID || formDataOrObj.propId || getCurrentProperty();
+      const jobId = formDataOrObj.jobID || formDataOrObj.jobId;
+      if (propId) form.append("propID", propId);
+      if (jobId) form.append("jobID", jobId);
+      if (formDataOrObj.field) form.append("field", formDataOrObj.field);
+      if (formDataOrObj.data !== undefined) form.append("data", formDataOrObj.data);
+      if (formDataOrObj.villaNumber) form.append("villaNumber", formDataOrObj.villaNumber);
+      if (formDataOrObj.ccf_dept) form.append("ccf_dept", formDataOrObj.ccf_dept);
+    }
+
     return await request("api/jobtracker/updatejobfields", {
+      method: "POST",
+      body: form
+    });
+  }
+
+  // 13. Update Job Full (api/jobtracker/updatejob)
+  async function updateJob(formData) {
+    return await request("api/jobtracker/updatejob", {
       method: "POST",
       body: formData
     });
@@ -333,7 +370,8 @@ const WorkWizeAPI = (function () {
     getJobById,
     addNewJob,
     addComment,
-    updateJobFields
+    updateJobFields,
+    updateJob
   };
 })();
 
