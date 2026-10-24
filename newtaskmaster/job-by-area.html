@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkWize | Job by Area</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="flex">
+
+  <!-- Sidebar -->
+  <aside class="workwize-sidebar">
+    <!-- Collapse / Expand Toggle Button on Sidebar Border Line -->
+    <button type="button" class="sidebar-toggle-btn" title="Collapse / Expand Sidebar" aria-label="Toggle Sidebar">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
+
+    <div>
+      <!-- Sidebar Header (Logo) -->
+      <div class="sidebar-header flex items-center mb-6">
+        <a href="dashboard.html" class="sidebar-logo-link flex items-center text-decoration-none">
+          <img src="assets/logo.png" alt="WorkWize Logo" class="sidebar-logo-expanded">
+          <img src="assets/logo.jpeg" alt="WorkWize Icon" class="sidebar-logo-collapsed">
+        </a>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="space-y-1">
+        <a href="dashboard.html" class="sidebar-nav-item" title="Dashboard">
+          <i class="fa-solid fa-house"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="job-by-area.html" class="sidebar-nav-item active" title="Job by Area">
+          <i class="fa-solid fa-layer-group"></i>
+          <span>Job by Area</span>
+        </a>
+        <a href="all-jobs.html" class="sidebar-nav-item" title="All Jobs">
+          <i class="fa-solid fa-list-check"></i>
+          <span>All Jobs</span>
+        </a>
+        <a href="calendar.html" class="sidebar-nav-item" title="Calendar">
+          <i class="fa-regular fa-calendar-days"></i>
+          <span>Calendar</span>
+        </a>
+        <a href="reports.html" class="sidebar-nav-item" title="Reports">
+          <i class="fa-solid fa-chart-pie"></i>
+          <span>Reports</span>
+        </a>
+        <a href="teams.html" class="sidebar-nav-item" title="Teams">
+          <i class="fa-solid fa-users"></i>
+          <span>Teams</span>
+        </a>
+        <a href="settings.html" class="sidebar-nav-item" title="Settings">
+          <i class="fa-solid fa-gear"></i>
+          <span>Settings</span>
+        </a>
+      </nav>
+    </div>
+
+    <!-- Sidebar Bottom Promo Box -->
+    <div class="sidebar-bottom-promo">
+      <div class="sidebar-promo-card">
+        <p class="text-xs font-semibold uppercase tracking-wider text-blue-200 mb-1">PRO SUITE</p>
+        <h4 class="text-sm font-bold leading-snug mb-3">Simplify Operations with WorkWize</h4>
+        <button class="w-8 h-8 rounded-full bg-white text-blue-600 flex items-center justify-center text-xs hover:scale-105 transition-transform shadow-md btn-open-job-modal">
+          <i class="fa-solid fa-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 min-w-0 flex flex-col min-h-screen">
+    
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input type="text" id="globalSearchInput" class="search-input-box" placeholder="Search by job, area, sub-area, status...">
+      </div>
+
+      <div class="flex items-center gap-3 sm:gap-4">
+        <!-- Property Selector Dropdown (Mirrors taskmaster nav-bar-prp-selector) -->
+        <div class="relative header-property-selector" id="headerPropertyDropdownContainer">
+          <button id="headerPropertyDropdownBtn" type="button" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-all shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+            <i class="fa-solid fa-hotel text-blue-600 text-xs"></i>
+            <span id="headerCurrentPropertyName" class="truncate max-w-[150px]">Loading Property...</span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+          </button>
+          <div id="headerPropertyMenu" class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs text-slate-700 animate-fade-in max-h-72 overflow-y-auto">
+            <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <span>Select Property</span>
+              <i class="fa-solid fa-building-circle-check text-blue-500"></i>
+            </div>
+            <div id="headerPropertyList" class="p-1 space-y-1">
+              <!-- Dynamically populated property options -->
+            </div>
+          </div>
+        </div>
+
+        <!-- User Profile Pill -->
+        <div class="relative">
+          <button id="userProfileBtn" class="flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-colors">
+            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs uppercase" id="headerUserAvatar">
+              <i class="fa-regular fa-user"></i>
+            </div>
+            <div class="text-left leading-none hidden sm:block max-w-[150px]">
+              <span class="text-xs font-bold text-slate-800 block truncate header-user-display-name">Loading...</span>
+              <span class="text-[10px] text-slate-400 font-medium block header-user-display-role">Staff</span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+          </button>
+
+          <div id="userProfileMenu" class="hidden absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 animate-fade-in">
+            <div class="px-4 py-2 border-b border-slate-100 font-medium">
+              <p class="text-slate-800 font-semibold header-menu-user-name">User</p>
+              <p class="text-slate-400 text-[11px] truncate header-menu-user-email">user@workwize.io</p>
+            </div>
+            <a href="settings.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-regular fa-user mr-2 text-slate-400"></i> My Profile</a>
+            <a href="settings.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-solid fa-sliders mr-2 text-slate-400"></i> Preferences</a>
+            <div class="border-t border-slate-100 my-1"></div>
+            <a href="login.html" class="block px-4 py-2 hover:bg-rose-50 text-rose-600"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Log Out</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Body -->
+    <main class="p-8 max-w-[100rem] w-full mx-auto space-y-6">
+
+      <!-- Page Title & Header Actions -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Job by Area</h1>
+          <p class="text-xs text-slate-500 mt-0.5" id="jobsPropertySubtitle">Track and manage jobs across different areas</p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button class="btn-primary text-xs btn-open-job-modal">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span>Create New Job</span>
+          </button>
+          <a href="all-jobs.html?status=Closed" class="btn-secondary text-xs">
+            <i class="fa-regular fa-circle-check text-xs"></i>
+            <span>View Closed Job</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- 4 Stat Metric Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <!-- Total Jobs -->
+        <div class="stat-card">
+          <div class="stat-icon-wrap stat-icon-blue">
+            <i class="fa-regular fa-clipboard"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-extrabold text-slate-900" id="statTotalJobs">-</div>
+            <div class="text-xs font-semibold text-slate-500">Total Jobs</div>
+          </div>
+        </div>
+
+        <!-- Open Jobs -->
+        <div class="stat-card">
+          <div class="stat-icon-wrap stat-icon-green">
+            <i class="fa-solid fa-play text-sm"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-extrabold text-slate-900" id="statOpenJobs">-</div>
+            <div class="text-xs font-semibold text-slate-500">Open Jobs</div>
+          </div>
+        </div>
+
+        <!-- Closed Jobs -->
+        <div class="stat-card">
+          <div class="stat-icon-wrap stat-icon-purple">
+            <i class="fa-regular fa-circle-check"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-extrabold text-slate-900" id="statClosedJobs">-</div>
+            <div class="text-xs font-semibold text-slate-500">Closed Jobs</div>
+          </div>
+        </div>
+
+        <!-- Safety Issues -->
+        <div class="stat-card">
+          <div class="stat-icon-wrap stat-icon-red">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-extrabold text-slate-900" id="statSafetyJobs">-</div>
+            <div class="text-xs font-semibold text-slate-500">Safety Issues</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jobs by Area Table -->
+      <div class="ww-card overflow-hidden !p-0">
+        <!-- Table Search Bar -->
+        <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-4">
+          <div class="relative w-72">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="areaSearchInput" placeholder="Filter areas..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 outline-none focus:bg-white focus:border-blue-500">
+          </div>
+          <span class="text-xs text-slate-400 font-medium" id="areaTotalCounter">Loading operational areas...</span>
+        </div>
+
+        <div class="table-scroll-container">
+          <table class="ww-table">
+            <thead>
+              <tr>
+                <th style="width: 50px;">#</th>
+                <th>Area</th>
+                <th>Total Jobs</th>
+                <th>Open Jobs</th>
+                <th>Safety Issues</th>
+                <th>Progress</th>
+                <th class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="jobsByAreaTableBody">
+              <!-- Dynamically populated via jobs.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Area Jobs Detail Pop-up Modal (Mirrors taskmaster JobDetailsform) -->
+  <div id="areaJobsModal" class="modal-backdrop">
+    <div class="modal-container !max-w-7xl">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/70 rounded-t-2xl">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg shrink-0">
+            <i class="fa-solid fa-layer-group"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-base sm:text-lg flex items-center gap-2 flex-wrap leading-tight">
+              <span>Job Details For</span>
+              <span id="areaModalAreaName" class="text-blue-600 font-extrabold">Area</span>
+              <span id="areaModalPropName" class="text-slate-400 text-xs sm:text-sm font-medium">[Property]</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              Showing <span id="areaModalJobCount" class="font-bold text-slate-800">0</span> registered jobs in this operational area
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Quick Search inside Modal -->
+          <div class="relative w-44 sm:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="areaModalSearchInput" placeholder="Filter area jobs..." class="w-full text-xs bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 outline-none focus:border-blue-500">
+          </div>
+          <button id="closeAreaModalBtn" class="w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" title="Close Modal">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (15 Headings Responsive Table from taskmaster) -->
+      <div class="p-4 sm:p-6 overflow-hidden">
+        <div class="table-scroll-container max-h-[60vh] overflow-y-auto overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-inner">
+          <table class="ww-table text-[11px] whitespace-nowrap">
+            <thead class="sticky top-0 bg-slate-100/95 backdrop-blur z-10 border-b border-slate-200">
+              <tr>
+                <th style="min-width: 140px;">ID</th>
+                <th style="min-width: 90px;" id="areaModalVillaHeader">VILLA</th>
+                <th style="min-width: 240px;">DETAILS</th>
+                <th style="min-width: 130px;">CREATE DATE</th>
+                <th style="min-width: 140px;">LOCATION</th>
+                <th style="min-width: 100px;">PRIORITY</th>
+                <th style="min-width: 120px;">STATUS</th>
+                <th style="min-width: 110px;">REF NO</th>
+                <th style="min-width: 150px;">ASSIGNED TO</th>
+                <th style="min-width: 160px;">EXPECTED COMPLETION DATE</th>
+                <th style="min-width: 130px;">CLOSE DATE</th>
+                <th style="min-width: 110px;" class="text-center">ATTACHMENTS</th>
+                <th style="min-width: 100px;" class="text-center">COMMENTS</th>
+                <th style="min-width: 140px;">CREATED BY</th>
+                <th style="min-width: 130px;">PROPERTY</th>
+              </tr>
+            </thead>
+            <tbody id="areaModalTableBody">
+              <!-- Dynamically populated rows via jobs.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between p-4 px-6 border-t border-slate-100 bg-slate-50/70 rounded-b-2xl text-xs">
+        <span class="text-slate-500 font-medium" id="areaModalFooterCount">Total 0 jobs</span>
+        <button id="closeAreaModalBtnBottom" class="btn-outline text-xs !py-1.5 !px-4">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add New Job 3-Step Modal -->
+  <div id="addJobModal" class="modal-backdrop">
+    <div class="modal-container">
+      <div class="flex items-center justify-between p-6 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base">
+            <i class="fa-solid fa-folder-plus"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-lg">Add New Job</h3>
+            <p class="text-xs text-slate-400">Configure parameters, assignment and documentation</p>
+          </div>
+        </div>
+
+        <div class="hidden md:flex items-center gap-6">
+          <div class="flex items-center gap-2.5">
+            <div id="stepCircle1" class="stepper-circle active">1</div>
+            <span id="stepLabel1" class="text-xs font-bold text-blue-600">Basic Information</span>
+          </div>
+          <div class="w-8 h-0.5 bg-slate-200"></div>
+          <div class="flex items-center gap-2.5">
+            <div id="stepCircle2" class="stepper-circle inactive">2</div>
+            <span id="stepLabel2" class="text-xs font-medium text-slate-400">Assignment</span>
+          </div>
+          <div class="w-8 h-0.5 bg-slate-200"></div>
+          <div class="flex items-center gap-2.5">
+            <div id="stepCircle3" class="stepper-circle inactive">3</div>
+            <span id="stepLabel3" class="text-xs font-medium text-slate-400">Additional Details</span>
+          </div>
+        </div>
+
+        <button id="closeJobModalBtn" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="addJobForm" onsubmit="return false;" class="p-6">
+        <div id="stepContent1" class="space-y-4">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Job Information</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Area <span class="text-rose-500">*</span></label>
+              <select id="modalArea" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalAreaChange()">
+                <option value="">Select Area...</option>
+                <option value="Statutory Compliance">Statutory Compliance</option>
+                <option value="Development/Project">Development/Project</option>
+                <option value="Fire Safety">Fire Safety</option>
+                <option value="Back of the House">Back of the House</option>
+                <option value="CAPEX">CAPEX</option>
+                <option value="SOP & Checklist">SOP & Checklist</option>
+                <option value="Energy Management">Energy Management</option>
+                <option value="Waste Management">Waste Management</option>
+                <option value="Utility">Utility</option>
+                <option value="Guest Villa">Guest Villa</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Villa Number <span id="villaRequiredMark" class="text-rose-500 hidden">*</span></label>
+              <input type="text" id="modalVillaNumber" placeholder="e.g. V-104" disabled class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Priority <span class="text-rose-500">*</span></label>
+              <select id="modalPriority" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+                <option value="HIGH">High</option>
+                <option value="MEDIUM" selected>Medium</option>
+                <option value="LOW">Low</option>
+                <option value="SAFETY">Safety</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Status <span class="text-rose-500">*</span></label>
+              <select id="modalStatus" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+                <option value="YET_TO_COMMENCE" selected>Yet to Commence</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="SPARES_ON_ORDER">Spares on Order</option>
+                <option value="UNDER_DISCUSSION">Under Discussion</option>
+                <option value="FIXED">Fixed</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+            <div class="sm:col-span-2">
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Location <span class="text-rose-500">*</span></label>
+              <input type="text" id="modalLocation" placeholder="e.g. Main Building Floor 3" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Creation Date <span class="text-rose-500">*</span></label>
+              <input type="date" id="modalJobCreationDate" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Expected Completion Date</label>
+              <input type="date" id="modalExpectedDate" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Reference No.</label>
+            <input type="text" id="modalReferenceNo" placeholder="e.g. REF-2026-99" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+          </div>
+        </div>
+
+        <div id="stepContent2" class="space-y-4 hidden">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Details & Assignment</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Assigned To <span class="text-rose-500">*</span></label>
+              <select id="modalAssignedTo" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+                <option value="">Select Team/Assignee...</option>
+                <option value="IT Admin" selected>Testing - IT Admin</option>
+                <option value="Facilities Team">Facilities Team</option>
+                <option value="Engineering Team">Engineering Team</option>
+                <option value="Safety Team">Safety Team</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Budget ($)</label>
+              <input type="number" id="modalBudget" placeholder="e.g. 1500" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Cost Center</label>
+              <select id="modalCostCenter" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalCcfChange()">
+                <option value="">Select Cost Center...</option>
+                <option value="POMEC">POMEC</option>
+                <option value="CAPEX">CAPEX</option>
+                <option value="Department Operational Budget">Department Operational Budget</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="modalCcfDeptContainer" class="hidden">
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department Name <span class="text-rose-500">*</span></label>
+            <input type="text" id="modalCcfDept" placeholder="Enter Department Name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Details <span class="text-rose-500">*</span></label>
+            <textarea id="modalJobDetails" rows="3" placeholder="Enter detailed description..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Remarks</label>
+            <input type="text" id="modalRemarks" placeholder="Enter remarks..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+          </div>
+        </div>
+
+        <div id="stepContent3" class="space-y-4 hidden">
+          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attachments</h4>
+          <div id="fileDropZone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-slate-50 transition-all">
+            <input type="file" id="fileUploadInput" multiple accept=".jpg,.jpeg,.png" class="hidden">
+            <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto mb-3">
+              <i class="fa-regular fa-file-image"></i>
+            </div>
+            <p class="text-sm font-semibold text-slate-700">Drag & drop files here or <span class="text-blue-600 underline">click to upload</span></p>
+            <p class="text-[11px] text-slate-400 mt-1">Only JPG, JPEG, and PNG files are allowed with maximum size limit of 5MB</p>
+          </div>
+
+          <!-- Uploaded files list preview -->
+          <div id="uploadedFileList" class="space-y-2"></div>
+        </div>
+      </form>
+
+      <div class="flex items-center justify-between p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+        <button id="cancelJobModalBtn" class="btn-outline text-xs">Cancel</button>
+        <div class="flex items-center gap-2">
+          <button id="prevJobModalBtn" class="btn-outline text-xs hidden">
+            <i class="fa-solid fa-arrow-left mr-1 text-[10px]"></i> Previous
+          </button>
+          <button id="nextJobModalBtn" class="btn-primary text-xs">
+            Next <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/jobs.js"></script>
+</body>
+</html>

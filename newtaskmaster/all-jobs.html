@@ -36,9 +36,9 @@
           <i class="fa-solid fa-house"></i>
           <span>Dashboard</span>
         </a>
-        <a href="jobs.html" class="sidebar-nav-item" title="Jobs">
+        <a href="job-by-area.html" class="sidebar-nav-item" title="Job by Area">
           <i class="fa-solid fa-layer-group"></i>
-          <span>Jobs</span>
+          <span>Job by Area</span>
         </a>
         <a href="all-jobs.html" class="sidebar-nav-item active" title="All Jobs">
           <i class="fa-solid fa-list-check"></i>
@@ -91,26 +91,40 @@
       </div>
 
       <!-- Right Header Items -->
-      <div class="flex items-center gap-4">
-        <button class="relative w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors">
-          <i class="fa-regular fa-bell text-lg"></i>
-          <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500"></span>
-        </button>
+      <div class="flex items-center gap-3 sm:gap-4">
+        <!-- Property Selector Dropdown (Mirrors taskmaster nav-bar-prp-selector) -->
+        <div class="relative header-property-selector" id="headerPropertyDropdownContainer">
+          <button id="headerPropertyDropdownBtn" type="button" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-all shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+            <i class="fa-solid fa-hotel text-blue-600 text-xs"></i>
+            <span id="headerCurrentPropertyName" class="truncate max-w-[150px]">Loading Property...</span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+          </button>
+          <div id="headerPropertyMenu" class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs text-slate-700 animate-fade-in max-h-72 overflow-y-auto">
+            <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <span>Select Property</span>
+              <i class="fa-solid fa-building-circle-check text-blue-500"></i>
+            </div>
+            <div id="headerPropertyList" class="p-1 space-y-1">
+              <!-- Dynamically populated property options -->
+            </div>
+          </div>
+        </div>
 
         <div class="relative">
           <button id="userProfileBtn" class="flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-colors">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-slate-200">
             <div class="text-left leading-none hidden sm:block">
-              <span class="text-xs font-bold text-slate-800 block">Testing</span>
-              <span class="text-[10px] text-slate-400 font-medium">IT Admin</span>
+              <span class="text-xs font-bold text-slate-800 block truncate max-w-[140px] header-user-display-name">Loading...</span>
+              <span class="text-[10px] text-slate-400 font-medium header-user-display-role">User</span>
             </div>
             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
           </button>
 
-          <div id="userProfileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 animate-fade-in">
+          <div id="userProfileMenu" class="hidden absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 animate-fade-in">
             <div class="px-4 py-2 border-b border-slate-100 font-medium">
-              <p class="text-slate-800 font-semibold">Testing Admin</p>
-              <p class="text-slate-400 text-[11px]">admin@workwize.io</p>
+              <p class="text-slate-800 font-semibold header-menu-user-name">Loading...</p>
+              <p class="text-slate-400 text-[11px] header-menu-user-email">loading@workwize.io</p>
             </div>
             <a href="settings.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-regular fa-user mr-2 text-slate-400"></i> My Profile</a>
             <a href="settings.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-solid fa-sliders mr-2 text-slate-400"></i> Preferences</a>
@@ -140,63 +154,68 @@
         </div>
       </div>
 
-      <!-- Filter Bar (Matching imagenew.png bottom-right filter bar) -->
+      <!-- Filter Bar (Comprehensive Filter Suite matching taskmaster) -->
       <div class="ww-card !p-3">
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2.5">
           
           <!-- Live Search Bar inside filter bar -->
-          <div class="relative flex-1 min-w-[220px]">
+          <div class="relative flex-1 min-w-[200px]">
             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input type="text" id="jobSearchInput" placeholder="Search by job, area, sub-area, status..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 outline-none focus:bg-white focus:border-blue-500 transition-colors">
-          </div>
-
-          <!-- Area Dropdown -->
-          <div class="w-36">
-            <select id="filterArea" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-700 outline-none focus:bg-white focus:border-blue-500">
-              <option value="">Area: All</option>
-            </select>
+            <input type="text" id="jobSearchInput" placeholder="Search by ID, details, villa, location, ref..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-2 outline-none focus:bg-white focus:border-blue-500 transition-colors">
           </div>
 
           <!-- Status Dropdown -->
           <div class="w-36">
-            <select id="filterStatus" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-700 outline-none focus:bg-white focus:border-blue-500">
+            <select id="filterStatus" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-700 outline-none focus:bg-white focus:border-blue-500 font-medium">
               <option value="">Status: All</option>
-              <option value="In Progress">In Progress</option>
               <option value="Yet to Commence">Yet to Commence</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Spares on Order">Spares on Order</option>
               <option value="Under Discussion">Under Discussion</option>
+              <option value="Fixed">Fixed</option>
               <option value="Closed">Closed</option>
             </select>
           </div>
 
           <!-- Priority Dropdown -->
           <div class="w-32">
-            <select id="filterPriority" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-700 outline-none focus:bg-white focus:border-blue-500">
+            <select id="filterPriority" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-700 outline-none focus:bg-white focus:border-blue-500 font-medium">
               <option value="">Priority: All</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+              <option value="Safety">Safety</option>
             </select>
           </div>
 
           <!-- Assigned To Dropdown -->
           <div class="w-36">
-            <select id="filterAssignedTo" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-700 outline-none focus:bg-white focus:border-blue-500">
-              <option value="">Assigned To: All</option>
+            <select id="filterAssignedTo" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-700 outline-none focus:bg-white focus:border-blue-500 font-medium">
+              <option value="">Assigned: All</option>
             </select>
           </div>
 
-          <!-- Date Range Filter -->
-          <button class="btn-outline text-xs !py-1.5 whitespace-nowrap">
-            <i class="fa-regular fa-calendar text-slate-400"></i>
-            <span>01 Oct 2026 - 31 Oct 2026</span>
-            <i class="fa-solid fa-chevron-down text-[9px] text-slate-400 ml-1"></i>
-          </button>
+          <!-- Date Span Filter Dropdown -->
+          <div class="w-36">
+            <select id="filterDateSpan" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 text-slate-700 outline-none focus:bg-white focus:border-blue-500 font-medium">
+              <option value="">Date: All</option>
+              <option value="d30">Within 30 Days</option>
+              <option value="d60">31 to 89 Days</option>
+              <option value="d90">90+ Days Ago</option>
+            </select>
+          </div>
 
-          <!-- Reset/Clear Filters -->
-          <button id="clearFiltersBtn" class="btn-outline text-xs !py-1.5 text-slate-500 hover:text-slate-800" title="Reset Filters">
-            <i class="fa-solid fa-arrow-rotate-left"></i>
-            <span>Reset</span>
-          </button>
+          <!-- Action Buttons (Reset, Export) -->
+          <div class="flex items-center gap-2">
+            <button id="clearFiltersBtn" class="btn-outline text-xs !py-1.5 text-slate-500 hover:text-slate-800" title="Reset Filters">
+              <i class="fa-solid fa-arrow-rotate-left mr-1"></i>
+              <span>Reset</span>
+            </button>
+            <button id="exportJobsBtn" class="btn-secondary text-xs !py-1.5" title="Export to CSV">
+              <i class="fa-solid fa-file-csv mr-1 text-emerald-600"></i>
+              <span>Export</span>
+            </button>
+          </div>
 
         </div>
       </div>
@@ -217,24 +236,31 @@
         </div>
       </div>
 
-      <!-- All Jobs LIST / TABLE VIEW (EXPLICIT USER REQUIREMENT: NO CARDS, TABLE ONLY!) -->
+      <!-- All Jobs LIST / TABLE VIEW (Exact 15 Headings from taskmaster prop-jobTrackerDataTable) -->
       <div class="ww-card overflow-hidden !p-0">
-        <div class="table-scroll-container">
-          <table class="ww-table">
-            <thead>
+        <div class="table-scroll-container overflow-x-auto">
+          <table class="ww-table text-[11px] whitespace-nowrap">
+            <thead class="sticky top-0 bg-slate-50 z-10 border-b border-slate-200">
               <tr>
                 <th style="width: 40px;">
                   <input type="checkbox" id="selectAllCheckbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
                 </th>
-                <th>ID</th>
-                <th>Job Title</th>
-                <th>Area</th>
-                <th>Sub Area</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Assigned To</th>
-                <th>Opened On</th>
-                <th class="text-right">Action</th>
+                <th style="min-width: 140px;">ID</th>
+                <th style="min-width: 90px;" id="allJobsVillaColHeader">VILLA</th>
+                <th style="min-width: 240px;">DETAILS</th>
+                <th style="min-width: 130px;">CREATE DATE</th>
+                <th style="min-width: 140px;">LOCATION</th>
+                <th style="min-width: 100px;">PRIORITY</th>
+                <th style="min-width: 120px;">STATUS</th>
+                <th style="min-width: 110px;">REF NO</th>
+                <th style="min-width: 150px;">ASSIGNED TO</th>
+                <th style="min-width: 160px;">EXPECTED COMPLETION DATE</th>
+                <th style="min-width: 130px;">CLOSE DATE</th>
+                <th style="min-width: 110px;" class="text-center">ATTACHMENTS</th>
+                <th style="min-width: 100px;" class="text-center">COMMENTS</th>
+                <th style="min-width: 140px;">CREATED BY</th>
+                <th style="min-width: 130px;">PROPERTY</th>
+                <th style="min-width: 80px;" class="text-right">ACTION</th>
               </tr>
             </thead>
             <tbody id="allJobsTableBody">
@@ -243,13 +269,14 @@
           </table>
         </div>
 
-        <!-- Pagination & Counter Footer (Exact layout from imagenew.png bottom-right) -->
-        <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
-          <div class="text-xs text-slate-500 font-medium" id="jobsCounterText">
-            Showing 1 to 8 of 360 jobs
+        <!-- Pagination & Counter Footer -->
+        <div class="pagination-footer">
+          <div class="pagination-counter" id="jobsCounterText">
+            <i class="fa-regular fa-folder-open text-blue-500"></i>
+            <span>Loading jobs count...</span>
           </div>
 
-          <div class="flex items-center gap-1.5" id="jobsPagination">
+          <div class="pagination-container" id="jobsPagination">
             <!-- Dynamically populated pagination buttons -->
           </div>
         </div>
@@ -300,7 +327,8 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Area <span class="text-rose-500">*</span></label>
-              <select id="modalArea" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+              <select id="modalArea" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalAreaChange()">
+                <option value="">Select Area...</option>
                 <option value="Statutory Compliance">Statutory Compliance</option>
                 <option value="Development/Project">Development/Project</option>
                 <option value="Fire Safety">Fire Safety</option>
@@ -310,27 +338,31 @@
                 <option value="Energy Management">Energy Management</option>
                 <option value="Waste Management">Waste Management</option>
                 <option value="Utility">Utility</option>
+                <option value="Guest Villa">Guest Villa</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Villa Number <span class="text-rose-500">*</span></label>
-              <input type="text" id="modalVillaNumber" placeholder="e.g. V-104" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Villa Number <span id="villaRequiredMark" class="text-rose-500 hidden">*</span></label>
+              <input type="text" id="modalVillaNumber" placeholder="e.g. V-104" disabled class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none disabled:opacity-60 disabled:cursor-not-allowed">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Priority <span class="text-rose-500">*</span></label>
               <select id="modalPriority" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="High">High</option>
-                <option value="Medium" selected>Medium</option>
-                <option value="Low">Low</option>
+                <option value="HIGH">High</option>
+                <option value="MEDIUM" selected>Medium</option>
+                <option value="LOW">Low</option>
+                <option value="SAFETY">Safety</option>
               </select>
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Status <span class="text-rose-500">*</span></label>
               <select id="modalStatus" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="Yet to Commence">Yet to Commence</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Under Discussion">Under Discussion</option>
-                <option value="Closed">Closed</option>
+                <option value="YET_TO_COMMENCE" selected>Yet to Commence</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="SPARES_ON_ORDER">Spares on Order</option>
+                <option value="UNDER_DISCUSSION">Under Discussion</option>
+                <option value="FIXED">Fixed</option>
+                <option value="COMPLETED">Completed</option>
               </select>
             </div>
           </div>
@@ -362,10 +394,11 @@
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Assigned To <span class="text-rose-500">*</span></label>
               <select id="modalAssignedTo" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="IT Admin">Testing - IT Admin</option>
-                <option value="nikhil11">nikhil11</option>
-                <option value="Zajira Yazeed">Zajira Yazeed</option>
-                <option value="Alex Morgan">Alex Morgan</option>
+                <option value="">Select Team/Assignee...</option>
+                <option value="IT Admin" selected>Testing - IT Admin</option>
+                <option value="Facilities Team">Facilities Team</option>
+                <option value="Engineering Team">Engineering Team</option>
+                <option value="Safety Team">Safety Team</option>
               </select>
             </div>
             <div>
@@ -374,13 +407,18 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Cost Center</label>
-              <select id="modalCostCenter" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="CC-01">CC-01 - Facilities Operations</option>
-                <option value="CC-02">CC-02 - Capital Engineering</option>
-                <option value="CC-03">CC-03 - Environmental & Sanitation</option>
-                <option value="CC-04">CC-04 - Safety Compliance</option>
+              <select id="modalCostCenter" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalCcfChange()">
+                <option value="">Select Cost Center...</option>
+                <option value="POMEC">POMEC</option>
+                <option value="CAPEX">CAPEX</option>
+                <option value="Department Operational Budget">Department Operational Budget</option>
               </select>
             </div>
+          </div>
+
+          <div id="modalCcfDeptContainer" class="hidden">
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department Name <span class="text-rose-500">*</span></label>
+            <input type="text" id="modalCcfDept" placeholder="Enter Department Name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
           </div>
 
           <div>
@@ -423,6 +461,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="js/api.js"></script>
   <script src="js/data.js"></script>
   <script src="js/main.js"></script>
   <script src="js/all-jobs.js"></script>

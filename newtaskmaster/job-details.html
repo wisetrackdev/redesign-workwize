@@ -36,9 +36,9 @@
           <i class="fa-solid fa-house"></i>
           <span>Dashboard</span>
         </a>
-        <a href="jobs.html" class="sidebar-nav-item" title="Jobs">
+        <a href="job-by-area.html" class="sidebar-nav-item" title="Job by Area">
           <i class="fa-solid fa-layer-group"></i>
-          <span>Jobs</span>
+          <span>Job by Area</span>
         </a>
         <a href="all-jobs.html" class="sidebar-nav-item active" title="All Jobs">
           <i class="fa-solid fa-list-check"></i>
@@ -85,26 +85,40 @@
         <input type="text" id="globalSearchInput" class="search-input-box" placeholder="Search by job, area, sub-area, status...">
       </div>
 
-      <div class="flex items-center gap-4">
-        <button class="relative w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-600 transition-colors">
-          <i class="fa-regular fa-bell text-lg"></i>
-          <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500"></span>
-        </button>
+      <div class="flex items-center gap-3 sm:gap-4">
+        <!-- Property Selector Dropdown (Mirrors taskmaster nav-bar-prp-selector) -->
+        <div class="relative header-property-selector" id="headerPropertyDropdownContainer">
+          <button id="headerPropertyDropdownBtn" type="button" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-all shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+            <i class="fa-solid fa-hotel text-blue-600 text-xs"></i>
+            <span id="headerCurrentPropertyName" class="truncate max-w-[150px]">Loading Property...</span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+          </button>
+          <div id="headerPropertyMenu" class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs text-slate-700 animate-fade-in max-h-72 overflow-y-auto">
+            <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <span>Select Property</span>
+              <i class="fa-solid fa-building-circle-check text-blue-500"></i>
+            </div>
+            <div id="headerPropertyList" class="p-1 space-y-1">
+              <!-- Dynamically populated property options -->
+            </div>
+          </div>
+        </div>
 
         <div class="relative">
           <button id="userProfileBtn" class="flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-colors">
             <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="Avatar" class="w-8 h-8 rounded-full object-cover border border-slate-200">
             <div class="text-left leading-none hidden sm:block">
-              <span class="text-xs font-bold text-slate-800 block">Testing</span>
-              <span class="text-[10px] text-slate-400 font-medium">IT Admin</span>
+              <span class="text-xs font-bold text-slate-800 block truncate max-w-[140px] header-user-display-name">Loading...</span>
+              <span class="text-[10px] text-slate-400 font-medium header-user-display-role">User</span>
             </div>
             <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
           </button>
 
-          <div id="userProfileMenu" class="hidden absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 animate-fade-in">
+          <div id="userProfileMenu" class="hidden absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 animate-fade-in">
             <div class="px-4 py-2 border-b border-slate-100 font-medium">
-              <p class="text-slate-800 font-semibold">Testing Admin</p>
-              <p class="text-slate-400 text-[11px]">admin@workwize.io</p>
+              <p class="text-slate-800 font-semibold header-menu-user-name">Loading...</p>
+              <p class="text-slate-400 text-[11px] header-menu-user-email">loading@workwize.io</p>
             </div>
             <a href="settings.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-regular fa-user mr-2 text-slate-400"></i> My Profile</a>
             <a href="settings.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-solid fa-sliders mr-2 text-slate-400"></i> Preferences</a>
@@ -231,7 +245,7 @@
           <!-- Attachments -->
           <div class="ww-card">
             <h3 class="font-bold text-slate-900 text-sm mb-3">Job Documentation & Photos</h3>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3" id="dynJobUploads">
               <div class="border border-slate-200 rounded-xl p-3 flex items-center gap-3 bg-slate-50">
                 <i class="fa-regular fa-file-pdf text-2xl text-rose-500"></i>
                 <div class="truncate text-xs">
@@ -245,6 +259,41 @@
                 <div class="truncate text-xs">
                   <span class="font-semibold text-slate-800 block truncate">Site_Photo_01.jpg</span>
                   <span class="text-[10px] text-slate-400">3.4 MB</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Discussion & Comments Section -->
+          <div class="ww-card space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 class="font-bold text-slate-900 text-sm">Comments & Activity Log</h3>
+              <span class="text-xs text-slate-400" id="dynCommentsCount">0 Comments</span>
+            </div>
+
+            <!-- Existing comments container -->
+            <div id="dynJobComments" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+              <!-- Dynamically populated comments -->
+            </div>
+
+            <!-- New Comment Box -->
+            <div class="pt-3 border-t border-slate-100">
+              <div class="flex items-start gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs shrink-0">
+                  <i class="fa-regular fa-user"></i>
+                </div>
+                <div class="flex-1 space-y-2">
+                  <textarea id="newCommentInput" rows="2" placeholder="Write a comment, note or update..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none resize-none"></textarea>
+                  <div class="flex items-center justify-between">
+                    <label class="cursor-pointer text-slate-400 hover:text-slate-600 text-xs flex items-center gap-1.5">
+                      <i class="fa-solid fa-paperclip"></i>
+                      <span class="text-[11px]" id="commentFileLabel">Attach Image</span>
+                      <input type="file" id="commentFileInput" accept="image/*" class="hidden">
+                    </label>
+                    <button id="submitCommentBtn" class="btn-primary text-xs !py-1.5 !px-3.5">
+                      <i class="fa-solid fa-paper-plane mr-1 text-[10px]"></i> Send Comment
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -297,6 +346,7 @@
   </div>
 
   <!-- Scripts -->
+  <script src="js/api.js"></script>
   <script src="js/data.js"></script>
   <script src="js/main.js"></script>
   <script src="js/job-details.js"></script>

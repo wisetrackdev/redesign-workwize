@@ -2,13 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=dashboard.html">
   <title>WorkWize - Redirecting...</title>
   <script>
-    window.location.href = "dashboard.html";
+    const user = localStorage.getItem("oproUserData");
+    if (user) {
+      window.location.href = "job-by-area.html";
+    } else {
+      window.location.href = "login.html";
+    }
   </script>
 </head>
-<body style="background:#091024; color:#fff; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
+<body style="background:#f4f7fb; color:#64748b; display:flex; align-items:center; justify-content:center; height:100vh; font-family:sans-serif;">
   <p>Loading WorkWize Platform...</p>
 </body>
 </html>
