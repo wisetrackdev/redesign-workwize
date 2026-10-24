@@ -7,7 +7,8 @@
   --primary-light: #eff5ff;
   --primary-border: #bfdbfe;
   
-  --sidebar-bg: var(--bg-app);
+  --sidebar-gradient: linear-gradient(175deg, #d3e2f8 0%, #ebf2fb 42%, #d2f0da 100%);
+  --sidebar-bg: #d3e2f8;
   --sidebar-hover: rgba(26, 104, 255, 0.08);
   --sidebar-text: #475569;
   --sidebar-active: #1a68ff;
@@ -69,7 +70,7 @@ body {
 
 /* Sidebar Styles */
 .workwize-sidebar {
-  background-color: var(--sidebar-bg);
+  background: var(--sidebar-gradient) !important;
   width: 250px;
   min-width: 250px;
   height: 100vh;
@@ -79,7 +80,7 @@ body {
   flex-direction: column;
   justify-content: space-between;
   padding: 20px;
-  border-right: 1px solid var(--card-border);
+  border-right: 1px solid rgba(64, 88, 167, 0.15);
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06), 1px 0 4px rgba(0, 0, 0, 0.03);
   z-index: 40;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
