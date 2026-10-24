@@ -6,6 +6,18 @@
 let areaOverviewData = [];
 let allPropertiesMap = {};
 
+// Standard 8 operational areas matching taskmaster
+const ALL_OPERATIONAL_AREAS = [
+  { name: "Development/Project", id: "AR_55857", icon: "fa-cubes" },
+  { name: "Fire Safety", id: "AR_FIRE", icon: "fa-fire-extinguisher" },
+  { name: "Back of the House", id: "AR_BOH", icon: "fa-door-open" },
+  { name: "CAPEX", id: "AR_CAPEX", icon: "fa-sack-dollar" },
+  { name: "SOP & Checklist", id: "AR_SOP", icon: "fa-list-check" },
+  { name: "Energy Management", id: "AR_ENERGY", icon: "fa-bolt-lightning" },
+  { name: "Waste Management", id: "AR_WASTE", icon: "fa-recycle" },
+  { name: "Utility", id: "AR_UTILITY", icon: "fa-faucet-drip" }
+];
+
 document.addEventListener("DOMContentLoaded", function () {
   initJobsByArea();
   initAreaSearch();
@@ -38,8 +50,9 @@ async function initJobsByArea() {
           allPropertiesMap[p.propId] = p.propName;
         });
 
-        // If no property selected, pick first
-        if (!localStorage.getItem("workwize_current_property")) {
+        // Mirror taskmaster: if no property or default PROP-001 or invalid, select first valid property
+        const storedProp = localStorage.getItem("workwize_current_property");
+        if (!storedProp || storedProp === "PROP-001" || !props.some(p => p.propId === storedProp)) {
           WorkWizeAPI.setCurrentProperty(props[0].propId, props[0].propName);
         }
       }
@@ -59,7 +72,7 @@ async function initJobsByArea() {
     const response = await WorkWizeAPI.getJobOverview(currentPropId);
 
     if (Array.isArray(response) && response.length > 0) {
-      areaOverviewData = response.map(item => {
+      const apiAreas = response.map(item => {
         const total = (item.total_jobs !== undefined && item.total_jobs !== null && !isNaN(item.total_jobs))
           ? Number(item.total_jobs)
           : ((item.total !== undefined && item.total !== null && !isNaN(item.total)) ? Number(item.total) : 0);
@@ -92,6 +105,30 @@ async function initJobsByArea() {
         };
       });
 
+      // Merge with standard areas so that all operational areas always show up in the table
+      const mergedAreas = [...apiAreas];
+      ALL_OPERATIONAL_AREAS.forEach(std => {
+        const found = mergedAreas.some(a => 
+          a.name.toLowerCase().includes(std.name.toLowerCase()) || 
+          std.name.toLowerCase().includes(a.name.toLowerCase()) ||
+          a.id === std.id
+        );
+        if (!found) {
+          mergedAreas.push({
+            id: std.id,
+            name: std.name,
+            total: 0,
+            open: 0,
+            safety: 0,
+            day30: 0,
+            day60: 0,
+            day90: 0,
+            icon: std.icon
+          });
+        }
+      });
+
+      areaOverviewData = mergedAreas;
       updateAreaStats(areaOverviewData);
       renderJobsByAreaTable();
       return;
@@ -100,21 +137,29 @@ async function initJobsByArea() {
     console.warn("API Overview failed, falling back to local database:", error.message);
   }
 
-  // Fallback to local data if API offline
-  areaOverviewData = WorkWizeDB.getAreasSummary().map(a => {
-    const day30 = Math.floor(a.open * 0.5);
-    const day60 = Math.floor(a.open * 0.3);
-    const day90 = Math.max(0, a.open - day30 - day60);
+  // Fallback: render ALL operational areas with local DB values or 0
+  areaOverviewData = ALL_OPERATIONAL_AREAS.map(std => {
+    const local = (typeof WorkWizeDB !== "undefined") ? WorkWizeDB.getAreasSummary().find(a => 
+      a.name.toLowerCase().includes(std.name.toLowerCase()) || std.name.toLowerCase().includes(a.name.toLowerCase())
+    ) : null;
+
+    const total = local ? Number(local.total) || 0 : 0;
+    const open = local ? Number(local.open) || 0 : 0;
+    const safety = local ? Number(local.safety) || 0 : 0;
+    const day30 = Math.floor(open * 0.5);
+    const day60 = Math.floor(open * 0.3);
+    const day90 = Math.max(0, open - day30 - day60);
+
     return {
-      id: a.name.toLowerCase().replace(/\s+/g, '-'),
-      name: a.name,
-      total: a.total,
-      open: a.open,
-      safety: a.safety,
+      id: std.id,
+      name: std.name,
+      total: total,
+      open: open,
+      safety: safety,
       day30: day30,
       day60: day60,
       day90: day90,
-      icon: a.icon || "fa-layer-group"
+      icon: std.icon
     };
   });
 
@@ -199,55 +244,46 @@ function renderJobsByAreaTable(filterQuery = "") {
         </a>
       </td>
       <td>
-        <div class="flex items-center gap-2">
-          <!-- Open Count with Dropdown for Age Spans -->
-          <div class="relative inline-block text-left dropdown-group">
-            <button type="button" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200/80 transition-all cursor-pointer shadow-xs" onclick="toggleRowMenu(this)" title="Click to view open jobs breakdown by age">
-              <span>${area.open}</span>
-              <i class="fa-solid fa-chevron-down text-[9px] text-blue-500"></i>
-            </button>
+        <!-- Open Count with Dropdown for Age Spans -->
+        <div class="relative inline-block text-left dropdown-group">
+          <button type="button" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200/80 transition-all cursor-pointer shadow-xs" onclick="toggleRowMenu(this)" title="Click to view open jobs breakdown by age">
+            <span>${area.open}</span>
+            <i class="fa-solid fa-chevron-down text-[9px] text-blue-500"></i>
+          </button>
 
-            <!-- Dropdown Menu -->
-            <div class="hidden absolute left-0 ${isLastRows ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} w-60 bg-white border border-slate-200 rounded-xl shadow-2xl py-2 z-40 text-xs text-slate-700 dropdown-menu animate-fade-in">
-              <div class="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
-                <span>Open Jobs by Age</span>
-                <i class="fa-regular fa-clock text-blue-500"></i>
-              </div>
-
-              <a href="javascript:void(0);" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd30')" class="flex items-center justify-between px-3.5 py-2 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
-                <span class="flex items-center gap-2 font-medium">
-                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Within 30 Days
-                </span>
-                <span class="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[11px]">${area.day30}</span>
-              </a>
-
-              <a href="javascript:void(0);" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd60')" class="flex items-center justify-between px-3.5 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-700 transition-colors">
-                <span class="flex items-center gap-2 font-medium">
-                  <span class="w-2 h-2 rounded-full bg-amber-500"></span> 31 to 89 Days
-                </span>
-                <span class="font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[11px]">${area.day60}</span>
-              </a>
-
-              <a href="javascript:void(0);" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd90')" class="flex items-center justify-between px-3.5 py-2 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition-colors">
-                <span class="flex items-center gap-2 font-medium">
-                  <span class="w-2 h-2 rounded-full bg-rose-500"></span> 90+ Days Ago
-                </span>
-                <span class="font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-[11px]">${area.day90}</span>
-              </a>
-
-              <div class="border-t border-slate-100 my-1"></div>
-
-              <a href="javascript:void(0);" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="block px-3.5 py-1.5 text-center text-blue-600 hover:bg-blue-50 font-semibold text-[11px]">
-                View All Open Jobs (${area.open})
-              </a>
+          <!-- Dropdown Menu -->
+          <div class="hidden absolute left-0 ${isLastRows ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} w-60 bg-white border border-slate-200 rounded-xl shadow-2xl py-2 z-40 text-xs text-slate-700 dropdown-menu animate-fade-in">
+            <div class="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+              <span>Open Jobs by Age</span>
+              <i class="fa-regular fa-clock text-blue-500"></i>
             </div>
-          </div>
 
-          <!-- Quick access pill tags -->
-          <div class="hidden sm:flex items-center gap-1 text-[10px]">
-            <button type="button" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd30')" class="px-1.5 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium transition-colors" title="Within 30 Days (${area.day30})">&le;30d: ${area.day30}</button>
-            <button type="button" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd60')" class="px-1.5 py-0.5 rounded bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium transition-colors" title="31 to 89 Days (${area.day60})">31-89d: ${area.day60}</button>
-            <button type="button" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd90')" class="px-1.5 py-0.5 rounded bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium transition-colors" title="90+ Days Ago (${area.day90})">&ge;90d: ${area.day90}</button>
+            <a href="javascript:void(0);" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd30')" class="flex items-center justify-between px-3.5 py-2 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 transition-colors">
+              <span class="flex items-center gap-2 font-medium">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Within 30 Days
+              </span>
+              <span class="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[11px]">${area.day30}</span>
+            </a>
+
+            <a href="javascript:void(0);" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd60')" class="flex items-center justify-between px-3.5 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-700 transition-colors">
+              <span class="flex items-center gap-2 font-medium">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span> 31 to 89 Days
+              </span>
+              <span class="font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[11px]">${area.day60}</span>
+            </a>
+
+            <a href="javascript:void(0);" onclick="showAreaJobsByDateModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}', 'd90')" class="flex items-center justify-between px-3.5 py-2 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition-colors">
+              <span class="flex items-center gap-2 font-medium">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span> 90+ Days Ago
+              </span>
+              <span class="font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded text-[11px]">${area.day90}</span>
+            </a>
+
+            <div class="border-t border-slate-100 my-1"></div>
+
+            <a href="javascript:void(0);" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="block px-3.5 py-1.5 text-center text-blue-600 hover:bg-blue-50 font-semibold text-[11px]">
+              View All Open Jobs (${area.open})
+            </a>
           </div>
         </div>
       </td>
@@ -411,14 +447,10 @@ async function showAreaJobsModal(areaId, areaName) {
         jobs = res;
       }
 
-      // Hide or show Villa header matching taskmaster condition
+      // Keep all 15 table headers visible and aligned 1-to-1 with table rows
       const villaHeader = document.getElementById("areaModalVillaHeader");
-      if (villaHeader && res && res.villaCount !== undefined) {
-        if (res.villaCount === 0) {
-          villaHeader.classList.add("hidden");
-        } else {
-          villaHeader.classList.remove("hidden");
-        }
+      if (villaHeader) {
+        villaHeader.classList.remove("hidden");
       }
     } catch (err) {
       console.warn("API getAreaJobs error, falling back to local DB:", err);
@@ -550,13 +582,10 @@ async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
       jobs = res;
     }
 
+    // Keep all 15 table headers visible and aligned 1-to-1 with table rows
     const villaHeader = document.getElementById("areaModalVillaHeader");
-    if (villaHeader && res && res.villaCount !== undefined) {
-      if (res.villaCount === 0) {
-        villaHeader.classList.add("hidden");
-      } else {
-        villaHeader.classList.remove("hidden");
-      }
+    if (villaHeader) {
+      villaHeader.classList.remove("hidden");
     }
   } catch (e) {
     console.warn("API getAreaJobsByDate error:", e);
@@ -633,6 +662,12 @@ function renderAreaModalRows(jobs) {
   const tbody = document.getElementById("areaModalTableBody");
   if (!tbody) return;
 
+  // Always keep all 15 columns visible and matching 1:1 with headers
+  const villaHeader = document.getElementById("areaModalVillaHeader");
+  if (villaHeader) {
+    villaHeader.classList.remove("hidden");
+  }
+
   if (!jobs || jobs.length === 0) {
     tbody.innerHTML = `
       <tr>
@@ -659,7 +694,7 @@ function renderAreaModalRows(jobs) {
     const rawId = j.jobId || j.orgjobId;
 
     // Badges
-    const normStatus = normalizeStatusString(j.jobStatus);
+    const normStatus = normalizeStatusString(j.jobStatus || j.status);
     const normPriority = normalizePriorityString(j.priority);
 
     let statusCls = "badge-in-progress";
@@ -685,39 +720,55 @@ function renderAreaModalRows(jobs) {
     const attachmentsCount = j.uploadCount !== undefined ? j.uploadCount : (Array.isArray(j.imageUploads) ? j.imageUploads.length : 0);
     const commentsCount = j.commentCount !== undefined ? j.commentCount : (Array.isArray(j.comments) ? j.comments.length : 0);
     const propDisplay = j.propName || WorkWizeAPI.getCurrentPropertyName() || "-";
+    const detailText = j.jobDetail || j.details || j.title || "";
 
     return `
       <tr class="hover:bg-blue-50/40 transition-colors">
+        <!-- 1. ID -->
         <td>
           <a href="job-details.html?id=${encodeURIComponent(rawId)}" target="_blank" class="font-bold text-blue-600 hover:underline hover:text-blue-800" title="Open Job ${displayId}">
             ${displayId}
           </a>
         </td>
+        <!-- 2. VILLA -->
         <td class="font-semibold text-slate-800">
-          ${j.villaNumber && j.villaNumber !== '-' ? j.villaNumber : '<span class="text-slate-300">-</span>'}
+          ${(j.villaNumber && j.villaNumber !== '-' && j.villaNumber !== 'null') ? j.villaNumber : '<span class="text-slate-300">-</span>'}
         </td>
-        <td class="max-w-[260px] truncate text-slate-700 font-medium" title="${escapeHtml(j.jobDetail || '')}">
-          ${j.jobDetail || '<span class="text-slate-400">No details provided</span>'}
+        <!-- 3. DETAILS -->
+        <td class="max-w-[260px] truncate text-slate-700 font-medium" title="${escapeHtml(detailText)}">
+          ${detailText || '<span class="text-slate-400">No details provided</span>'}
         </td>
-        <td class="text-slate-500">${formatDateStr(j.jobCreatedOn)}</td>
-        <td class="text-slate-600">${j.jobLocation || '<span class="text-slate-300">-</span>'}</td>
+        <!-- 4. CREATE DATE -->
+        <td class="text-slate-500">${formatDateStr(j.jobCreatedOn || j.openedOn)}</td>
+        <!-- 5. LOCATION -->
+        <td class="text-slate-600">${j.jobLocation || j.location || '<span class="text-slate-300">-</span>'}</td>
+        <!-- 6. PRIORITY -->
         <td>
           <span class="badge-priority ${priorityCls}">${normPriority}</span>
         </td>
+        <!-- 7. STATUS -->
         <td>
           <span class="badge-status ${statusCls}">${normStatus}</span>
         </td>
-        <td class="text-slate-600 font-mono text-[10px]">${j.refNum || '<span class="text-slate-300">-</span>'}</td>
+        <!-- 8. REF NO -->
+        <td class="text-slate-600 font-mono text-[10px]">${(j.refNum && j.refNum !== 'null') ? j.refNum : (j.refNo || '<span class="text-slate-300">-</span>')}</td>
+        <!-- 9. ASSIGNED TO -->
         <td class="text-slate-700">${assignedText}</td>
-        <td class="text-slate-500">${formatDateStr(j.expectedCompletion)}</td>
-        <td class="text-slate-500">${formatDateStr(j.jobCloseOn)}</td>
+        <!-- 10. EXPECTED COMPLETION DATE -->
+        <td class="text-slate-500">${formatDateStr(j.expectedCompletion || j.expectedDate)}</td>
+        <!-- 11. CLOSE DATE -->
+        <td class="text-slate-500">${formatDateStr(j.jobCloseOn || j.closedOn)}</td>
+        <!-- 12. ATTACHMENTS -->
         <td class="text-center font-semibold text-slate-600">
           <span class="inline-flex items-center gap-1"><i class="fa-regular fa-image text-blue-500"></i> ${attachmentsCount}</span>
         </td>
+        <!-- 13. COMMENTS -->
         <td class="text-center font-semibold text-slate-600">
           <span class="inline-flex items-center gap-1"><i class="fa-regular fa-comment text-slate-400"></i> ${commentsCount}</span>
         </td>
+        <!-- 14. CREATED BY -->
         <td class="text-slate-600">${createdByText}</td>
+        <!-- 15. PROPERTY -->
         <td class="text-slate-500">${propDisplay}</td>
       </tr>
     `;
