@@ -7,9 +7,9 @@
   --primary-light: #eff5ff;
   --primary-border: #bfdbfe;
   
-  --sidebar-bg: #091024;
-  --sidebar-hover: rgba(255, 255, 255, 0.06);
-  --sidebar-text: #94a3b8;
+  --sidebar-bg: var(--bg-app);
+  --sidebar-hover: rgba(26, 104, 255, 0.08);
+  --sidebar-text: #475569;
   --sidebar-active: #1a68ff;
   
   --bg-app: #f4f7fb;
@@ -78,9 +78,103 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 24px 16px;
+  padding: 20px;
+  border-right: 1px solid var(--card-border);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.06), 1px 0 4px rgba(0, 0, 0, 0.03);
   z-index: 40;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-sizing: border-box;
+}
+
+/* Sidebar Collapsed State */
+.workwize-sidebar.collapsed {
+  width: 76px;
+  min-width: 76px;
+  padding: 20px 10px;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+  min-height: 38px;
+}
+
+.workwize-sidebar.collapsed .sidebar-header {
+  justify-content: center;
+}
+
+.sidebar-logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  min-height: 38px;
+}
+
+/* Expanded Logo (Horizontal logo.png) */
+.sidebar-logo-expanded {
+  display: block;
+  height: 34px;
+  width: auto;
+  max-width: 155px;
+  object-fit: contain;
+  transition: opacity 0.2s ease;
+}
+
+/* Collapsed Logo (Square logo.jpeg) */
+.sidebar-logo-collapsed {
+  display: none;
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+/* Switch Logos on Collapse */
+.workwize-sidebar.collapsed .sidebar-logo-expanded {
+  display: none !important;
+}
+
+.workwize-sidebar.collapsed .sidebar-logo-collapsed {
+  display: block !important;
+}
+
+/* Toggle Button Positioned directly on the Sidebar Edge/Line */
+.sidebar-toggle-btn {
+  position: absolute;
+  top: 26px;
+  right: -13px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid #dbeafe;
+  background-color: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 50;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #1a68ff;
+  color: #ffffff;
+  border-color: #1a68ff;
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(26, 104, 255, 0.35);
+}
+
+.sidebar-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+.sidebar-toggle-btn i {
+  font-size: 11px;
 }
 
 .sidebar-nav-item {
@@ -95,25 +189,57 @@ body {
   text-decoration: none;
   transition: all 0.2s ease;
   margin-bottom: 4px;
+  white-space: nowrap;
 }
 
 .sidebar-nav-item:hover {
-  color: #ffffff;
+  color: #1a68ff;
   background-color: var(--sidebar-hover);
   transform: translateX(3px);
 }
 
 .sidebar-nav-item.active {
-  background-color: var(--sidebar-active);
-  color: #ffffff;
+  background-color: var(--sidebar-active) !important;
+  color: #ffffff !important;
   font-weight: 600;
-  box-shadow: 0 4px 16px rgba(26, 104, 255, 0.4);
+  box-shadow: 0 4px 14px rgba(26, 104, 255, 0.35);
+}
+
+.sidebar-nav-item.active i {
+  color: #ffffff !important;
+}
+
+.sidebar-nav-item.active:hover {
+  transform: none;
+  background-color: #1455d9 !important;
+  color: #ffffff !important;
 }
 
 .sidebar-nav-item i {
   font-size: 18px;
   width: 22px;
   text-align: center;
+  flex-shrink: 0;
+}
+
+.workwize-sidebar.collapsed .sidebar-nav-item span {
+  display: none;
+}
+
+.workwize-sidebar.collapsed .sidebar-nav-item {
+  justify-content: center;
+  padding: 12px;
+  transform: none !important;
+  gap: 0;
+}
+
+.workwize-sidebar.collapsed .sidebar-nav-item i {
+  width: auto;
+  font-size: 18px;
+}
+
+.workwize-sidebar.collapsed .sidebar-bottom-promo {
+  display: none;
 }
 
 /* Sidebar Promo Widgets */
@@ -137,11 +263,12 @@ body {
 }
 
 .sidebar-promo-dark {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: #ffffff;
+  border: 1px solid var(--card-border);
   border-radius: var(--radius-md);
-  padding: 16px;
-  color: #ffffff;
+  padding: 14px;
+  color: var(--text-main);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* Header bar */

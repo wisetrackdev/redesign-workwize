@@ -4,12 +4,13 @@
 
 document.addEventListener("DOMContentLoaded", function () {
   initActiveSidebarLink();
+  initSidebarToggle();
   initTopHeaderSearch();
   initAddJobModal();
   initUserDropdown();
 });
 
-// Highlight active sidebar item according to URL
+// Highlight active sidebar item according to URL & on click set active blue
 function initActiveSidebarLink() {
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
   const navLinks = document.querySelectorAll(".sidebar-nav-item");
@@ -21,6 +22,47 @@ function initActiveSidebarLink() {
     } else {
       link.classList.remove("active");
     }
+
+    // Click handler to immediately set active state and blue background
+    link.addEventListener("click", function () {
+      navLinks.forEach(item => item.classList.remove("active"));
+      this.classList.add("active");
+    });
+  });
+}
+
+// Sidebar collapse & expand functionality
+function initSidebarToggle() {
+  const sidebar = document.querySelector(".workwize-sidebar");
+  const toggleBtns = document.querySelectorAll(".sidebar-toggle-btn");
+
+  if (!sidebar || !toggleBtns.length) return;
+
+  // Restore state from localStorage
+  const isCollapsed = localStorage.getItem("workwize_sidebar_collapsed") === "true";
+  if (isCollapsed) {
+    sidebar.classList.add("collapsed");
+    toggleBtns.forEach(btn => {
+      const icon = btn.querySelector("i");
+      if (icon) {
+        icon.className = "fa-solid fa-chevron-right";
+      }
+    });
+  }
+
+  toggleBtns.forEach(btn => {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      const collapsed = sidebar.classList.toggle("collapsed");
+      localStorage.setItem("workwize_sidebar_collapsed", collapsed ? "true" : "false");
+
+      toggleBtns.forEach(b => {
+        const icon = b.querySelector("i");
+        if (icon) {
+          icon.className = collapsed ? "fa-solid fa-chevron-right" : "fa-solid fa-chevron-left";
+        }
+      });
+    });
   });
 }
 

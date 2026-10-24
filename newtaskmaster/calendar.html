@@ -16,52 +16,55 @@
 
   <!-- Sidebar -->
   <aside class="workwize-sidebar">
-    <div>
-      <a href="dashboard.html" class="flex items-center gap-3 px-2 mb-8 text-decoration-none">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/25">
-          <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/>
-          </svg>
-        </div>
-        <div>
-          <span class="text-white font-extrabold text-lg tracking-tight block leading-tight">WorkWize</span>
-          <span class="text-[9.5px] text-blue-400 font-semibold tracking-wider block uppercase">Efficiency Redefined</span>
-        </div>
-      </a>
+    <!-- Collapse / Expand Toggle Button on Sidebar Border Line -->
+    <button type="button" class="sidebar-toggle-btn" title="Collapse / Expand Sidebar" aria-label="Toggle Sidebar">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
 
+    <div>
+      <!-- Sidebar Header (Logo) -->
+      <div class="sidebar-header flex items-center mb-6">
+        <a href="dashboard.html" class="sidebar-logo-link flex items-center text-decoration-none">
+          <img src="assets/logo.png" alt="WorkWize Logo" class="sidebar-logo-expanded">
+          <img src="assets/logo.jpeg" alt="WorkWize Icon" class="sidebar-logo-collapsed">
+        </a>
+      </div>
+
+      <!-- Navigation Links -->
       <nav class="space-y-1">
-        <a href="dashboard.html" class="sidebar-nav-item">
+        <a href="dashboard.html" class="sidebar-nav-item" title="Dashboard">
           <i class="fa-solid fa-house"></i>
           <span>Dashboard</span>
         </a>
-        <a href="jobs.html" class="sidebar-nav-item">
+        <a href="jobs.html" class="sidebar-nav-item" title="Jobs">
           <i class="fa-solid fa-layer-group"></i>
           <span>Jobs</span>
         </a>
-        <a href="all-jobs.html" class="sidebar-nav-item">
+        <a href="all-jobs.html" class="sidebar-nav-item" title="All Jobs">
           <i class="fa-solid fa-list-check"></i>
           <span>All Jobs</span>
         </a>
-        <a href="calendar.html" class="sidebar-nav-item active">
+        <a href="calendar.html" class="sidebar-nav-item active" title="Calendar">
           <i class="fa-regular fa-calendar-days"></i>
           <span>Calendar</span>
         </a>
-        <a href="reports.html" class="sidebar-nav-item">
+        <a href="reports.html" class="sidebar-nav-item" title="Reports">
           <i class="fa-solid fa-chart-pie"></i>
           <span>Reports</span>
         </a>
-        <a href="teams.html" class="sidebar-nav-item">
+        <a href="teams.html" class="sidebar-nav-item" title="Teams">
           <i class="fa-solid fa-users"></i>
           <span>Teams</span>
         </a>
-        <a href="settings.html" class="sidebar-nav-item">
+        <a href="settings.html" class="sidebar-nav-item" title="Settings">
           <i class="fa-solid fa-gear"></i>
           <span>Settings</span>
         </a>
       </nav>
     </div>
 
-    <div>
+    <!-- Sidebar Bottom Promo Box -->
+    <div class="sidebar-bottom-promo">
       <div class="sidebar-promo-card">
         <p class="text-xs font-semibold uppercase tracking-wider text-blue-200 mb-1">PRO SUITE</p>
         <h4 class="text-sm font-bold leading-snug mb-3">Simplify Operations with WorkWize</h4>
