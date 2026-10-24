@@ -1,6 +1,6 @@
 /**
  * WorkWize TaskMaster API Service
- * Mirrors endpoints from OPRO-FRONTEND/taskmaster & backend controllers
+ * Mirrors endpoints from OPRO-FRONTEND/taskmaster & backend controllerss
  */
 
 const WorkWizeAPI = (function () {
