@@ -91,6 +91,7 @@
     issuedBy: 'all',
     issuedTo: 'all',
     assignedTo: 'all',
+    closedBy: 'all',
     fromDate: '',
     toDate: '',
     sort: 'new',
@@ -465,8 +466,48 @@
     img: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>',
     tick: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>',
     up: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>',
-    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>'
+    trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
+    copy: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+    copiedTick: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
   };
+
+  /* Helper to render Job ID badge with copy button */
+  function propBadgeHTML(propId, extraStyle) {
+    var idStr = String(propId || '').trim();
+    var styleAttr = extraStyle ? ' style="' + extraStyle + '"' : '';
+    return '<span class="prop-badge"' + styleAttr + ' title="Job ID: ' + esc(idStr) + '">' +
+      '<span class="prop-badge-text">' + hl(idStr) + '</span>' +
+      '<button type="button" class="prop-copy-btn" data-copy="' + esc(idStr) + '" title="Copy Job ID" aria-label="Copy Job ID">' +
+        I.copy +
+      '</button>' +
+    '</span>';
+  }
+
+  /* Copy to clipboard helper */
+  function copyToClipboard(text) {
+    if (!text) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).catch(function () {
+        fallbackCopyText(text);
+      });
+    } else {
+      fallbackCopyText(text);
+    }
+  }
+
+  function fallbackCopyText(text) {
+    try {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    } catch (e) {}
+  }
 
   /* Deleted Jobs session tracker */
   var deletedJobIds = new Set();
@@ -776,9 +817,35 @@
     return text.split(re).map(function (p, i) { return i % 2 ? '<mark>' + esc(p) + '</mark>' : esc(p); }).join('');
   }
 
+  function resolveBackendJobId(query) {
+    if (!query || typeof query !== 'string') return '';
+    var q = query.trim();
+    if (!q) return '';
+    loadJobCustomIdMap();
+    var qLower = q.toLowerCase();
+    for (var k in globalJobCustomIdMap) {
+      if (!globalJobCustomIdMap.hasOwnProperty(k)) continue;
+      var item = globalJobCustomIdMap[k];
+      if (!item) continue;
+      var cId = (item.canonicalPropId || '').toLowerCase();
+      if (cId === qLower || (cId && cId.indexOf(qLower) !== -1)) {
+        return k;
+      }
+    }
+    var parsed = parseFormattedPropId(q);
+    if (parsed && parsed.serial) {
+      return String(parsed.serial);
+    }
+    var mEnd = q.match(/-(\d+)$/);
+    if (mEnd && mEnd[1]) {
+      return String(parseInt(mEnd[1], 10));
+    }
+    return '';
+  }
+
   function matches(j) {
     var w = words(); if (!w.length) return true;
-    var hay = [j.id, j.jobId, j.propId, currentPropertyId, j.details, j.by, j.dept, j.area, j.sub, j.assigned, j.assignDept, j.status, j.remarks, j.closedBy, fmt(j.opened), fmt(j.closedAt)].join(' ').toLowerCase();
+    var hay = [j.id, j.jobId, j.propId, j.customJobId, currentPropertyId, j.details, j.by, j.dept, j.area, j.sub, j.assigned, j.assignDept, j.status, j.remarks, j.closedBy, fmt(j.opened), fmt(j.closedAt)].join(' ').toLowerCase();
     return w.every(function (x) { return hay.indexOf(x) !== -1; });
   }
 
@@ -796,6 +863,13 @@
         } else {
           matchAssign = j.assigned === state.assignedTo;
         }
+      }
+
+      var matchClosedBy = true;
+      if (state.closedBy && state.closedBy !== 'all') {
+        var selCb = state.closedBy.trim().toLowerCase();
+        var jCb = (j.closedBy || '').trim().toLowerCase();
+        matchClosedBy = (jCb === selCb);
       }
 
       var matchDate = true;
@@ -841,11 +915,18 @@
         matchIssuedBy &&
         (!state.issuedTo || state.issuedTo === 'all' || j.dept === state.issuedTo) &&
         matchAssign &&
+        matchClosedBy &&
         matchDate &&
         (ignoreStatus || tab === 'closed' || state.status === 'all' || j.status === state.status || (state.status === 'In-Progress' && (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress')));
     });
     var s = state.sort;
     arr.sort(function (a, b) {
+      if (s === 'closed_new' || s === 'closed_old') {
+        var ca = parseJobDate(a.closedAt) || new Date(0);
+        var cb = parseJobDate(b.closedAt) || new Date(0);
+        if (s === 'closed_old') return (ca - cb) || String(a.id).localeCompare(String(b.id));
+        return (cb - ca) || String(b.id).localeCompare(String(a.id));
+      }
       var da = parseJobDate(a.opened) || new Date(0);
       var db = parseJobDate(b.opened) || new Date(0);
       if (s === 'old') return (da - db) || String(a.id).localeCompare(String(b.id));
@@ -1111,7 +1192,7 @@
 
     return '<article class="jcard ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="top">' +
-        '<div class="left"><span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' + statusTag + '</div>' +
+        '<div class="left">' + propBadgeHTML(j.propId) + statusTag + '</div>' +
         menuHTML(j) +
       '</div>' +
       '<h3 title="' + esc(j.details) + '">' + hl(j.details) + '</h3>' +
@@ -1135,14 +1216,14 @@
       var closedRemark = (j.remarks && j.remarks !== 'NA') ? hl(j.remarks) : '<span class="na">NA</span>';
       return '<article class="jrow Closed' + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
         '<div class="rt">' +
-          '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
+          propBadgeHTML(j.propId) +
           '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
           '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
         '</div>' +
         '<div class="rc" title="' + esc(j.area) + '"><span>Area</span>' + hl(j.area) + '</div>' +
         '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
         '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
-        '<div class="rc" title="' + esc(fmt(j.closedAt)) + '"><span>Closed</span>' + (j.closedAt ? fmt(j.closedAt) : '<span class="na">NA</span>') + '</div>' +
+        '<div class="rc col-sort-closed" data-sort-closed title="Click to sort by Close Date"><span>Closed</span>' + (j.closedAt ? fmt(j.closedAt) : '<span class="na">NA</span>') + '</div>' +
         '<div class="rc" title="' + esc(assignedPerson || 'NA') + '"><span>Closed By</span>' + assignedVal + '</div>' +
         '<div class="rc" title="' + esc(j.remarks || 'NA') + '"><span>Remarks</span>' + closedRemark + '</div>' +
         '<div class="rs"><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +
@@ -1157,7 +1238,7 @@
 
     return '<article class="jrow ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="rt">' +
-        '<span class="prop-badge" title="Job ID">' + esc(j.propId) + '</span>' +
+        propBadgeHTML(j.propId) +
         '<b title="' + esc(j.details) + '">' + hl(j.details) + '</b>' +
         '<small>' + I.dept + ' ' + hl(j.dept) + '</small>' +
       '</div>' +
@@ -1330,6 +1411,30 @@
         }).join('');
     }
 
+    // Dynamic Closed By dropdown
+    var closedByMap = {};
+    var closedSource = (closedJobs && closedJobs.length) ? closedJobs : currentList;
+    closedSource.forEach(function (j) {
+      if (j.closedBy && typeof j.closedBy === 'string') {
+        var cb = j.closedBy.trim();
+        if (cb && cb !== 'NA' && cb !== 'na' && cb.toLowerCase() !== 'null' && cb.toLowerCase() !== 'undefined') {
+          closedByMap[cb] = 1;
+        }
+      }
+    });
+    var fltClosedBy = $('#fltClosedBy');
+    if (fltClosedBy) {
+      fltClosedBy.innerHTML = '<option value="all">All Closed By</option>' +
+        Object.keys(closedByMap).sort().map(function (person) {
+          return '<option value="' + esc(person) + '"' + (state.closedBy === person ? ' selected' : '') + '>' + esc(person) + '</option>';
+        }).join('');
+      fltClosedBy.value = state.closedBy || 'all';
+    }
+    var fsClosedByGroup = $('#fsClosedByGroup');
+    if (fsClosedByGroup) {
+      fsClosedByGroup.hidden = (tab !== 'closed');
+    }
+
     var sortBy = $('#sortBy');
     if (sortBy && state.sort) {
       sortBy.value = state.sort;
@@ -1359,6 +1464,7 @@
       (state.issuedBy && state.issuedBy !== 'all') ||
       (state.issuedTo && state.issuedTo !== 'all') ||
       (state.assignedTo && state.assignedTo !== 'all') ||
+      (state.closedBy && state.closedBy !== 'all') ||
       (tab === 'open' && state.status !== 'all') ||
       (state.fromDate && state.fromDate.length > 0) ||
       (state.toDate && state.toDate.length > 0) ||
@@ -1385,6 +1491,15 @@
     // Use current server-fetched paged items directly
     var currentList = (tab === 'closed') ? closedJobs : openJobs;
     var pageItems = currentList;
+    if (state.q) {
+      pageItems = currentList.filter(matches);
+    }
+    if (state.closedBy && state.closedBy !== 'all') {
+      var selCb = state.closedBy.trim().toLowerCase();
+      pageItems = pageItems.filter(function (j) {
+        return (j.closedBy || '').trim().toLowerCase() === selCb;
+      });
+    }
 
     cont.className = 'cards' + (state.layout === 'list' ? ' list' : '');
     cont.innerHTML = pageItems.length
@@ -1506,19 +1621,27 @@
 
     try {
       var sortParam = state.sort || 'new';
-      var sortOrder = (sortParam === 'old') ? 'asc' : 'desc';
+      var sortOrder = (sortParam === 'old' || sortParam === 'closed_old') ? 'asc' : 'desc';
+      if (sortParam === 'closed_new' || sortParam === 'closed_old') {
+        sortParam = 'closeDate';
+      }
+
+      var searchInput = (state.q || '').trim();
+      var resolvedId = resolveBackendJobId(searchInput);
+      var apiSearch = resolvedId || searchInput;
 
       var queryParams = {
         propId: currentPropertyId,
         jobList: (tab === 'closed' || tab === 'close') ? 'close' : 'open',
         pageNumber: pageNumber,
         pageSize: ps,
-        search: (state.q || '').trim(),
+        search: apiSearch,
         status: (tab === 'closed' ? 'Closed' : state.status) || 'all',
         areaId: state.area || 'all',
         issuedBy: state.issuedBy || 'all',
         issuedTo: state.issuedTo || 'all',
         assignedTo: state.assignedTo || 'all',
+        closedBy: state.closedBy || 'all',
         fromDate: state.fromDate || '',
         toDate: state.toDate || '',
         sortBy: sortParam,
@@ -1560,6 +1683,40 @@
       var serialItems = assignDateBasedSerialNumbers(uniqueList, activePrefix);
       var mappedItems = serialItems.map(function (item) {
         return mapApiJob(item.rawJob, item);
+      });
+
+      // Fallback: if search was by custom propId and server returned 0 results, check local cache
+      if (mappedItems.length === 0 && searchInput) {
+        var localSource = (tab === 'closed' || tab === 'close') ? closedJobs : openJobs;
+        var localMatches = localSource.filter(matches);
+        if (localMatches.length > 0) {
+          mappedItems = localMatches;
+        }
+      }
+
+      // Filter by Closed By if specified
+      if (state.closedBy && state.closedBy !== 'all') {
+        var selClosedBy = state.closedBy.trim().toLowerCase();
+        mappedItems = mappedItems.filter(function (j) {
+          return (j.closedBy || '').trim().toLowerCase() === selClosedBy;
+        });
+      }
+
+      // Apply client-side sorting (supports Close Date newest/oldest)
+      var s = state.sort;
+      mappedItems.sort(function (a, b) {
+        if (s === 'closed_new' || s === 'closed_old') {
+          var ca = parseJobDate(a.closedAt) || new Date(0);
+          var cb = parseJobDate(b.closedAt) || new Date(0);
+          if (s === 'closed_old') return (ca - cb) || String(a.id).localeCompare(String(b.id));
+          return (cb - ca) || String(b.id).localeCompare(String(a.id));
+        }
+        var da = parseJobDate(a.opened) || new Date(0);
+        var db = parseJobDate(b.opened) || new Date(0);
+        if (s === 'old') return (da - db) || String(a.id).localeCompare(String(b.id));
+        if (s === 'az') return (a.details || '').localeCompare(b.details || '');
+        if (s === 'area') return (a.area || '').localeCompare(b.area || '') || (a.details || '').localeCompare(b.details || '');
+        return (db - da) || String(b.id).localeCompare(String(a.id));
       });
 
       var totalCount = mappedItems.length;
@@ -3050,7 +3207,7 @@
     }).join('');
 
     var fields =
-      field('Job ID', '<b class="prop-text">' + esc(j.propId) + '</b>') +
+      field('Job ID', '<b class="prop-text">' + esc(j.propId) + '</b> <button type="button" class="prop-copy-btn" data-copy="' + esc(j.propId) + '" title="Copy Job ID" style="display:inline-flex;vertical-align:middle;margin-left:4px;">' + I.copy + '</button>') +
       field('Job Details', esc(j.details), true) +
       field('Issued To', esc(j.dept)) + field('Issued By', esc(j.by)) +
       field('Area', esc(j.area)) + field('Sub-Area', na(j.sub)) +
@@ -3083,7 +3240,7 @@
     }
 
     $('#viewDialog').innerHTML =
-      '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips"><span class="prop-badge" style="font-size:12px;padding:3px 9px" title="Job ID">' + esc(j.propId) + '</span><span class="tag st-' + j.status + '">' + j.status + '</span><span class="age">' + age + '</span></div>' +
+      '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips">' + propBadgeHTML(j.propId, 'font-size:12px;padding:3px 9px') + '<span class="tag st-' + j.status + '">' + j.status + '</span><span class="age">' + age + '</span></div>' +
       '<div class="vnav"><button data-vnav="-1" title="Previous (&larr;)"' + (pos <= 0 ? ' disabled' : '') + '>&lsaquo;</button><span>' + (pos + 1) + ' of ' + tot + '</span><button data-vnav="1" title="Next (&rarr;)"' + (pos >= tot - 1 ? ' disabled' : '') + '>&rsaquo;</button><button class="vx" data-vclose title="Close (Esc)">&times;</button></div></div>' +
       '<h2>' + esc(j.details) + '</h2><p>Issued To: ' + esc(j.dept) + ' &middot; Area: ' + esc(j.area) + (j.sub ? ' &middot; Sub Area: ' + esc(j.sub) : '') + '</p></div>' +
       '<div class="vbody"><div class="vmain"><h4>Job Information</h4><div class="fv">' + fields + '</div>' +
@@ -3622,6 +3779,7 @@
     state.issuedBy = 'all';
     state.issuedTo = 'all';
     state.assignedTo = 'all';
+    state.closedBy = 'all';
     state.status = (state.tab === 'closed') ? 'Closed' : 'all';
     state.fromDate = '';
     state.toDate = '';
@@ -3634,6 +3792,7 @@
     var fltIssuedBy = $('#fltIssuedBy'); if (fltIssuedBy) fltIssuedBy.value = 'all';
     var fltIssuedTo = $('#fltIssuedTo'); if (fltIssuedTo) fltIssuedTo.value = 'all';
     var fltAssignTo = $('#fltAssignTo'); if (fltAssignTo) fltAssignTo.value = 'all';
+    var fltClosedBy = $('#fltClosedBy'); if (fltClosedBy) fltClosedBy.value = 'all';
     var fltFromDate = $('#fltFromDate'); if (fltFromDate) { fltFromDate.value = ''; fltFromDate.removeAttribute('max'); }
     var fltToDate = $('#fltToDate'); if (fltToDate) { fltToDate.value = ''; fltToDate.removeAttribute('min'); }
     var sortBy = $('#sortBy'); if (sortBy) sortBy.value = 'new';
@@ -3839,6 +3998,39 @@
       else if (act === 'del') openDel(job);
       else if (act === 'change-team') openChangeTeam(job);
       else if (act === 'share-wa') shareJobWhatsApp(job);
+      return;
+    }
+
+    // Copy Job ID button click
+    var copyBtn = t.closest('.prop-copy-btn');
+    if (copyBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var textToCopy = copyBtn.getAttribute('data-copy');
+      if (textToCopy) {
+        copyToClipboard(textToCopy);
+        copyBtn.innerHTML = I.copiedTick;
+        copyBtn.classList.add('copied');
+        toast('Copied Job ID: ' + textToCopy);
+        setTimeout(function () {
+          copyBtn.innerHTML = I.copy;
+          copyBtn.classList.remove('copied');
+        }, 1500);
+      }
+      return;
+    }
+
+    // Sort by Close Date on column click (in Closed tab)
+    var sortClosedCol = t.closest('[data-sort-closed]');
+    if (sortClosedCol) {
+      e.preventDefault();
+      e.stopPropagation();
+      state.sort = (state.sort === 'closed_new') ? 'closed_old' : 'closed_new';
+      var sb = $('#sortBy');
+      if (sb) sb.value = state.sort;
+      renderFilters();
+      fetchJobs(state.tab, 1, true);
+      toast('Sorted by Close Date: ' + (state.sort === 'closed_new' ? 'Newest first' : 'Oldest first'));
       return;
     }
 
@@ -4090,6 +4282,17 @@
     if (fltAssignTo) {
       fltAssignTo.addEventListener('change', function (e) {
         state.assignedTo = e.target.value;
+        if (pagination[state.tab]) pagination[state.tab].page = 1;
+        renderFilters();
+        fetchJobs(state.tab, 1, true);
+      });
+    }
+
+    // Closed By filter
+    var fltClosedBy = $('#fltClosedBy');
+    if (fltClosedBy) {
+      fltClosedBy.addEventListener('change', function (e) {
+        state.closedBy = e.target.value;
         if (pagination[state.tab]) pagination[state.tab].page = 1;
         renderFilters();
         fetchJobs(state.tab, 1, true);

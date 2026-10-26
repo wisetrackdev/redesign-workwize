@@ -401,6 +401,14 @@
         </select>
       </div>
 
+      <!-- Closed By Filter -->
+      <div class="fs-group" id="fsClosedByGroup" hidden>
+        <label class="fs-label" for="fltClosedBy">Closed By</label>
+        <select id="fltClosedBy" aria-label="Filter by closed by">
+          <option value="all">All Closed By</option>
+        </select>
+      </div>
+
       <!-- Date Range Filter -->
       <div class="fs-group" id="fsDateRangeGroup">
         <label class="fs-label">Date Range</label>
@@ -420,8 +428,10 @@
       <div class="fs-group">
         <label class="fs-label" for="sortBy">Sort By</label>
         <select id="sortBy" aria-label="Sort">
-          <option value="new">Newest first</option>
-          <option value="old">Oldest first</option>
+          <option value="new">Newest first (Open Date)</option>
+          <option value="old">Oldest first (Open Date)</option>
+          <option value="closed_new">Close Date (Newest first)</option>
+          <option value="closed_old">Close Date (Oldest first)</option>
           <option value="az">Job name A-Z</option>
           <option value="area">Area A-Z</option>
         </select>
