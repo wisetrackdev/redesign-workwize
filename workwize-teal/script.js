@@ -509,6 +509,19 @@
     } catch (e) {}
   }
 
+  /* Closed Date sorting icon helper */
+  function getClosedSortIconHTML() {
+    var isNew = state.sort === 'closed_new';
+    var isOld = state.sort === 'closed_old';
+    if (isNew) {
+      return '<span class="closed-sort-btn active" title="Sorted: Close Date (Newest first - Click to toggle)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></span>';
+    } else if (isOld) {
+      return '<span class="closed-sort-btn active" title="Sorted: Close Date (Oldest first - Click to toggle)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></span>';
+    } else {
+      return '<span class="closed-sort-btn" title="Click to sort by Close Date"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg></span>';
+    }
+  }
+
   /* Deleted Jobs session tracker */
   var deletedJobIds = new Set();
   try {
@@ -1214,6 +1227,7 @@
     // Requirement: Remarks ONLY shown in Closed tab!
     if (closed) {
       var closedRemark = (j.remarks && j.remarks !== 'NA') ? hl(j.remarks) : '<span class="na">NA</span>';
+      var isClosedSort = (state.sort === 'closed_new' || state.sort === 'closed_old');
       return '<article class="jrow Closed' + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
         '<div class="rt">' +
           propBadgeHTML(j.propId) +
@@ -1223,7 +1237,7 @@
         '<div class="rc" title="' + esc(j.area) + '"><span>Area</span>' + hl(j.area) + '</div>' +
         '<div class="rc" title="' + esc(j.sub || 'NA') + '"><span>Sub Area</span>' + (j.sub ? hl(j.sub) : '<span class="na">NA</span>') + '</div>' +
         '<div class="rc" title="' + esc(fmt(j.opened)) + '"><span>Opened</span>' + fmt(j.opened) + '</div>' +
-        '<div class="rc col-sort-closed" data-sort-closed title="Click to sort by Close Date"><span>Closed</span>' + (j.closedAt ? fmt(j.closedAt) : '<span class="na">NA</span>') + '</div>' +
+        '<div class="rc col-sort-closed' + (isClosedSort ? ' active-sort' : '') + '" data-sort-closed title="Click to sort by Close Date"><span class="col-sort-title">Closed ' + getClosedSortIconHTML() + '</span><div class="col-sort-val">' + (j.closedAt ? fmt(j.closedAt) : '<span class="na">NA</span>') + '</div></div>' +
         '<div class="rc" title="' + esc(assignedPerson || 'NA') + '"><span>Closed By</span>' + assignedVal + '</div>' +
         '<div class="rc" title="' + esc(j.remarks || 'NA') + '"><span>Remarks</span>' + closedRemark + '</div>' +
         '<div class="rs"><span class="tag st-' + j.status + '">' + j.status + '</span></div>' +

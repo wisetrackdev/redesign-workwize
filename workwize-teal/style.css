@@ -675,9 +675,16 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
 .prop-copy-btn:hover{opacity:1;background:rgba(37,99,235,0.12);transform:scale(1.15)}
 .prop-copy-btn.copied{opacity:1;color:#16a34a}
 .prop-text{font-family:inherit;font-size:12px;font-weight:700;color:var(--primary);background:#EEF2FB;padding:2px 7px;border-radius:6px;border:1px solid #D6DFEE;display:inline-block;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.jrow.Closed .rc.col-sort-closed{cursor:pointer;user-select:none;transition:color .15s}
-.jrow.Closed .rc.col-sort-closed:hover span{color:var(--primary);font-weight:700}
-.jrow.Closed .rc.col-sort-closed span::after{content:' ↕';font-size:10px;opacity:0.7}
+.jrow.Closed .rc.col-sort-closed{cursor:pointer;user-select:none;transition:all .15s ease}
+.jrow.Closed .rc.col-sort-closed .col-sort-title{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);font-weight:500;margin-bottom:2px;transition:color .15s ease}
+.jrow.Closed .rc.col-sort-closed:hover .col-sort-title{color:var(--primary,#2563eb);font-weight:700}
+.jrow.Closed .rc.col-sort-closed:hover .closed-sort-btn{color:var(--primary,#2563eb);transform:scale(1.15)}
+.jrow.Closed .rc.col-sort-closed.active-sort .col-sort-title{color:#2563eb !important;font-weight:700 !important}
+.closed-sort-btn{display:inline-flex !important;align-items:center;justify-content:center;color:#94a3b8;vertical-align:middle;padding:1px 2px;border-radius:4px;transition:all .15s ease;margin-bottom:0 !important}
+.closed-sort-btn svg{display:block;width:14px;height:14px;transition:stroke .15s ease, transform .15s ease}
+.closed-sort-btn.active{color:#2563eb !important;background-color:rgba(37,99,235,0.12)}
+.closed-sort-btn.active svg{stroke:#2563eb !important}
+.jrow.Closed .rc.col-sort-closed .col-sort-val{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap}
 .st-Open{background:#FEF0D3;color:#B45309}.st-Assigned{background:#E3E8F8;color:#2F4390}.st-Closed{background:var(--green-soft);color:#2A7A26}.st-In-Progress,.st-InProgress{background:#E0F2FE;color:#0369A1}
 .pf{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--muted);background:#EDF0F8;border-radius:6px;padding:2px 6px}
