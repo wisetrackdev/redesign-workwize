@@ -468,7 +468,8 @@
     up: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>',
     trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
     copy: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
-    copiedTick: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+    copiedTick: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    taskmaster: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>'
   };
 
   /* Helper to render Job ID badge with copy button */
@@ -1138,6 +1139,11 @@
       }
     }
 
+    var taskMasterBtn = '';
+    if (!closed) {
+      taskMasterBtn = '<button data-act="taskmaster" data-id="' + j.id + '">' + I.taskmaster + ' Move to Task Master</button>';
+    }
+
     var closeBtn = '';
     if (!closed && canClose) {
       closeBtn = '<button data-act="close" data-id="' + j.id + '">' + I.check + ' Close Job</button>';
@@ -1154,6 +1160,7 @@
       editBtn +
       // changeTeamBtn +
       assignBtn +
+      taskMasterBtn +
       closeBtn +
       deleteBtn +
       '</div></div>';
@@ -3155,6 +3162,23 @@
     document.body.classList.add('noscroll');
   }
 
+  /* ================= Move to Task Master Modal ================= */
+  var taskMasterTargetJob = null;
+
+  function openTaskMaster(job) {
+    if (!job) return;
+    taskMasterTargetJob = job;
+    var tt = $('#taskMasterText');
+    if (tt) {
+      tt.innerHTML = 'Do you want to save the changes?<br><small style="color:var(--muted);display:block;margin-top:6px;">Move <b style="color:var(--ink);">' + esc(job.propId || ('Job #' + job.id)) + '</b> to Task Master?</small>';
+    }
+    var modal = $('#taskMasterModal');
+    if (modal) {
+      modal.hidden = false;
+      document.body.classList.add('noscroll');
+    }
+  }
+
   /* ================= View Modal (Job Details) ================= */
   function openView(id, ids) {
     var j = byId(id);
@@ -3240,13 +3264,14 @@
     viewActions += '<button type="button" class="btn" data-vact="share-wa" style="background:#25D366;color:#fff;border-color:#25D366;display:inline-flex;align-items:center;gap:6px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z"/></svg> Share via WhatsApp</button>';
 
     if (!isAtmosphereAdmin()) {
-      if (canChange) {
-        viewActions += '<button type="button" class="btn s" data-vact="change-team">' + I.dept + ' Change Team</button>';
-      }
+      // if (canChange) {
+      //   viewActions += '<button type="button" class="btn s" data-vact="change-team">' + I.dept + ' Change Team</button>';
+      // }
       if (!closed) {
         if (canAssign) {
           viewActions += '<button class="btn p" data-vact="assign">' + I.user + (isAssigned ? ' Reassign' : ' Assign Job') + '</button>';
         }
+        viewActions += '<button type="button" class="btn s" data-vact="taskmaster">' + I.taskmaster + ' Move to Task Master</button>';
         if (canClose) {
           viewActions += '<button class="btn g" data-vact="close">' + I.check + ' Close Job</button>';
         }
@@ -3280,11 +3305,12 @@
 
   /* ================= Modals Management ================= */
   function closeModals() {
-    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#resetPwdModal', '#noPhotoConfirmModal', '#noPhotoModal', '#viewModal', '#changeTeamModal'];
+    var modals = ['#assignModal', '#closeModal', '#editModal', '#delModal', '#taskMasterModal', '#resetPwdModal', '#noPhotoConfirmModal', '#noPhotoModal', '#viewModal', '#changeTeamModal'];
     modals.forEach(function (m) {
       var el = $(m);
       if (el) el.hidden = true;
     });
+    taskMasterTargetJob = null;
     document.body.classList.remove('noscroll');
   }
 
@@ -4010,6 +4036,7 @@
       else if (act === 'assign') openAssign(job);
       else if (act === 'close') openClose(job);
       else if (act === 'del') openDel(job);
+      else if (act === 'taskmaster') openTaskMaster(job);
       else if (act === 'change-team') openChangeTeam(job);
       else if (act === 'share-wa') shareJobWhatsApp(job);
       return;
@@ -4136,6 +4163,7 @@
         else if (act === 'close') { closeView(); openClose(job); }
         else if (act === 'edit') { closeView(); openEdit(job); }
         else if (act === 'del') { openDel(job); }
+        else if (act === 'taskmaster') { closeView(); openTaskMaster(job); }
         else if (act === 'change-team') { closeView(); openChangeTeam(job); }
         else if (act === 'share-wa') { shareJobWhatsApp(job); }
       }
@@ -4763,6 +4791,72 @@
           confirmDelBtn.disabled = false;
           confirmDelBtn.textContent = 'Delete';
           deleteTargetJob = null;
+        }
+      });
+    }
+
+    // Confirm Move to Task Master Action
+    var confirmMoveTaskMasterBtn = $('#confirmMoveTaskMaster');
+    if (confirmMoveTaskMasterBtn) {
+      confirmMoveTaskMasterBtn.addEventListener('click', async function () {
+        if (!taskMasterTargetJob) return;
+        var target = taskMasterTargetJob;
+        confirmMoveTaskMasterBtn.disabled = true;
+        confirmMoveTaskMasterBtn.textContent = 'Saving...';
+
+        try {
+          var targetPropId = (target.raw && target.raw.propId) ? target.raw.propId : currentPropertyId;
+          var targetJobId = (target.raw && target.raw.jobId != null) ? target.raw.jobId : (target.jobId != null ? target.jobId : target.id);
+
+          var res = null;
+          if (api && api.moveToTaskMaster) {
+            res = await api.moveToTaskMaster(targetPropId, targetJobId);
+          } else if (window.WorkWizeDailyJobApi && window.WorkWizeDailyJobApi.moveToTaskMaster) {
+            res = await window.WorkWizeDailyJobApi.moveToTaskMaster(targetPropId, targetJobId);
+          }
+
+          if (res === true || (res && res.success !== false && !res.error)) {
+            var targetIdStr = String(target.id);
+            var targetJobIdStr = target.jobId != null ? String(target.jobId) : null;
+
+            // Remove from openJobs
+            var oIdx = openJobs.findIndex(function (j) {
+              return String(j.id) === targetIdStr || (targetJobIdStr && String(j.jobId) === targetJobIdStr);
+            });
+            if (oIdx !== -1) {
+              openJobs.splice(oIdx, 1);
+              if (pagination.open) {
+                pagination.open.total = Math.max(0, (pagination.open.total || 1) - 1);
+                pagination.open.totalPages = Math.max(1, Math.ceil(pagination.open.total / (pagination.open.pageSize || 25)));
+              }
+            }
+
+            // Update tab badge
+            var ob = $('#openBadge');
+            if (ob) ob.textContent = (pagination.open && pagination.open.total !== undefined) ? pagination.open.total : openJobs.length;
+
+            closeModals();
+            closeView();
+
+            renderList(state.tab);
+            renderRecentStats();
+
+            toast('Job moved to Task Master');
+
+            // Refresh open jobs list from API in background if online
+            if (typeof loadJobs === 'function' && currentPropertyId) {
+              loadJobs('open', (pagination.open && pagination.open.page) || 1, false).catch(function () {});
+            }
+          } else {
+            toast('Failed to move to Task Master');
+          }
+        } catch (err) {
+          console.error('Error moving to TaskMaster:', err);
+          toast('Failed to move to Task Master: ' + (err.message || 'Unknown error'));
+        } finally {
+          confirmMoveTaskMasterBtn.disabled = false;
+          confirmMoveTaskMasterBtn.textContent = 'Save';
+          taskMasterTargetJob = null;
         }
       });
     }
