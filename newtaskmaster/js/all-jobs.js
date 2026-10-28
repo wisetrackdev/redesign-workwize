@@ -8,7 +8,7 @@ let allJobsStore = [];
 let filteredJobs = [];
 let selectedJobIds = new Set();
 let currentPage = 1;
-const pageSize = 12;
+let pageSize = 12;
 
 document.addEventListener("DOMContentLoaded", async function () {
   // Parse query string for pre-filled filters
@@ -24,6 +24,19 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (searchParam && searchInput) searchInput.value = searchParam;
   if (areaParam && areaSelect) areaSelect.value = areaParam;
   if (statusParam && statusSelect) statusSelect.value = statusParam;
+
+  // Page size selector
+  const pageSizeSelect = document.getElementById("pageSizeSelect");
+  if (pageSizeSelect) {
+    pageSizeSelect.value = pageSize;
+    pageSizeSelect.addEventListener("change", function () {
+      pageSize = parseInt(this.value, 10) || 12;
+      currentPage = 1;
+      renderTableRows();
+      renderPagination();
+      updateCounterText();
+    });
+  }
 
   // Load jobs from API
   await loadAllJobsFromAPI();
@@ -50,6 +63,49 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (clearFiltersBtn) {
     clearFiltersBtn.addEventListener("click", resetAllFilters);
   }
+
+  // Filter Sidebar Drawer Controls
+  const filterToggleBtn = document.getElementById("filterToggleBtn");
+  const filterSidebar = document.getElementById("filterSidebar");
+  const filterSidebarBackdrop = document.getElementById("filterSidebarBackdrop");
+  const closeFilterSidebarBtn = document.getElementById("closeFilterSidebarBtn");
+  const cancelFilterSidebarBtn = document.getElementById("cancelFilterSidebarBtn");
+  const applyFilterBtn = document.getElementById("applyFilterBtn");
+
+  function openFilterSidebar() {
+    if (!filterSidebar || !filterSidebarBackdrop) return;
+    filterSidebarBackdrop.classList.remove("opacity-0", "pointer-events-none");
+    filterSidebarBackdrop.classList.add("opacity-100");
+    filterSidebar.classList.remove("translate-x-full");
+    filterSidebar.classList.add("translate-x-0");
+  }
+
+  function closeFilterSidebar() {
+    if (!filterSidebar || !filterSidebarBackdrop) return;
+    filterSidebarBackdrop.classList.add("opacity-0", "pointer-events-none");
+    filterSidebarBackdrop.classList.remove("opacity-100");
+    filterSidebar.classList.add("translate-x-full");
+    filterSidebar.classList.remove("translate-x-0");
+  }
+
+  if (filterToggleBtn) filterToggleBtn.addEventListener("click", openFilterSidebar);
+  if (closeFilterSidebarBtn) closeFilterSidebarBtn.addEventListener("click", closeFilterSidebar);
+  if (cancelFilterSidebarBtn) cancelFilterSidebarBtn.addEventListener("click", closeFilterSidebar);
+  if (filterSidebarBackdrop) filterSidebarBackdrop.addEventListener("click", closeFilterSidebar);
+
+  if (applyFilterBtn) {
+    applyFilterBtn.addEventListener("click", function () {
+      closeFilterSidebar();
+      currentPage = 1;
+      filterAndRenderJobs();
+    });
+  }
+
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && filterSidebar && !filterSidebar.classList.contains("translate-x-full")) {
+      closeFilterSidebar();
+    }
+  });
 
   // Select all checkbox
   const selectAllCheckbox = document.getElementById("selectAllCheckbox");
@@ -323,6 +379,33 @@ function filterAndRenderJobs() {
   renderTableRows();
   renderPagination();
   updateCounterText();
+  updateActiveFilterBadge();
+}
+
+function updateActiveFilterBadge() {
+  let count = 0;
+  if (document.getElementById("filterStatus")?.value) count++;
+  if (document.getElementById("filterPriority")?.value) count++;
+  if (document.getElementById("filterAssignedTo")?.value) count++;
+  if (document.getElementById("filterDateSpan")?.value) count++;
+  if (document.getElementById("filterArea")?.value) count++;
+
+  const badge = document.getElementById("activeFilterBadge");
+  const btn = document.getElementById("filterToggleBtn");
+  if (badge) {
+    if (count > 0) {
+      badge.textContent = count;
+      badge.classList.remove("hidden");
+      if (btn) {
+        btn.classList.add("border-blue-500", "text-blue-600", "bg-blue-50/50");
+      }
+    } else {
+      badge.classList.add("hidden");
+      if (btn) {
+        btn.classList.remove("border-blue-500", "text-blue-600", "bg-blue-50/50");
+      }
+    }
+  }
 }
 
 function renderTableRows() {
@@ -558,13 +641,13 @@ function updateCounterText() {
 
   const total = filteredJobs.length;
   if (total === 0) {
-    counterEl.textContent = "Showing 0 of 0 jobs";
+    counterEl.innerHTML = `Showing <span class="font-semibold text-slate-700">0</span> of <span class="font-semibold text-slate-700">0</span> jobs`;
     return;
   }
 
   const start = (currentPage - 1) * pageSize + 1;
   const end = Math.min(currentPage * pageSize, total);
-  counterEl.textContent = `Showing ${start} to ${end} of ${total} jobs`;
+  counterEl.innerHTML = `Showing <span class="font-bold text-slate-800">${start}</span> to <span class="font-bold text-slate-800">${end}</span> of <span class="font-bold text-slate-900">${total}</span> jobs`;
 }
 
 function resetAllFilters() {
