@@ -1021,3 +1021,101 @@ mark{background:#fde68a;color:inherit;border-radius:3px;padding:0 1px}
   transform-origin: center center;
 }
 
+
+
+/* Multiple Image Badge on Card & Row Thumbnails */
+.thumb-wrap {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.multi-img-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  line-height: 1.2;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Lightbox Multiple Image Gallery Navigation */
+.lb-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-size: 32px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 320;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(8px);
+  user-select: none;
+}
+.lb-nav-btn:hover {
+  background: rgba(255, 255, 255, 0.45);
+  transform: translateY(-50%) scale(1.1);
+}
+.lb-nav-btn.lb-prev {
+  left: 20px;
+}
+.lb-nav-btn.lb-next {
+  right: 20px;
+}
+.lb-counter {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 0 10px;
+  letter-spacing: 0.5px;
+}
+.lb-thumbs {
+  position: absolute;
+  bottom: 16px;
+  display: flex;
+  gap: 8px;
+  z-index: 320;
+  max-width: 90vw;
+  overflow-x: auto;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.7);
+  border-radius: 12px;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.lb-thumbs img, .lb-thumbs video, .lb-thumbs .lb-thumb-vid {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  object-fit: cover;
+  cursor: pointer;
+  opacity: 0.6;
+  border: 2px solid transparent;
+  transition: all 0.15s ease;
+  background: #000;
+}
+.lb-thumbs img:hover, .lb-thumbs video:hover, .lb-thumbs .lb-thumb-vid:hover {
+  opacity: 0.9;
+}
+.lb-thumbs img.active, .lb-thumbs video.active, .lb-thumbs .lb-thumb-vid.active {
+  opacity: 1;
+  border-color: #38bdf8;
+  transform: scale(1.08);
+}
