@@ -569,9 +569,37 @@
     }
     var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
     return roles.some(function (r) {
-      var u = String(r).toUpperCase();
-      return u === 'SUPERADMIN' || u === 'OPROADMIN';
+      if (!r) return false;
+      var u = String(r).toUpperCase().replace(/[\s_-]+/g, '');
+      return u === 'SUPERADMIN' || u === 'OPROADMIN' || u.indexOf('SUPERADMIN') !== -1 || u.indexOf('OPROADMIN') !== -1;
     });
+  }
+
+  /**
+   * Helper: Check if current user is SuperAdmin or OproAdmin
+   */
+  function isSuperOrOproAdmin() {
+    if (!currentUser) return false;
+    if (isAtmosphereAdmin()) return false;
+    if (isSuperAdmin()) return true;
+
+    function isSuperOrOproStr(val) {
+      if (!val) return false;
+      var clean = String(val).toUpperCase().replace(/[\s_-]+/g, '');
+      return clean === 'SUPERADMIN' || clean === 'OPROADMIN' ||
+             clean.indexOf('SUPERADMIN') !== -1 || clean.indexOf('OPROADMIN') !== -1;
+    }
+
+    if (isSuperOrOproStr(currentUser.desg) || isSuperOrOproStr(currentUser.designation) || isSuperOrOproStr(currentUser.user_role)) {
+      return true;
+    }
+
+    var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
+    if (roles.some(isSuperOrOproStr)) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -579,20 +607,30 @@
    * ONLY Superadmin and Oproadmin can delete jobs
    */
   function canDeleteJob() {
-    if (isAtmosphereAdmin()) return false;
-    if (!currentUser) return false;
-    if (isSuperAdmin()) return true;
-    var desg = String(currentUser.desg || currentUser.designation || '').toUpperCase().trim();
-    if (desg === 'SUPERADMIN' || desg === 'OPROADMIN') return true;
-    var roles = Array.isArray(currentUser.role) ? currentUser.role : [currentUser.role];
-    if (roles.some(function (r) {
-      if (!r) return false;
-      var u = String(r).toUpperCase().trim();
-      return u === 'SUPERADMIN' || u === 'OPROADMIN';
-    })) return true;
-    var uRole = String(currentUser.user_role || '').toUpperCase().trim();
-    if (uRole === 'SUPERADMIN' || uRole === 'OPROADMIN') return true;
-    return false;
+    return isSuperOrOproAdmin();
+  }
+
+  /**
+   * Edit Job Rule:
+   * ONLY Superadmin and Oproadmin can edit jobs.
+   * Edit icon / button is visible ONLY for jobs with status 'Open' in Open tab (not Assigned or Closed).
+   */
+  function canEditJob(j) {
+    if (!isSuperOrOproAdmin()) return false;
+    if (!j) return false;
+    return state.tab === 'open' && j.status === 'Open';
+  }
+
+  /**
+   * Move to Task Master Rule:
+   * ONLY Superadmin and Oproadmin can move jobs to Task Master.
+   * Button is visible for non-closed jobs.
+   */
+  function canMoveToTaskMaster(j) {
+    if (!isSuperOrOproAdmin()) return false;
+    if (!j) return false;
+    var closed = (j.status === 'Closed') || (state.tab === 'closed');
+    return !closed;
   }
 
   function isAdmin() {
@@ -1120,8 +1158,8 @@
     var canClose = canCloseJob(j);
 
     var editBtn = '';
-    // Edit Job ONLY for jobs with status 'Open' in Open tab (not Assigned or Closed)
-    if (state.tab === 'open' && j.status === 'Open') {
+    // Edit Job ONLY for jobs with status 'Open' in Open tab (not Assigned or Closed) & ONLY for SuperAdmin/OproAdmin
+    if (canEditJob(j)) {
       editBtn = '<button data-act="edit" data-id="' + j.id + '">' + I.edit + ' Edit Job</button>';
     }
 
@@ -1140,7 +1178,8 @@
     }
 
     var taskMasterBtn = '';
-    if (!closed) {
+    // Move to Task Master ONLY for SuperAdmin / OproAdmin
+    if (canMoveToTaskMaster(j)) {
       taskMasterBtn = '<button data-act="taskmaster" data-id="' + j.id + '">' + I.taskmaster + ' Move to Task Master</button>';
     }
 
@@ -2953,6 +2992,7 @@
   }
 
   function openEdit(job) {
+    if (!job || !canEditJob(job)) return;
     closeView();
     if (job && job.id) highlightJob(job.id);
     editTargetJob = job;
@@ -3026,7 +3066,7 @@
 
   function submitEditForm(e) {
     e.preventDefault();
-    if (!editTargetJob) return;
+    if (!editTargetJob || !canEditJob(editTargetJob)) return;
 
     var details = $('#eDetails').value.trim();
     if (!details) {
@@ -3166,7 +3206,7 @@
   var taskMasterTargetJob = null;
 
   function openTaskMaster(job) {
-    if (!job) return;
+    if (!job || !canMoveToTaskMaster(job)) return;
     taskMasterTargetJob = job;
     var tt = $('#taskMasterText');
     if (tt) {
@@ -3271,7 +3311,9 @@
         if (canAssign) {
           viewActions += '<button class="btn p" data-vact="assign">' + I.user + (isAssigned ? ' Reassign' : ' Assign Job') + '</button>';
         }
-        viewActions += '<button type="button" class="btn s" data-vact="taskmaster">' + I.taskmaster + ' Move to Task Master</button>';
+        if (canMoveToTaskMaster(j)) {
+          viewActions += '<button type="button" class="btn s" data-vact="taskmaster">' + I.taskmaster + ' Move to Task Master</button>';
+        }
         if (canClose) {
           viewActions += '<button class="btn g" data-vact="close">' + I.check + ' Close Job</button>';
         }
@@ -4032,11 +4074,17 @@
       var job = byId(id);
       if (!job) return;
       if (act === 'view') openView(job.id, listFor(state.tab).map(function (x) { return x.id; }));
-      else if (act === 'edit') openEdit(job);
+      else if (act === 'edit') {
+        if (!canEditJob(job)) return;
+        openEdit(job);
+      }
       else if (act === 'assign') openAssign(job);
       else if (act === 'close') openClose(job);
       else if (act === 'del') openDel(job);
-      else if (act === 'taskmaster') openTaskMaster(job);
+      else if (act === 'taskmaster') {
+        if (!canMoveToTaskMaster(job)) return;
+        openTaskMaster(job);
+      }
       else if (act === 'change-team') openChangeTeam(job);
       else if (act === 'share-wa') shareJobWhatsApp(job);
       return;
@@ -4161,9 +4209,17 @@
         var act = a.dataset.vact;
         if (act === 'assign') { closeView(); openAssign(job); }
         else if (act === 'close') { closeView(); openClose(job); }
-        else if (act === 'edit') { closeView(); openEdit(job); }
+        else if (act === 'edit') {
+          if (!canEditJob(job)) return;
+          closeView();
+          openEdit(job);
+        }
         else if (act === 'del') { openDel(job); }
-        else if (act === 'taskmaster') { closeView(); openTaskMaster(job); }
+        else if (act === 'taskmaster') {
+          if (!canMoveToTaskMaster(job)) return;
+          closeView();
+          openTaskMaster(job);
+        }
         else if (act === 'change-team') { closeView(); openChangeTeam(job); }
         else if (act === 'share-wa') { shareJobWhatsApp(job); }
       }
@@ -4799,7 +4855,7 @@
     var confirmMoveTaskMasterBtn = $('#confirmMoveTaskMaster');
     if (confirmMoveTaskMasterBtn) {
       confirmMoveTaskMasterBtn.addEventListener('click', async function () {
-        if (!taskMasterTargetJob) return;
+        if (!taskMasterTargetJob || !canMoveToTaskMaster(taskMasterTargetJob)) return;
         var target = taskMasterTargetJob;
         confirmMoveTaskMasterBtn.disabled = true;
         confirmMoveTaskMasterBtn.textContent = 'Saving...';
