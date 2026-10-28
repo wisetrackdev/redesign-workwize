@@ -776,8 +776,20 @@
   function mapApiJob(op, serialInfo) {
     if (!op) return null;
     var photosBefore = [];
-    if (op.open_uploads && Array.isArray(op.open_uploads)) {
-      op.open_uploads.forEach(function (u) {
+    var rawOpenUploads = op.open_uploads || op.openUploads || op.uploads || op.jobImages;
+    if (typeof rawOpenUploads === 'string' && rawOpenUploads.trim()) {
+      try {
+        rawOpenUploads = JSON.parse(rawOpenUploads);
+      } catch (e) {
+        if (rawOpenUploads.indexOf(',') !== -1) {
+          rawOpenUploads = rawOpenUploads.split(',').map(function (s) { return s.trim(); });
+        } else {
+          rawOpenUploads = [rawOpenUploads];
+        }
+      }
+    }
+    if (rawOpenUploads && Array.isArray(rawOpenUploads)) {
+      rawOpenUploads.forEach(function (u) {
         if (!u) return;
         var url = typeof u === 'string' ? u : (u.fileurl || u.url || u.fileUrl || u.path);
         if (url && url !== 'na' && url !== 'NA') photosBefore.push(url);
@@ -788,8 +800,20 @@
     var photoBefore = photosBefore[0] || (op.photoBefore || '');
 
     var photosAfter = [];
-    if (op.close_uploads && Array.isArray(op.close_uploads)) {
-      op.close_uploads.forEach(function (u) {
+    var rawCloseUploads = op.close_uploads || op.closeUploads;
+    if (typeof rawCloseUploads === 'string' && rawCloseUploads.trim()) {
+      try {
+        rawCloseUploads = JSON.parse(rawCloseUploads);
+      } catch (e) {
+        if (rawCloseUploads.indexOf(',') !== -1) {
+          rawCloseUploads = rawCloseUploads.split(',').map(function (s) { return s.trim(); });
+        } else {
+          rawCloseUploads = [rawCloseUploads];
+        }
+      }
+    }
+    if (rawCloseUploads && Array.isArray(rawCloseUploads)) {
+      rawCloseUploads.forEach(function (u) {
         if (!u) return;
         var url = typeof u === 'string' ? u : (u.fileurl || u.url || u.fileUrl || u.path);
         if (url && url !== 'na' && url !== 'NA') photosAfter.push(url);
@@ -1007,35 +1031,120 @@
     return arr;
   }
 
+  /* ================= Job Photos Helper ================= */
+  function getJobPhotos(job, which) {
+    if (!job) return [];
+    var isAfter = which && String(which).toLowerCase() === 'after';
+    var photos = [];
+
+    function collect(item) {
+      if (!item) return;
+      if (Array.isArray(item)) {
+        item.forEach(collect);
+        return;
+      }
+      if (typeof item === 'object') {
+        var u = item.fileurl || item.url || item.fileUrl || item.path || item.src;
+        if (u) collect(u);
+        return;
+      }
+      if (typeof item === 'string') {
+        var str = item.trim();
+        if (!str || str === 'na' || str === 'NA' || str === 'null' || str === 'undefined') return;
+        if (str.charAt(0) === '[' && str.charAt(str.length - 1) === ']') {
+          try {
+            var parsed = JSON.parse(str);
+            if (Array.isArray(parsed)) {
+              collect(parsed);
+              return;
+            }
+          } catch (e) {}
+        }
+        if (str.indexOf(',') !== -1 && !str.startsWith('data:')) {
+          str.split(',').forEach(function (part) { collect(part.trim()); });
+          return;
+        }
+        if (photos.indexOf(str) === -1) {
+          photos.push(str);
+        }
+      }
+    }
+
+    if (isAfter) {
+      if (job.photosAfter) collect(job.photosAfter);
+      if (job.photoAfter) collect(job.photoAfter);
+      if (job.close_uploads) collect(job.close_uploads);
+      if (job.raw) {
+        if (job.raw.close_uploads) collect(job.raw.close_uploads);
+        if (job.raw.closeUploads) collect(job.raw.closeUploads);
+        if (job.raw.photoAfter) collect(job.raw.photoAfter);
+        if (job.raw.photosAfter) collect(job.raw.photosAfter);
+      }
+    } else {
+      if (job.photosBefore) collect(job.photosBefore);
+      if (job.photoBefore) collect(job.photoBefore);
+      if (job.open_uploads) collect(job.open_uploads);
+      if (job.raw) {
+        if (job.raw.open_uploads) collect(job.raw.open_uploads);
+        if (job.raw.openUploads) collect(job.raw.openUploads);
+        if (job.raw.jobImages) collect(job.raw.jobImages);
+        if (job.raw.photoBefore) collect(job.raw.photoBefore);
+        if (job.raw.photosBefore) collect(job.raw.photosBefore);
+      }
+    }
+
+    return photos;
+  }
+
   /* ================= Photos Preview Helpers ================= */
   function photoBeforePreview(j) {
-    var url = j.photoBefore;
-    if (url && url !== 'na' && url !== 'NA') {
-      var isVideo = /\.(mp4|mov)$/i.test(url);
-      if (isVideo) {
-        return '<a href="javascript:void(0)" class="video-preview-btn" data-video="' + esc(url) + '" title="Play Video" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 8.64L15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg> Video</a>';
-      }
-      if (url.indexOf('data:image') === 0 || url.indexOf('http') === 0 || url.indexOf('/') === 0) {
-        return '<img src="' + esc(url) + '" class="thumb-preview" alt="Photo Before" data-zoom title="Click to view photo">';
-      }
-      return '<span class="pf" title="' + esc(url) + '">' + I.img + ' Photo</span>';
+    var photos = getJobPhotos(j, 'Before');
+    if (!photos || photos.length === 0) {
+      return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
     }
-    return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
+    var first = photos[0];
+    var isVideo = /\.(mp4|mov)$/i.test(first);
+    var countBadge = '';
+    if (photos.length > 1) {
+      countBadge = '<span class="multi-img-badge">+' + (photos.length - 1) + '</span>';
+    }
+
+    if (isVideo) {
+      return '<div class="thumb-wrap" data-job-id="' + j.id + '" data-photo-type="Before" data-photo-idx="0">' +
+        '<a href="javascript:void(0)" class="video-preview-btn" data-video="' + esc(first) + '" title="Play Video (' + photos.length + ' attachments)" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 8.64L15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg> Video</a>' +
+        countBadge +
+        '</div>';
+    }
+
+    return '<div class="thumb-wrap" data-job-id="' + j.id + '" data-photo-type="Before" data-photo-idx="0" title="Click to view ' + photos.length + ' photos">' +
+      '<img src="' + esc(first) + '" class="thumb-preview" alt="Photo Before" data-zoom>' +
+      countBadge +
+      '</div>';
   }
 
   function photoAfterPreview(j) {
-    var url = j.photoAfter;
-    if (url && url !== 'na' && url !== 'NA') {
-      var isVideo = /\.(mp4|mov)$/i.test(url);
-      if (isVideo) {
-        return '<a href="javascript:void(0)" class="video-preview-btn" data-video="' + esc(url) + '" title="Play Video" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 8.64L15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg> Video</a>';
-      }
-      if (url.indexOf('data:image') === 0 || url.indexOf('http') === 0 || url.indexOf('/') === 0) {
-        return '<img src="' + esc(url) + '" class="thumb-preview" alt="Photo After" data-zoom title="Click to view photo">';
-      }
-      return '<span class="pf" title="' + esc(url) + '">' + I.img + ' Photo</span>';
+    var photos = getJobPhotos(j, 'After');
+    if (!photos || photos.length === 0) {
+      return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
     }
-    return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
+    var first = photos[0];
+    var isVideo = /\.(mp4|mov)$/i.test(first);
+    var countBadge = '';
+    if (photos.length > 1) {
+      countBadge = '<span class="multi-img-badge">+' + (photos.length - 1) + '</span>';
+    }
+
+    if (isVideo) {
+      return '<div class="thumb-wrap" data-job-id="' + j.id + '" data-photo-type="After" data-photo-idx="0">' +
+        '<a href="javascript:void(0)" class="video-preview-btn" data-video="' + esc(first) + '" title="Play Video (' + photos.length + ' attachments)" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 8.64L15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg> Video</a>' +
+        countBadge +
+        '</div>';
+    }
+
+    return '<div class="thumb-wrap" data-job-id="' + j.id + '" data-photo-type="After" data-photo-idx="0" title="Click to view ' + photos.length + ' photos">' +
+      '<img src="' + esc(first) + '" class="thumb-preview" alt="Photo After" data-zoom>' +
+      countBadge +
+      '</div>';
   }
 
   function clsOf(j) {
@@ -2771,7 +2880,7 @@
     closeTargetJob.closedAt = new Date().toISOString();
 
     var afterDataUrls = [];
-    var containerImgs = $('#closePhotoPreviews img');
+    var containerImgs = $$('#closePhotoPreviews img');
     if (containerImgs.length > 0) {
       containerImgs.forEach(function (img) { if (img.src) afterDataUrls.push(img.src); });
     }
@@ -3313,24 +3422,34 @@
 
   /* ================= View Modal (Job Details) ================= */
   function openView(id, ids) {
-    var j = byId(id);
-    if (!j) return;
-    highlightJob(id);
-    ctx.ids = ids && ids.indexOf(id) !== -1 ? ids : [id];
-    ctx.id = id;
-    renderView();
-    $('#viewModal').hidden = false;
-    document.body.classList.add('noscroll');
+    try {
+      var j = byId(id);
+      if (!j) return;
+      highlightJob(id);
+      var strId = String(id);
+      var strIds = (ids && ids.length) ? ids.map(function (x) { return String(x); }) : [strId];
+      if (strIds.indexOf(strId) === -1) strIds.push(strId);
+      ctx.ids = strIds;
+      ctx.id = strId;
+      renderView();
+      var vm = $('#viewModal');
+      if (vm) vm.hidden = false;
+      document.body.classList.add('noscroll');
+    } catch (err) {
+      console.error('Error opening view modal:', err);
+    }
   }
 
   function byId(id) {
+    if (id == null) return null;
+    var sid = String(id).trim();
     var list = getActiveJobs();
     for (var i = 0; i < list.length; i++) {
-      if (list[i].id === id || String(list[i].jobId) === String(id)) return list[i];
+      if (String(list[i].id) === sid || String(list[i].jobId) === sid || String(list[i].propId) === sid) return list[i];
     }
     var other = (state.tab === 'closed') ? openJobs : closedJobs;
     for (var k = 0; k < other.length; k++) {
-      if (other[k].id === id || String(other[k].jobId) === String(id)) return other[k];
+      if (String(other[k].id) === sid || String(other[k].jobId) === sid || String(other[k].propId) === sid) return other[k];
     }
     return null;
   }
@@ -3339,19 +3458,51 @@
     return '<div class="fv-i' + (full ? ' full' : '') + '"><span>' + label + '</span><b>' + val + '</b></div>';
   }
 
-  function photoPanel(which, src) {
-    var isVideo = src && /\.(mp4|mov)$/i.test(src);
-    var content = '';
-    if (src) {
-      if (isVideo) {
-        content = '<video controls style="width:100%;height:140px;border-radius:8px;background:#000;"><source src="' + esc(src) + '"></video>';
-      } else {
-        content = '<img src="' + esc(src) + '" alt="Photo ' + which + '" data-zoom>';
-      }
-    } else {
-      content = '<div class="ph-none">' + I.img + '<span>No photo ' + which.toLowerCase() + '</span></div>';
+  function photoPanel(which, photosOrSrc) {
+    var photos = [];
+    if (Array.isArray(photosOrSrc)) {
+      photos = photosOrSrc.filter(Boolean);
+    } else if (photosOrSrc && typeof photosOrSrc === 'string' && photosOrSrc !== 'na' && photosOrSrc !== 'NA') {
+      photos = [photosOrSrc];
     }
-    return '<div class="ph"><div class="ph-h"><span>Photo ' + which + '</span></div>' + content + '</div>';
+
+    if (!photos.length) {
+      return '<div class="ph">' +
+        '<div class="ph-h"><span>Photo ' + which + '</span></div>' +
+        '<div class="ph-none">' + I.img + '<span>No photo ' + which.toLowerCase() + '</span></div>' +
+        '</div>';
+    }
+
+    if (photos.length === 1) {
+      var item = photos[0];
+      var isVideo = /\.(mp4|mov)$/i.test(item);
+      var content = isVideo
+        ? '<video controls style="width:100%;height:150px;border-radius:8px;background:#000;"><source src="' + esc(item) + '"></video>'
+        : '<img src="' + esc(item) + '" alt="Photo ' + which + '" data-zoom data-photo-idx="0" data-photo-type="' + which + '">';
+      return '<div class="ph">' +
+        '<div class="ph-h"><span>Photo ' + which + '</span></div>' +
+        content +
+        '</div>';
+    }
+
+    // Multiple photos: display all in a gallery grid
+    var itemsHTML = photos.map(function (src, idx) {
+      var isVid = /\.(mp4|mov)$/i.test(src);
+      if (isVid) {
+        return '<div class="ph-thumb ph-thumb-vid" data-zoom data-photo-idx="' + idx + '" data-photo-type="' + which + '" title="View attachment ' + (idx + 1) + '">' +
+          '<video src="' + esc(src) + '"></video>' +
+          '<span class="vid-badge">&#9658;</span>' +
+          '</div>';
+      }
+      return '<div class="ph-thumb" data-zoom data-photo-idx="' + idx + '" data-photo-type="' + which + '" title="Click to view photo ' + (idx + 1) + '">' +
+        '<img src="' + esc(src) + '" alt="Photo ' + which + ' ' + (idx + 1) + '">' +
+        '</div>';
+    }).join('');
+
+    return '<div class="ph">' +
+      '<div class="ph-h"><span>Photo ' + which + ' (' + photos.length + ')</span><small style="color:var(--text-muted);font-size:11px;">Click any to view</small></div>' +
+      '<div class="ph-gallery">' + itemsHTML + '</div>' +
+      '</div>';
   }
 
   function renderView() {
@@ -3359,7 +3510,10 @@
     if (!j) return;
 
     var closed = j.status === 'Closed';
-    var pos = ctx.ids.indexOf(j.id);
+    var jIdStr = String(j.id);
+    var pos = ctx.ids.map(String).indexOf(jIdStr);
+    if (pos === -1 && j.jobId != null) pos = ctx.ids.map(String).indexOf(String(j.jobId));
+    if (pos === -1) pos = 0;
     var tot = ctx.ids.length;
     var isAssigned = (j.assigned && j.assigned !== 'NA') || j.status === 'Assigned';
     var age = closed
@@ -3431,7 +3585,8 @@
   }
 
   function vnav(d) {
-    var i = ctx.ids.indexOf(ctx.id) + d;
+    var sid = String(ctx.id);
+    var i = ctx.ids.map(String).indexOf(sid) + d;
     if (i < 0 || i >= ctx.ids.length) return;
     ctx.id = ctx.ids[i];
     renderView();
@@ -4333,13 +4488,29 @@
       var wrap = thumbWrap || (z ? z.closest('.thumb-wrap') : null);
       var parentRow = t.closest('.jcard, .jrow');
       var jobId = (wrap && wrap.dataset.jobId) || (parentRow && parentRow.dataset.id) || ctx.id;
-      var photoType = (wrap && wrap.dataset.photoType) || ((z && z.alt && z.alt.indexOf('After') !== -1) ? 'After' : 'Before');
+      var photoType = (wrap && wrap.dataset.photoType) || (z && z.dataset && z.dataset.photoType) || ((z && z.alt && z.alt.indexOf('After') !== -1) ? 'After' : 'Before');
       var job = jobId ? byId(jobId) : null;
       if (job) {
         var photos = getJobPhotos(job, photoType);
         if (photos && photos.length > 0) {
-          var clickedIdx = (wrap && wrap.dataset.photoIdx != null) ? parseInt(wrap.dataset.photoIdx, 10) : (z ? photos.indexOf(z.src) : 0);
-          if (clickedIdx === -1) clickedIdx = 0;
+          var clickedIdx = 0;
+          if (wrap && wrap.dataset.photoIdx != null) {
+            clickedIdx = parseInt(wrap.dataset.photoIdx, 10);
+          } else if (z && z.dataset && z.dataset.photoIdx != null) {
+            clickedIdx = parseInt(z.dataset.photoIdx, 10);
+          } else if (z) {
+            var zSrc = z.src || (z.querySelector && z.querySelector('img') ? z.querySelector('img').src : '');
+            clickedIdx = photos.indexOf(zSrc);
+            if (clickedIdx === -1 && zSrc) {
+              for (var pi = 0; pi < photos.length; pi++) {
+                if (zSrc.indexOf(photos[pi]) !== -1 || photos[pi].indexOf(zSrc) !== -1) {
+                  clickedIdx = pi;
+                  break;
+                }
+              }
+            }
+          }
+          if (clickedIdx === -1 || isNaN(clickedIdx)) clickedIdx = 0;
           openPhotoLightbox(photos, clickedIdx, parentRow);
           return;
         }
