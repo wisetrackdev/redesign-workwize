@@ -2355,6 +2355,36 @@
     executeSubmitJob();
   }
 
+  function getNextCustomJobId() {
+    var maxSerial = 0;
+    var all = (openJobs || []).concat(closedJobs || []);
+    all.forEach(function (j) {
+      if (!j) return;
+      if (j.serial && Number(j.serial) > maxSerial) {
+        maxSerial = Number(j.serial);
+      }
+      var p = parseFormattedPropId(j.customJobId) || parseFormattedPropId(j.propId);
+      if (p && p.serial > maxSerial) {
+        maxSerial = p.serial;
+      }
+    });
+    if (globalJobCustomIdMap) {
+      Object.keys(globalJobCustomIdMap).forEach(function (k) {
+        var item = globalJobCustomIdMap[k];
+        if (item) {
+          var s = typeof item === 'object' ? item.serial : (parseFormattedPropId(item) ? parseFormattedPropId(item).serial : null);
+          if (s != null && Number(s) > maxSerial) {
+            maxSerial = Number(s);
+          }
+        }
+      });
+    }
+    var nextSerial = maxSerial > 0 ? maxSerial + 1 : 1;
+    var prefix = getActivePropertyPrefix();
+    var dateCode = getJobDateCode(new Date());
+    return prefix + '-' + dateCode + '-' + pad3(nextSerial);
+  }
+
   async function executeSubmitJob() {
     var fDept = $('#fDept');
     var fArea = $('#fArea');
@@ -2375,6 +2405,7 @@
       supervisorAssigned = (sa && sa.value) ? sa.value : null;
     }
 
+    var nextCustomJobId = getNextCustomJobId();
     var jobData = {
       propId: currentPropertyId,
       areaID: fArea.value,
@@ -2386,6 +2417,7 @@
       creator_email: (currentUser && (currentUser.email || currentUser.username)) || '',
       creator_position: (currentUser && currentUser.role && currentUser.role[0]) || 'Staff',
       job_detail: fDetails.value.trim(),
+      customJobId: nextCustomJobId,
       assigned_dept: teamAssigned,
       assigned_supervisor: supervisorAssigned
     };
@@ -2575,12 +2607,17 @@
 
     // Call API in background
     try {
+      var targetCustomJobId = (assignTargetJob.customJobId && !assignTargetJob.customJobId.startsWith('OPRO-'))
+        ? assignTargetJob.customJobId
+        : ((assignTargetJob.propId && !assignTargetJob.propId.startsWith('OPRO-')) ? assignTargetJob.propId : '');
+
       var res = await api.assignTeamMember(
         assignTargetJob.jobId,
         currentPropertyId,
         assignTargetJob.issued_to_team,
         subteamId,
-        memberEmail
+        memberEmail,
+        targetCustomJobId
       );
       if (res && res.success !== false) {
         fetchOpenJobs(pagination.open.page, state.pageSize);

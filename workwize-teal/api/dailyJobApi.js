@@ -163,6 +163,9 @@
       form.append('creator_position', data.creator_position || '');
       form.append('creator_email', data.creator_email || '');
       form.append('job_detail', data.job_detail || '');
+      if (data.customJobId && typeof data.customJobId === 'string' && !data.customJobId.startsWith('OPRO-')) {
+        form.append('customJobId', data.customJobId.trim());
+      }
 
       // Assign fields (only if assigning within own team)
       if (data.assigned_dept) {
@@ -206,13 +209,16 @@
      * Assign team member to a job
      * Endpoint: POST /api/dailyjob/assignteammember
      */
-    assignTeamMember: async function (jobId, propId, teamId, subteamId, assignedToEmail) {
+    assignTeamMember: async function (jobId, propId, teamId, subteamId, assignedToEmail, customJobId) {
       var form = new FormData();
       form.append('jobId', jobId);
       form.append('propId', propId);
       form.append('teamId', teamId);
       form.append('subteamId', subteamId || '');
       form.append('assignedto', assignedToEmail || '');
+      if (customJobId && typeof customJobId === 'string' && !customJobId.startsWith('OPRO-')) {
+        form.append('customJobId', customJobId.trim());
+      }
 
       return await apiFetch('api/dailyjob/assignteammember', {
         method: 'POST',
