@@ -111,6 +111,7 @@
   var assignTargetJob = null;
   var closeTargetJob = null;
   var closePhotoFile = null;
+  var closePhotoFiles = [];
   var editTargetJob = null;
   var editPhotoBeforeData = undefined;
   var ctx = { ids: [], id: null }; // View modal context
@@ -774,14 +775,53 @@
   /* ================= API Data Mapping ================= */
   function mapApiJob(op, serialInfo) {
     if (!op) return null;
-    var photoBefore = '';
-    if (op.open_uploads && op.open_uploads.length > 0 && op.open_uploads[0].fileurl) {
-      photoBefore = op.open_uploads[0].fileurl;
+    var photosBefore = [];
+    var rawOpenUploads = op.open_uploads || op.openUploads || op.uploads || op.jobImages;
+    if (typeof rawOpenUploads === 'string' && rawOpenUploads.trim()) {
+      try {
+        rawOpenUploads = JSON.parse(rawOpenUploads);
+      } catch (e) {
+        if (rawOpenUploads.indexOf(',') !== -1) {
+          rawOpenUploads = rawOpenUploads.split(',').map(function (s) { return s.trim(); });
+        } else {
+          rawOpenUploads = [rawOpenUploads];
+        }
+      }
     }
-    var photoAfter = '';
-    if (op.close_uploads && op.close_uploads.length > 0 && op.close_uploads[0].fileurl) {
-      photoAfter = op.close_uploads[0].fileurl;
+    if (rawOpenUploads && Array.isArray(rawOpenUploads)) {
+      rawOpenUploads.forEach(function (u) {
+        if (!u) return;
+        var url = typeof u === 'string' ? u : (u.fileurl || u.url || u.fileUrl || u.path);
+        if (url && url !== 'na' && url !== 'NA') photosBefore.push(url);
+      });
+    } else if (op.photoBefore) {
+      photosBefore.push(op.photoBefore);
     }
+    var photoBefore = photosBefore[0] || (op.photoBefore || '');
+
+    var photosAfter = [];
+    var rawCloseUploads = op.close_uploads || op.closeUploads;
+    if (typeof rawCloseUploads === 'string' && rawCloseUploads.trim()) {
+      try {
+        rawCloseUploads = JSON.parse(rawCloseUploads);
+      } catch (e) {
+        if (rawCloseUploads.indexOf(',') !== -1) {
+          rawCloseUploads = rawCloseUploads.split(',').map(function (s) { return s.trim(); });
+        } else {
+          rawCloseUploads = [rawCloseUploads];
+        }
+      }
+    }
+    if (rawCloseUploads && Array.isArray(rawCloseUploads)) {
+      rawCloseUploads.forEach(function (u) {
+        if (!u) return;
+        var url = typeof u === 'string' ? u : (u.fileurl || u.url || u.fileUrl || u.path);
+        if (url && url !== 'na' && url !== 'NA') photosAfter.push(url);
+      });
+    } else if (op.photoAfter) {
+      photosAfter.push(op.photoAfter);
+    }
+    var photoAfter = photosAfter[0] || (op.photoAfter || '');
 
     var assignDept = 'NA';
     if (op.assigned_dept_name) {
@@ -850,7 +890,9 @@
       assignDate: op.assignDate || op.assignedDate || '',
       assignedDate: op.assignDate || op.assignedDate || '',
       photoBefore: photoBefore,
+      photosBefore: photosBefore,
       photoAfter: photoAfter,
+      photosAfter: photosAfter,
       assignDept: assignDept,
       assigned: assignedName,
       status: op.job_status || 'Open',
@@ -989,35 +1031,120 @@
     return arr;
   }
 
+  /* ================= Job Photos Helper ================= */
+  function getJobPhotos(job, which) {
+    if (!job) return [];
+    var isAfter = which && String(which).toLowerCase() === 'after';
+    var photos = [];
+
+    function collect(item) {
+      if (!item) return;
+      if (Array.isArray(item)) {
+        item.forEach(collect);
+        return;
+      }
+      if (typeof item === 'object') {
+        var u = item.fileurl || item.url || item.fileUrl || item.path || item.src;
+        if (u) collect(u);
+        return;
+      }
+      if (typeof item === 'string') {
+        var str = item.trim();
+        if (!str || str === 'na' || str === 'NA' || str === 'null' || str === 'undefined') return;
+        if (str.charAt(0) === '[' && str.charAt(str.length - 1) === ']') {
+          try {
+            var parsed = JSON.parse(str);
+            if (Array.isArray(parsed)) {
+              collect(parsed);
+              return;
+            }
+          } catch (e) {}
+        }
+        if (str.indexOf(',') !== -1 && !str.startsWith('data:')) {
+          str.split(',').forEach(function (part) { collect(part.trim()); });
+          return;
+        }
+        if (photos.indexOf(str) === -1) {
+          photos.push(str);
+        }
+      }
+    }
+
+    if (isAfter) {
+      if (job.photosAfter) collect(job.photosAfter);
+      if (job.photoAfter) collect(job.photoAfter);
+      if (job.close_uploads) collect(job.close_uploads);
+      if (job.raw) {
+        if (job.raw.close_uploads) collect(job.raw.close_uploads);
+        if (job.raw.closeUploads) collect(job.raw.closeUploads);
+        if (job.raw.photoAfter) collect(job.raw.photoAfter);
+        if (job.raw.photosAfter) collect(job.raw.photosAfter);
+      }
+    } else {
+      if (job.photosBefore) collect(job.photosBefore);
+      if (job.photoBefore) collect(job.photoBefore);
+      if (job.open_uploads) collect(job.open_uploads);
+      if (job.raw) {
+        if (job.raw.open_uploads) collect(job.raw.open_uploads);
+        if (job.raw.openUploads) collect(job.raw.openUploads);
+        if (job.raw.jobImages) collect(job.raw.jobImages);
+        if (job.raw.photoBefore) collect(job.raw.photoBefore);
+        if (job.raw.photosBefore) collect(job.raw.photosBefore);
+      }
+    }
+
+    return photos;
+  }
+
   /* ================= Photos Preview Helpers ================= */
   function photoBeforePreview(j) {
-    var url = j.photoBefore;
-    if (url && url !== 'na' && url !== 'NA') {
-      var isVideo = /\.(mp4|mov)$/i.test(url);
-      if (isVideo) {
-        return '<a href="javascript:void(0)" class="video-preview-btn" data-video="' + esc(url) + '" title="Play Video" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 8.64L15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg> Video</a>';
-      }
-      if (url.indexOf('data:image') === 0 || url.indexOf('http') === 0 || url.indexOf('/') === 0) {
-        return '<img src="' + esc(url) + '" class="thumb-preview" alt="Photo Before" data-zoom title="Click to view photo">';
-      }
-      return '<span class="pf" title="' + esc(url) + '">' + I.img + ' Photo</span>';
+    var photos = getJobPhotos(j, 'Before');
+    if (!photos || photos.length === 0) {
+      return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
     }
-    return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
+    var first = photos[0];
+    var isVideo = /\.(mp4|mov)$/i.test(first);
+    var countBadge = '';
+    if (photos.length > 1) {
+      countBadge = '<span class="multi-img-badge">+' + (photos.length - 1) + '</span>';
+    }
+
+    if (isVideo) {
+      return '<div class="thumb-wrap" data-job-id="' + j.id + '" data-photo-type="Before" data-photo-idx="0">' +
+        '<a href="javascript:void(0)" class="video-preview-btn" data-video="' + esc(first) + '" title="Play Video (' + photos.length + ' attachments)" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 8.64L15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg> Video</a>' +
+        countBadge +
+        '</div>';
+    }
+
+    return '<div class="thumb-wrap" data-job-id="' + j.id + '" data-photo-type="Before" data-photo-idx="0" title="Click to view ' + photos.length + ' photos">' +
+      '<img src="' + esc(first) + '" class="thumb-preview" alt="Photo Before" data-zoom>' +
+      countBadge +
+      '</div>';
   }
 
   function photoAfterPreview(j) {
-    var url = j.photoAfter;
-    if (url && url !== 'na' && url !== 'NA') {
-      var isVideo = /\.(mp4|mov)$/i.test(url);
-      if (isVideo) {
-        return '<a href="javascript:void(0)" class="video-preview-btn" data-video="' + esc(url) + '" title="Play Video" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 8.64L15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg> Video</a>';
-      }
-      if (url.indexOf('data:image') === 0 || url.indexOf('http') === 0 || url.indexOf('/') === 0) {
-        return '<img src="' + esc(url) + '" class="thumb-preview" alt="Photo After" data-zoom title="Click to view photo">';
-      }
-      return '<span class="pf" title="' + esc(url) + '">' + I.img + ' Photo</span>';
+    var photos = getJobPhotos(j, 'After');
+    if (!photos || photos.length === 0) {
+      return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
     }
-    return '<span class="no-photo-badge">' + I.img + ' No Photo</span>';
+    var first = photos[0];
+    var isVideo = /\.(mp4|mov)$/i.test(first);
+    var countBadge = '';
+    if (photos.length > 1) {
+      countBadge = '<span class="multi-img-badge">+' + (photos.length - 1) + '</span>';
+    }
+
+    if (isVideo) {
+      return '<div class="thumb-wrap" data-job-id="' + j.id + '" data-photo-type="After" data-photo-idx="0">' +
+        '<a href="javascript:void(0)" class="video-preview-btn" data-video="' + esc(first) + '" title="Play Video (' + photos.length + ' attachments)" style="display:inline-flex;align-items:center;gap:4px;color:var(--primary);font-weight:600;"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M10 8.64L15.27 12 10 15.36V8.64M8 5v14l11-7L8 5z"/></svg> Video</a>' +
+        countBadge +
+        '</div>';
+    }
+
+    return '<div class="thumb-wrap" data-job-id="' + j.id + '" data-photo-type="After" data-photo-idx="0" title="Click to view ' + photos.length + ' photos">' +
+      '<img src="' + esc(first) + '" class="thumb-preview" alt="Photo After" data-zoom>' +
+      countBadge +
+      '</div>';
   }
 
   function clsOf(j) {
@@ -2223,12 +2350,14 @@
       if (file.size > maxSize) {
         if (errEl) errEl.textContent = 'File "' + file.name + '" exceeds the 5MB size limit.';
         toast('File size exceeds 5MB limit: ' + file.name);
-        return;
+        continue;
       }
-      if (file.type && !validTypes.includes(file.type.toLowerCase())) {
+      var isImgOrVid = !file.type || file.type.startsWith('image/') || file.type.startsWith('video/') ||
+        validTypes.includes(file.type.toLowerCase()) || /\.(jpe?g|png|gif|webp|bmp|heic|mp4|mov)$/i.test(file.name);
+      if (!isImgOrVid) {
         if (errEl) errEl.textContent = 'Invalid file type. Please upload JPEG, PNG, MP4, or MOV.';
         toast('Invalid file type: ' + file.name);
-        return;
+        continue;
       }
       newJobSelectedFiles.push(file);
     }
@@ -2627,6 +2756,69 @@
     }
   }
 
+
+  /* Close Job multiple file upload and preview */
+  function handleCloseJobFiles(files) {
+    if (!files || !files.length) return;
+    var maxSize = 5 * 1024 * 1024; // 5MB
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      if (file.size > maxSize) {
+        toast('File "' + file.name + '" exceeds the 5MB size limit.');
+        continue;
+      }
+      closePhotoFiles.push(file);
+    }
+    renderClosePhotoPreviews();
+  }
+
+  function renderClosePhotoPreviews() {
+    var container = $('#closePhotoPreviews');
+    var noneText = $('#closePhotoNone');
+    var delBtn = $('#closePhotoDel');
+    if (!container) return;
+    container.innerHTML = '';
+
+    if (!closePhotoFiles.length) {
+      if (noneText) noneText.hidden = false;
+      if (delBtn) delBtn.hidden = true;
+      return;
+    }
+    if (noneText) noneText.hidden = true;
+    if (delBtn) delBtn.hidden = false;
+
+    closePhotoFiles.forEach(function (file, idx) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;width:74px;height:74px;border-radius:8px;overflow:hidden;border:1.5px solid var(--line);background:#fff;';
+
+      if (file.type && file.type.startsWith('video/')) {
+        var icon = document.createElement('div');
+        icon.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:11px;font-weight:700;background:var(--bg);text-align:center;padding:4px;';
+        icon.textContent = 'VIDEO\n' + file.name.slice(-4);
+        wrap.appendChild(icon);
+      } else {
+        var img = document.createElement('img');
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        var reader = new FileReader();
+        reader.onload = function (e) { img.src = e.target.result; };
+        reader.readAsDataURL(file);
+        wrap.appendChild(img);
+      }
+
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.innerHTML = '&times;';
+      del.style.cssText = 'position:absolute;top:3px;right:3px;background:rgba(0,0,0,0.65);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;';
+      del.addEventListener('click', function (e) {
+        e.stopPropagation();
+        closePhotoFiles.splice(idx, 1);
+        renderClosePhotoPreviews();
+      });
+      wrap.appendChild(del);
+      container.appendChild(wrap);
+    });
+  }
+
   /* ================= Close Modal & Status Update ================= */
   function openClose(job) {
     if (!job) return;
@@ -2649,6 +2841,8 @@
 
     closeTargetJob = job;
     closePhotoFile = null;
+    closePhotoFiles = [];
+    renderClosePhotoPreviews();
     $('#closeId').textContent = job.propId;
     $('#closeBrief').innerHTML =
       '<b>' + esc(job.details) + '</b>' +
@@ -2689,8 +2883,7 @@
       return;
     }
 
-    var prev = $('#closePhotoPrev');
-    var hasPhoto = Boolean(closePhotoFile || (prev && !prev.hidden && prev.src));
+    var hasPhoto = Boolean(closePhotoFiles && closePhotoFiles.length > 0);
 
     if (!hasPhoto) {
       showNoPhotoConfirmModal(
@@ -2723,9 +2916,17 @@
     closeTargetJob.closedBy = closedBy;
     closeTargetJob.closedAt = new Date().toISOString();
 
-    var prev = $('#closePhotoPrev');
-    if (prev && !prev.hidden && prev.src) {
-      closeTargetJob.photoAfter = prev.src;
+    var afterDataUrls = [];
+    var containerImgs = $$('#closePhotoPreviews img');
+    if (containerImgs.length > 0) {
+      containerImgs.forEach(function (img) { if (img.src) afterDataUrls.push(img.src); });
+    }
+    if (afterDataUrls.length > 0) {
+      closeTargetJob.photosAfter = afterDataUrls;
+      closeTargetJob.photoAfter = afterDataUrls[0];
+    } else {
+      closeTargetJob.photosAfter = [];
+      closeTargetJob.photoAfter = '';
     }
 
     // Permanently remember this job's exact propId (serial) so it never changes in Closed tab
@@ -2770,7 +2971,7 @@
 
     // Background API call
     try {
-      var files = closePhotoFile ? [closePhotoFile] : [];
+      var files = closePhotoFiles && closePhotoFiles.length > 0 ? closePhotoFiles : (closePhotoFile ? [closePhotoFile] : []);
       await api.changeJobStatus(
         closeTargetJob.jobId,
         currentPropertyId,
@@ -3258,24 +3459,34 @@
 
   /* ================= View Modal (Job Details) ================= */
   function openView(id, ids) {
-    var j = byId(id);
-    if (!j) return;
-    highlightJob(id);
-    ctx.ids = ids && ids.indexOf(id) !== -1 ? ids : [id];
-    ctx.id = id;
-    renderView();
-    $('#viewModal').hidden = false;
-    document.body.classList.add('noscroll');
+    try {
+      var j = byId(id);
+      if (!j) return;
+      highlightJob(id);
+      var strId = String(id);
+      var strIds = (ids && ids.length) ? ids.map(function (x) { return String(x); }) : [strId];
+      if (strIds.indexOf(strId) === -1) strIds.push(strId);
+      ctx.ids = strIds;
+      ctx.id = strId;
+      renderView();
+      var vm = $('#viewModal');
+      if (vm) vm.hidden = false;
+      document.body.classList.add('noscroll');
+    } catch (err) {
+      console.error('Error opening view modal:', err);
+    }
   }
 
   function byId(id) {
+    if (id == null) return null;
+    var sid = String(id).trim();
     var list = getActiveJobs();
     for (var i = 0; i < list.length; i++) {
-      if (list[i].id === id || String(list[i].jobId) === String(id)) return list[i];
+      if (String(list[i].id) === sid || String(list[i].jobId) === sid || String(list[i].propId) === sid) return list[i];
     }
     var other = (state.tab === 'closed') ? openJobs : closedJobs;
     for (var k = 0; k < other.length; k++) {
-      if (other[k].id === id || String(other[k].jobId) === String(id)) return other[k];
+      if (String(other[k].id) === sid || String(other[k].jobId) === sid || String(other[k].propId) === sid) return other[k];
     }
     return null;
   }
@@ -3284,19 +3495,51 @@
     return '<div class="fv-i' + (full ? ' full' : '') + '"><span>' + label + '</span><b>' + val + '</b></div>';
   }
 
-  function photoPanel(which, src) {
-    var isVideo = src && /\.(mp4|mov)$/i.test(src);
-    var content = '';
-    if (src) {
-      if (isVideo) {
-        content = '<video controls style="width:100%;height:140px;border-radius:8px;background:#000;"><source src="' + esc(src) + '"></video>';
-      } else {
-        content = '<img src="' + esc(src) + '" alt="Photo ' + which + '" data-zoom>';
-      }
-    } else {
-      content = '<div class="ph-none">' + I.img + '<span>No photo ' + which.toLowerCase() + '</span></div>';
+  function photoPanel(which, photosOrSrc) {
+    var photos = [];
+    if (Array.isArray(photosOrSrc)) {
+      photos = photosOrSrc.filter(Boolean);
+    } else if (photosOrSrc && typeof photosOrSrc === 'string' && photosOrSrc !== 'na' && photosOrSrc !== 'NA') {
+      photos = [photosOrSrc];
     }
-    return '<div class="ph"><div class="ph-h"><span>Photo ' + which + '</span></div>' + content + '</div>';
+
+    if (!photos.length) {
+      return '<div class="ph">' +
+        '<div class="ph-h"><span>Photo ' + which + '</span></div>' +
+        '<div class="ph-none">' + I.img + '<span>No photo ' + which.toLowerCase() + '</span></div>' +
+        '</div>';
+    }
+
+    if (photos.length === 1) {
+      var item = photos[0];
+      var isVideo = /\.(mp4|mov)$/i.test(item);
+      var content = isVideo
+        ? '<video controls style="width:100%;height:150px;border-radius:8px;background:#000;"><source src="' + esc(item) + '"></video>'
+        : '<img src="' + esc(item) + '" alt="Photo ' + which + '" data-zoom data-photo-idx="0" data-photo-type="' + which + '">';
+      return '<div class="ph">' +
+        '<div class="ph-h"><span>Photo ' + which + '</span></div>' +
+        content +
+        '</div>';
+    }
+
+    // Multiple photos: display all in a gallery grid
+    var itemsHTML = photos.map(function (src, idx) {
+      var isVid = /\.(mp4|mov)$/i.test(src);
+      if (isVid) {
+        return '<div class="ph-thumb ph-thumb-vid" data-zoom data-photo-idx="' + idx + '" data-photo-type="' + which + '" title="View attachment ' + (idx + 1) + '">' +
+          '<video src="' + esc(src) + '"></video>' +
+          '<span class="vid-badge">&#9658;</span>' +
+          '</div>';
+      }
+      return '<div class="ph-thumb" data-zoom data-photo-idx="' + idx + '" data-photo-type="' + which + '" title="Click to view photo ' + (idx + 1) + '">' +
+        '<img src="' + esc(src) + '" alt="Photo ' + which + ' ' + (idx + 1) + '">' +
+        '</div>';
+    }).join('');
+
+    return '<div class="ph">' +
+      '<div class="ph-h"><span>Photo ' + which + ' (' + photos.length + ')</span><small style="color:var(--text-muted);font-size:11px;">Click any to view</small></div>' +
+      '<div class="ph-gallery">' + itemsHTML + '</div>' +
+      '</div>';
   }
 
   function renderView() {
@@ -3304,7 +3547,10 @@
     if (!j) return;
 
     var closed = j.status === 'Closed';
-    var pos = ctx.ids.indexOf(j.id);
+    var jIdStr = String(j.id);
+    var pos = ctx.ids.map(String).indexOf(jIdStr);
+    if (pos === -1 && j.jobId != null) pos = ctx.ids.map(String).indexOf(String(j.jobId));
+    if (pos === -1) pos = 0;
     var tot = ctx.ids.length;
     var isAssigned = (j.assigned && j.assigned !== 'NA') || j.status === 'Assigned';
     var age = closed
@@ -3362,7 +3608,7 @@
       '<div class="vnav"><button data-vnav="-1" title="Previous (&larr;)"' + (pos <= 0 ? ' disabled' : '') + '>&lsaquo;</button><span>' + (pos + 1) + ' of ' + tot + '</span><button data-vnav="1" title="Next (&rarr;)"' + (pos >= tot - 1 ? ' disabled' : '') + '>&rsaquo;</button><button class="vx" data-vclose title="Close (Esc)">&times;</button></div></div>' +
       '<h2>' + esc(j.details) + '</h2><p>Issued To: ' + esc(j.dept) + ' &middot; Area: ' + esc(j.area) + (j.sub ? ' &middot; Sub Area: ' + esc(j.sub) : '') + '</p></div>' +
       '<div class="vbody"><div class="vmain"><h4>Job Information</h4><div class="fv">' + fields + '</div>' +
-      '<h4>Photos</h4><div class="phs">' + photoPanel('Before', j.photoBefore) + (closed ? photoPanel('After', j.photoAfter) : '') + '</div></div>' +
+      '<h4>Photos</h4><div class="phs">' + photoPanel('Before', getJobPhotos(j, 'Before')) + (closed ? photoPanel('After', getJobPhotos(j, 'After')) : '') + '</div></div>' +
       '<aside class="vside"><h4>Progress</h4><ul class="tl">' + tl + '</ul>' +
       '<div class="vfact"><span>Time ' + (closed ? 'taken' : 'open') + '</span><b>' + (closed ? (j.closedAt ? span(j.opened, j.closedAt) : 'Closed') : span(j.opened, new Date())) + '</b></div></aside></div>' +
       '<div class="vfoot"><span class="sp"></span>' + viewActions + '</div>';
@@ -3376,7 +3622,8 @@
   }
 
   function vnav(d) {
-    var i = ctx.ids.indexOf(ctx.id) + d;
+    var sid = String(ctx.id);
+    var i = ctx.ids.map(String).indexOf(sid) + d;
     if (i < 0 || i >= ctx.ids.length) return;
     ctx.id = ctx.ids[i];
     renderView();
@@ -3919,62 +4166,132 @@
     fetchJobs(state.tab, 1, false);
   }
 
-  /* ================= Lightbox Zoom & Scroll Preservation (Points 8 & 10) ================= */
+  /* ================= Lightbox Zoom & Gallery (Points 8 & 10) ================= */
   var savedScrollY = 0;
   var lbZoomScale = 1;
+  var lbPhotos = [];
+  var lbCurrentIndex = 0;
 
-  function openPhotoLightbox(src, jobElement) {
+  function lbNavigate(dir) {
+    if (!lbPhotos || lbPhotos.length <= 1) return;
+    lbCurrentIndex = (lbCurrentIndex + dir + lbPhotos.length) % lbPhotos.length;
+    renderLightboxPhoto();
+  }
+
+  function renderLightboxPhoto() {
+    var lbContainer = $('#lbImgContainer');
+    var lbCounter = $('#lbCounter');
+    var lbPrev = $('#lbPrev');
+    var lbNext = $('#lbNext');
+    var lbThumbs = $('#lbThumbs');
+
+    if (!lbPhotos.length) return;
+    if (lbCurrentIndex < 0) lbCurrentIndex = 0;
+    if (lbCurrentIndex >= lbPhotos.length) lbCurrentIndex = lbPhotos.length - 1;
+
+    var cur = lbPhotos[lbCurrentIndex];
+    lbZoomScale = 1;
+
+    var isVideo = cur && /\.(mp4|mov)$/i.test(cur);
+    if (isVideo) {
+      if (lbContainer) {
+        lbContainer.innerHTML = '<video controls autoplay style="max-width:85vw;max-height:80vh;border-radius:8px;"><source src="' + esc(cur) + '"></video>';
+      }
+    } else {
+      if (lbContainer) {
+        lbContainer.innerHTML = '<img id="lbImg" src="' + esc(cur) + '" alt="Preview Photo" style="transform:scale(1);">';
+      }
+    }
+
+    if (lbPhotos.length > 1) {
+      if (lbCounter) {
+        lbCounter.textContent = (lbCurrentIndex + 1) + ' / ' + lbPhotos.length;
+        lbCounter.style.display = 'inline-block';
+      }
+      if (lbPrev) lbPrev.style.display = 'flex';
+      if (lbNext) lbNext.style.display = 'flex';
+      if (lbThumbs) {
+        lbThumbs.style.display = 'flex';
+        lbThumbs.innerHTML = lbPhotos.map(function (src, idx) {
+          var isVid = /\.(mp4|mov)$/i.test(src);
+          var activeCls = idx === lbCurrentIndex ? ' active' : '';
+          if (isVid) {
+            return '<div class="lb-thumb-vid' + activeCls + '" data-lb-idx="' + idx + '" style="width:50px;height:50px;border-radius:6px;background:#000;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;cursor:pointer;">VID</div>';
+          }
+          return '<img src="' + esc(src) + '" class="' + activeCls + '" data-lb-idx="' + idx + '" alt="Thumb ' + (idx + 1) + '">';
+        }).join('');
+      }
+    } else {
+      if (lbCounter) lbCounter.style.display = 'none';
+      if (lbPrev) lbPrev.style.display = 'none';
+      if (lbNext) lbNext.style.display = 'none';
+      if (lbThumbs) lbThumbs.style.display = 'none';
+    }
+  }
+
+  function openPhotoLightbox(photosOrSrc, startIndex, jobElement) {
     savedScrollY = window.pageYOffset || document.documentElement.scrollTop || window.scrollY || 0;
-    if (jobElement && jobElement.dataset.id) {
+    if (jobElement && jobElement.dataset && jobElement.dataset.id) {
       highlightJob(jobElement.dataset.id);
     }
-    lbZoomScale = 1;
-    var lb = $('#lightbox');
-    var lbImg = $('#lbImg');
-    if (lb && lbImg) {
-      lbImg.src = src;
-      lbImg.style.transform = 'scale(1)';
-      lb.hidden = false;
+    if (Array.isArray(photosOrSrc)) {
+      lbPhotos = photosOrSrc.filter(Boolean);
+    } else if (photosOrSrc) {
+      lbPhotos = [photosOrSrc];
+    } else {
+      lbPhotos = [];
     }
+    lbCurrentIndex = typeof startIndex === 'number' ? startIndex : 0;
+    renderLightboxPhoto();
+    var lb = $('#lightbox');
+    if (lb) lb.hidden = false;
   }
 
   function closePhotoLightbox() {
     var lb = $('#lightbox');
     if (lb && !lb.hidden) {
       lb.hidden = true;
-      // Point 8: Remain at same scroll position when closing photograph
+      var lbContainer = $('#lbImgContainer');
+      if (lbContainer) lbContainer.innerHTML = '';
       window.scrollTo(0, savedScrollY);
     }
   }
 
   function setupLightboxEvents() {
     var lb = $('#lightbox');
-    var lbImg = $('#lbImg');
     var lbIn = $('#lbZoomIn');
     var lbOut = $('#lbZoomOut');
     var lbReset = $('#lbZoomReset');
     var lbClose = $('#lbClose');
+    var lbPrev = $('#lbPrev');
+    var lbNext = $('#lbNext');
+    var lbThumbs = $('#lbThumbs');
     var lbContainer = $('#lbImgContainer');
+
+    function applyZoom(delta) {
+      var img = $('#lbImg');
+      if (!img) return;
+      if (delta === 0) lbZoomScale = 1;
+      else lbZoomScale = Math.max(0.5, Math.min(4, lbZoomScale + delta));
+      img.style.transform = 'scale(' + lbZoomScale + ')';
+    }
 
     if (lbIn) {
       lbIn.addEventListener('click', function (e) {
         e.stopPropagation();
-        lbZoomScale = Math.min(4, lbZoomScale + 0.25);
-        if (lbImg) lbImg.style.transform = 'scale(' + lbZoomScale + ')';
+        applyZoom(0.25);
       });
     }
     if (lbOut) {
       lbOut.addEventListener('click', function (e) {
         e.stopPropagation();
-        lbZoomScale = Math.max(0.5, lbZoomScale - 0.25);
-        if (lbImg) lbImg.style.transform = 'scale(' + lbZoomScale + ')';
+        applyZoom(-0.25);
       });
     }
     if (lbReset) {
       lbReset.addEventListener('click', function (e) {
         e.stopPropagation();
-        lbZoomScale = 1;
-        if (lbImg) lbImg.style.transform = 'scale(1)';
+        applyZoom(0);
       });
     }
     if (lbClose) {
@@ -3983,20 +4300,37 @@
         closePhotoLightbox();
       });
     }
+    if (lbPrev) {
+      lbPrev.addEventListener('click', function (e) {
+        e.stopPropagation();
+        lbNavigate(-1);
+      });
+    }
+    if (lbNext) {
+      lbNext.addEventListener('click', function (e) {
+        e.stopPropagation();
+        lbNavigate(1);
+      });
+    }
+    if (lbThumbs) {
+      lbThumbs.addEventListener('click', function (e) {
+        var item = e.target.closest('[data-lb-idx]');
+        if (item && item.dataset.lbIdx != null) {
+          e.stopPropagation();
+          lbCurrentIndex = parseInt(item.dataset.lbIdx, 10);
+          renderLightboxPhoto();
+        }
+      });
+    }
     if (lbContainer) {
       lbContainer.addEventListener('wheel', function (e) {
         e.preventDefault();
-        if (e.deltaY < 0) {
-          lbZoomScale = Math.min(4, lbZoomScale + 0.15);
-        } else {
-          lbZoomScale = Math.max(0.5, lbZoomScale - 0.15);
-        }
-        if (lbImg) lbImg.style.transform = 'scale(' + lbZoomScale + ')';
+        applyZoom(e.deltaY < 0 ? 0.15 : -0.15);
       }, { passive: false });
     }
     if (lb) {
       lb.addEventListener('click', function (e) {
-        if (e.target === lb || e.target.classList.contains('lightbox-img-container')) {
+        if (e.target === lb || e.target.id === 'lbImgContainer') {
           closePhotoLightbox();
         }
       });
@@ -4183,16 +4517,54 @@
       return;
     }
 
-    // Lightbox image zoom (Points 8 & 10)
+    // Lightbox image zoom & multi-image gallery
     var z = t.closest('[data-zoom]');
-    if (z) {
+    var thumbWrap = t.closest('.thumb-wrap');
+    if (z || thumbWrap) {
+      e.stopPropagation();
+      var wrap = thumbWrap || (z ? z.closest('.thumb-wrap') : null);
       var parentRow = t.closest('.jcard, .jrow');
-      openPhotoLightbox(z.src, parentRow);
+      var jobId = (wrap && wrap.dataset.jobId) || (parentRow && parentRow.dataset.id) || ctx.id;
+      var photoType = (wrap && wrap.dataset.photoType) || (z && z.dataset && z.dataset.photoType) || ((z && z.alt && z.alt.indexOf('After') !== -1) ? 'After' : 'Before');
+      var job = jobId ? byId(jobId) : null;
+      if (job) {
+        var photos = getJobPhotos(job, photoType);
+        if (photos && photos.length > 0) {
+          var clickedIdx = 0;
+          if (wrap && wrap.dataset.photoIdx != null) {
+            clickedIdx = parseInt(wrap.dataset.photoIdx, 10);
+          } else if (z && z.dataset && z.dataset.photoIdx != null) {
+            clickedIdx = parseInt(z.dataset.photoIdx, 10);
+          } else if (z) {
+            var zSrc = z.src || (z.querySelector && z.querySelector('img') ? z.querySelector('img').src : '');
+            clickedIdx = photos.indexOf(zSrc);
+            if (clickedIdx === -1 && zSrc) {
+              for (var pi = 0; pi < photos.length; pi++) {
+                if (zSrc.indexOf(photos[pi]) !== -1 || photos[pi].indexOf(zSrc) !== -1) {
+                  clickedIdx = pi;
+                  break;
+                }
+              }
+            }
+          }
+          if (clickedIdx === -1 || isNaN(clickedIdx)) clickedIdx = 0;
+          openPhotoLightbox(photos, clickedIdx, parentRow);
+          return;
+        }
+      }
+      var fallbackSrc = z ? z.src : (wrap && wrap.querySelector('img') ? wrap.querySelector('img').src : '');
+      if (fallbackSrc) openPhotoLightbox(fallbackSrc, 0, parentRow);
       return;
     }
   });
 
   document.addEventListener('keydown', function (e) {
+    var lb = $('#lightbox');
+    if (lb && !lb.hidden) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); lbNavigate(-1); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); lbNavigate(1); return; }
+      if (e.key === 'Escape') { closePhotoLightbox(); return; }
+    }
     if (e.key === 'Escape') {
       var pdMenu = $('#pdTestingMenu');
       if (pdMenu && !pdMenu.hidden) {
@@ -4711,30 +5083,16 @@
     if (closePhotoPick && closePhotoInp) {
       closePhotoPick.addEventListener('click', function () { closePhotoInp.click(); });
       closePhotoInp.addEventListener('change', function (e) {
-        var f = e.target.files[0];
-        e.target.value = '';
-        if (!f) return;
-        if (f.size > 5 * 1024 * 1024) {
-          toast('Photo size exceeds 5MB');
-          return;
-        }
-        closePhotoFile = f;
-        var r = new FileReader();
-        r.onload = function (ev) {
-          var p = $('#closePhotoPrev');
-          if (p) { p.src = ev.target.result; p.hidden = false; }
-          var d = $('#closePhotoDel');
-          if (d) d.hidden = false;
-        };
-        r.readAsDataURL(f);
+        handleCloseJobFiles(e.target.files);
+        closePhotoInp.value = '';
       });
     }
     var closePhotoDel = $('#closePhotoDel');
     if (closePhotoDel) {
       closePhotoDel.addEventListener('click', function () {
+        closePhotoFiles = [];
         closePhotoFile = null;
-        var p = $('#closePhotoPrev'); if (p) { p.src = ''; p.hidden = true; }
-        this.hidden = true;
+        renderClosePhotoPreviews();
       });
     }
 

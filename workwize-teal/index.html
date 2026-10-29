@@ -594,12 +594,13 @@
         <div class="fld full">
           <label>Photo After (Optional)</label>
           <div class="pp" id="closePhotoWrap" data-which="After">
-            <img id="closePhotoPrev" alt="" hidden><span class="none">No photo</span>
-            <div class="ppb">
-              <button type="button" class="mini" id="closePhotoPick">Choose</button>
-              <button type="button" class="mini danger" id="closePhotoDel" hidden>Remove</button>
+            <div class="ppb" style="margin-bottom:6px;">
+              <button type="button" class="mini" id="closePhotoPick">Choose Photos</button>
+              <button type="button" class="mini danger" id="closePhotoDel" hidden>Remove All</button>
             </div>
-            <input type="file" id="closePhotoInput" accept="image/*" hidden>
+            <span class="none" id="closePhotoNone">No photo</span>
+            <div id="closePhotoPreviews" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"></div>
+            <input type="file" id="closePhotoInput" accept=".jpeg, .jpg, .png, .mp4, .mov, image/*" multiple hidden>
           </div>
         </div>
       </div>
@@ -661,17 +662,21 @@
     </form>
   </div> -->
 
-  <!-- ===== PHOTO LIGHTBOX WITH ZOOM CONTROLS (Points 8 & 10) ===== -->
+  <!-- ===== PHOTO LIGHTBOX WITH ZOOM & GALLERY CONTROLS ===== -->
   <div class="lightbox" id="lightbox" hidden>
     <div class="lb-toolbar">
+      <span class="lb-counter" id="lbCounter" style="display:none;"></span>
       <button type="button" class="lb-tool" id="lbZoomIn" title="Zoom In">+</button>
       <button type="button" class="lb-tool" id="lbZoomOut" title="Zoom Out">&minus;</button>
       <button type="button" class="lb-tool" id="lbZoomReset" title="Reset Zoom">100%</button>
       <button type="button" class="x lb-close" id="lbClose" title="Close photo">&times;</button>
     </div>
+    <button type="button" class="lb-nav-btn lb-prev" id="lbPrev" title="Previous photo (Left arrow)" style="display:none;">&lsaquo;</button>
     <div class="lb-img-container" id="lbImgContainer">
       <img id="lbImg" alt="Preview Photo">
     </div>
+    <button type="button" class="lb-nav-btn lb-next" id="lbNext" title="Next photo (Right arrow)" style="display:none;">&rsaquo;</button>
+    <div class="lb-thumbs" id="lbThumbs" style="display:none;"></div>
   </div>
   <input type="file" accept="image/*" id="quickPhoto" hidden>
 
