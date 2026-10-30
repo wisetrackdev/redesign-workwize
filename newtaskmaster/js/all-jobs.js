@@ -504,9 +504,7 @@ function renderTableRows() {
             <a href="job-details.html?id=${encodeURIComponent(job.rawId || job.id)}" target="_blank" class="block px-3 py-2 hover:bg-slate-50">
               <i class="fa-regular fa-eye mr-2 text-blue-500"></i> View Details
             </a>
-            <button onclick="quickUpdateJobStatus('${job.rawId || job.id}', 'IN_PROGRESS', 'In Progress')" class="w-full text-left px-3 py-2 hover:bg-slate-50">
-              <i class="fa-solid fa-play mr-2 text-blue-500"></i> Set In Progress
-            </button>
+         
             <button onclick="quickUpdateJobStatus('${job.rawId || job.id}', 'COMPLETED', 'Closed')" class="w-full text-left px-3 py-2 hover:bg-slate-50">
               <i class="fa-solid fa-check mr-2 text-emerald-500"></i> Mark as Closed
             </button>

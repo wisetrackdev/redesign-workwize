@@ -33,7 +33,7 @@ async function initJobsByArea() {
   if (tbody) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="text-center py-10 text-slate-400">
+        <td colspan="6" class="text-center py-10 text-slate-400">
           <i class="fa-solid fa-circle-notch fa-spin text-xl text-blue-600 mb-2"></i>
           <p class="text-xs">Loading operational areas from server...</p>
         </td>
@@ -202,7 +202,7 @@ function renderJobsByAreaTable(filterQuery = "") {
   if (filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" class="text-center py-8 text-slate-400 text-xs">
+        <td colspan="6" class="text-center py-8 text-slate-400 text-xs">
           No operational areas matched "${filterQuery}".
         </td>
       </tr>
@@ -328,12 +328,6 @@ function renderJobsByAreaTable(filterQuery = "") {
             <span class="text-[11px] font-extrabold text-rose-600 w-6 text-right">${area.safety}</span>
           </div>
         </div>
-      </td>
-      <td class="text-right whitespace-nowrap">
-        <button type="button" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-semibold text-xs shadow-sm shadow-blue-500/20 hover:shadow-md transition-all cursor-pointer" title="View all ${area.total} jobs in ${area.name}">
-          <i class="fa-regular fa-folder-open text-xs"></i>
-          <span>View Job</span>
-        </button>
       </td>
     `;
     tbody.appendChild(tr);
