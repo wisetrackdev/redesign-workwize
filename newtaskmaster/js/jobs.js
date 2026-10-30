@@ -71,7 +71,7 @@ async function initJobsByArea() {
     // 2. Fetch Job Overview by Area from API
     const response = await WorkWizeAPI.getJobOverview(currentPropId);
 
-    if (Array.isArray(response) && response.length > 0) {
+    if (Array.isArray(response)) {
       const apiAreas = response.map(item => {
         const total = (item.total_jobs !== undefined && item.total_jobs !== null && !isNaN(item.total_jobs))
           ? Number(item.total_jobs)
@@ -137,31 +137,18 @@ async function initJobsByArea() {
     console.warn("API Overview failed, falling back to local database:", error.message);
   }
 
-  // Fallback: render ALL operational areas with local DB values or 0
-  areaOverviewData = ALL_OPERATIONAL_AREAS.map(std => {
-    const local = (typeof WorkWizeDB !== "undefined") ? WorkWizeDB.getAreasSummary().find(a => 
-      a.name.toLowerCase().includes(std.name.toLowerCase()) || std.name.toLowerCase().includes(a.name.toLowerCase())
-    ) : null;
-
-    const total = local ? Number(local.total) || 0 : 0;
-    const open = local ? Number(local.open) || 0 : 0;
-    const safety = local ? Number(local.safety) || 0 : 0;
-    const day30 = Math.floor(open * 0.5);
-    const day60 = Math.floor(open * 0.3);
-    const day90 = Math.max(0, open - day30 - day60);
-
-    return {
-      id: std.id,
-      name: std.name,
-      total: total,
-      open: open,
-      safety: safety,
-      day30: day30,
-      day60: day60,
-      day90: day90,
-      icon: std.icon
-    };
-  });
+  // Fallback: render ALL operational areas with 0 counts (no static mock data)
+  areaOverviewData = ALL_OPERATIONAL_AREAS.map(std => ({
+    id: std.id,
+    name: std.name,
+    total: 0,
+    open: 0,
+    safety: 0,
+    day30: 0,
+    day60: 0,
+    day90: 0,
+    icon: std.icon
+  }));
 
   updateAreaStats(areaOverviewData);
   renderJobsByAreaTable();
@@ -455,66 +442,8 @@ async function showAreaJobsModal(areaId, areaName) {
     }
   }
 
-  // Fallback to local DB if empty or error
-  if (!jobs || jobs.length === 0) {
-    if (typeof WorkWizeDB !== "undefined") {
-      const allLocal = WorkWizeDB.getJobs();
-      const normAreaName = (areaName || "").toLowerCase().trim();
-      const normAreaId = (areaId || "").toLowerCase().trim();
-
-      // Find all total jobs belonging to this area
-      jobs = allLocal.filter(j => {
-        const jArea = (j.area || "").toLowerCase().trim();
-        const jSub = (j.subArea || "").toLowerCase().trim();
-        return jArea === normAreaName || 
-               jArea.includes(normAreaName) || 
-               normAreaName.includes(jArea) ||
-               jSub.includes(normAreaName) || 
-               normAreaName.includes(jSub) ||
-               (normAreaId && (jArea.includes(normAreaId) || normAreaId.includes(jArea)));
-      }).map(j => ({
-        jobId: j.id,
-        orgjobId: j.id,
-        villaNumber: j.villaNumber || "-",
-        jobDetail: j.details || j.title || "No description",
-        jobCreatedOn: j.openedOn,
-        jobLocation: j.location || "-",
-        priority: j.priority || "Medium",
-        jobStatus: j.status || "Yet to Commence",
-        refNum: j.refNo || "-",
-        data1: [{ teamName: j.assignedTo || "IT Admin" }],
-        expectedCompletion: j.expectedDate || "-",
-        jobCloseOn: (j.status === "Closed" || j.status === "Completed") ? (j.expectedDate || j.openedOn) : null,
-        uploadCount: j.uploadCount || 0,
-        commentCount: j.commentCount || 0,
-        firstname: typeof UserSession !== "undefined" ? UserSession.getUserName() : "User",
-        lastname: "",
-        propName: currentPropName
-      }));
-
-      // If no specific match, load all local jobs so modal always presents area jobs
-      if (jobs.length === 0 && allLocal.length > 0) {
-        jobs = allLocal.map(j => ({
-          jobId: j.id,
-          orgjobId: j.id,
-          villaNumber: j.villaNumber || "-",
-          jobDetail: j.details || j.title || "No description",
-          jobCreatedOn: j.openedOn,
-          jobLocation: j.location || "-",
-          priority: j.priority || "Medium",
-          jobStatus: j.status || "Yet to Commence",
-          refNum: j.refNo || "-",
-          data1: [{ teamName: j.assignedTo || "IT Admin" }],
-          expectedCompletion: j.expectedDate || "-",
-          jobCloseOn: (j.status === "Closed" || j.status === "Completed") ? (j.expectedDate || j.openedOn) : null,
-          uploadCount: j.uploadCount || 0,
-          commentCount: j.commentCount || 0,
-          firstname: typeof UserSession !== "undefined" ? UserSession.getUserName() : "User",
-          lastname: "",
-          propName: currentPropName
-        }));
-      }
-    }
+  if (!jobs || !Array.isArray(jobs)) {
+    jobs = [];
   }
 
   currentAreaModalJobs = jobs;
@@ -589,43 +518,8 @@ async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
     console.warn("API getAreaJobsByDate error:", e);
   }
 
-  // Fallback to local DB if empty or error
-  if (!jobs || jobs.length === 0) {
-    if (typeof WorkWizeDB !== "undefined") {
-      const now = new Date().getTime();
-      const allLocal = WorkWizeDB.getJobs();
-      jobs = allLocal.filter(j => {
-        const matchesArea = (j.area && j.area.toLowerCase() === areaName.toLowerCase()) ||
-          (j.subArea && j.subArea.toLowerCase().includes(areaName.toLowerCase()));
-        if (!matchesArea) return false;
-
-        if (j.openedOn) {
-          const diffDays = (now - new Date(j.openedOn).getTime()) / (1000 * 60 * 60 * 24);
-          if (dateSpan === "d30") return diffDays <= 30;
-          if (dateSpan === "d60") return diffDays > 30 && diffDays <= 89;
-          if (dateSpan === "d90") return diffDays >= 90;
-        }
-        return true;
-      }).map(j => ({
-        jobId: j.id,
-        orgjobId: j.id,
-        villaNumber: j.villaNumber || "-",
-        jobDetail: j.details || j.title,
-        jobCreatedOn: j.openedOn,
-        jobLocation: j.location,
-        priority: j.priority,
-        jobStatus: j.status,
-        refNum: j.refNo || "-",
-        data1: [{ teamName: j.assignedTo }],
-        expectedCompletion: j.expectedDate,
-        jobCloseOn: j.status === "Closed" ? j.expectedDate : null,
-        uploadCount: 0,
-        commentCount: 0,
-        firstname: typeof UserSession !== "undefined" ? UserSession.getUserName() : "User",
-        lastname: "",
-        propName: currentPropName
-      }));
-    }
+  if (!jobs || !Array.isArray(jobs)) {
+    jobs = [];
   }
 
   currentAreaModalJobs = jobs;

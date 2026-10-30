@@ -155,7 +155,7 @@ async function loadAllJobsFromAPI() {
     const currentPropId = WorkWizeAPI.getCurrentProperty();
     const response = await WorkWizeAPI.getPropertyJobs(currentPropId);
 
-    if (response && Array.isArray(response.jobs) && response.jobs.length > 0) {
+    if (response && Array.isArray(response.jobs)) {
       allJobsStore = response.jobs.map(j => mapApiJobToModel(j));
       sortJobsDescending(allJobsStore);
       populateFilterDropdowns();
@@ -166,38 +166,13 @@ async function loadAllJobsFromAPI() {
       return;
     }
   } catch (error) {
-    console.warn("API getpropertyjobs failed, falling back to local database:", error.message);
+    console.warn("API getpropertyjobs failed:", error.message);
   }
 
-  // Fallback to local DB
-  if (typeof WorkWizeDB !== "undefined") {
-    allJobsStore = WorkWizeDB.getJobs().map(j => ({
-      id: j.id,
-      rawId: j.id,
-      orgjobId: j.id,
-      villaNumber: j.villaNumber || "-",
-      details: j.details || j.title || "No description",
-      createdOn: j.openedOn,
-      location: j.location || "-",
-      priority: j.priority || "Medium",
-      status: j.status || "Yet to Commence",
-      refNum: j.refNo || "-",
-      assignedTo: j.assignedTo || "IT Admin",
-      expectedCompletion: j.expectedDate || "-",
-      closeDate: j.status === "Closed" ? j.expectedDate : "-",
-      uploadCount: 0,
-      commentCount: 0,
-      createdBy: typeof UserSession !== "undefined" ? UserSession.getUserName() : "Admin",
-      propName: WorkWizeAPI.getCurrentPropertyName() || "Main Facility",
-      area: j.area || "General Area"
-    }));
-    sortJobsDescending(allJobsStore);
-    const openCount = allJobsStore.filter(j => j.status !== "Closed").length;
-    const closedCount = allJobsStore.filter(j => j.status === "Closed").length;
-    if (typeof updateHeaderBadges === "function") updateHeaderBadges(openCount, closedCount);
-  }
-
+  // If no jobs returned from API or API failed, strictly clear store (no static mock data)
+  allJobsStore = [];
   populateFilterDropdowns();
+  if (typeof updateHeaderBadges === "function") updateHeaderBadges(0, 0);
   filterAndRenderJobs();
 }
 

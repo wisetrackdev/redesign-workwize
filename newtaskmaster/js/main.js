@@ -146,21 +146,28 @@ async function initPropertyDropdown() {
 
   if (!btn || !menu) return;
 
-  btn.addEventListener("click", function (e) {
-    e.stopPropagation();
-    menu.classList.toggle("hidden");
-  });
+  // Ensure button toggle and outside-click listeners are bound only ONCE
+  if (!btn.dataset.initialized) {
+    btn.dataset.initialized = "true";
 
-  document.addEventListener("click", function () {
-    menu.classList.add("hidden");
-  });
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      menu.classList.toggle("hidden");
+    });
+
+    document.addEventListener("click", function (e) {
+      if (!menu.contains(e.target) && !btn.contains(e.target)) {
+        menu.classList.add("hidden");
+      }
+    });
+  }
 
   if (typeof WorkWizeAPI !== "undefined") {
     try {
       const properties = await WorkWizeAPI.getAllProperties();
       if (Array.isArray(properties) && properties.length > 0) {
         let currentPropId = WorkWizeAPI.getCurrentProperty();
-        let currentProp = properties.find(p => p.propId === currentPropId) || properties[0];
+        let currentProp = properties.find(p => String(p.propId) === String(currentPropId)) || properties[0];
 
         if (!currentPropId && currentProp) {
           WorkWizeAPI.setCurrentProperty(currentProp.propId, currentProp.propName);
@@ -174,7 +181,7 @@ async function initPropertyDropdown() {
         if (listContainer) {
           listContainer.innerHTML = "";
           properties.forEach(p => {
-            const isSelected = p.propId === currentPropId;
+            const isSelected = String(p.propId) === String(currentPropId);
             const item = document.createElement("button");
             item.type = "button";
             item.className = `w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors ${
@@ -820,9 +827,9 @@ async function updateHeaderBadges(openCount, closedCount) {
       const propId = WorkWizeAPI.getCurrentProperty();
       if (propId && typeof WorkWizeAPI.getJobOverview === "function") {
         const overview = await WorkWizeAPI.getJobOverview(propId);
-        if (Array.isArray(overview) && overview.length > 0) {
-          const tot = overview.reduce((s, a) => s + (Number(a.totalJobs || a.total) || 0), 0);
-          const opn = overview.reduce((s, a) => s + (Number(a.openJobs || a.open) || 0), 0);
+        if (Array.isArray(overview)) {
+          const tot = overview.reduce((s, a) => s + (Number(a.totalJobs || a.total || a.total_jobs) || 0), 0);
+          const opn = overview.reduce((s, a) => s + (Number(a.openJobs || a.open || a.open_jobs) || 0), 0);
           const cls = Math.max(0, tot - opn);
           if (openBadge) openBadge.textContent = opn;
           if (closedBadge) closedBadge.textContent = cls;

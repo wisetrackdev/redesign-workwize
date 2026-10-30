@@ -55,7 +55,7 @@ async function loadDashboardForProperty(propId) {
     if (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getJobOverview === "function") {
       const overview = await WorkWizeAPI.getJobOverview(currentPropId);
 
-      if (Array.isArray(overview) && overview.length > 0) {
+      if (Array.isArray(overview)) {
         renderDashboardWithAreas(overview, currentPropName);
         return;
       }
@@ -333,10 +333,7 @@ function renderStatusDonutChart(stats) {
 }
 
 function renderDashboardFallback(propName) {
-  let stats = { total: 0, open: 0, closed: 0, safety: 0 };
-  if (typeof WorkWizeDB !== "undefined" && typeof WorkWizeDB.getStats === "function") {
-    stats = WorkWizeDB.getStats();
-  }
+  const stats = { total: 0, open: 0, closed: 0, safety: 0 };
   updateKPIStatCards(stats);
 
   const subtitleEl = document.getElementById("jobsByAreaSubtitle");
