@@ -159,6 +159,9 @@ async function loadAllJobsFromAPI() {
       allJobsStore = response.jobs.map(j => mapApiJobToModel(j));
       sortJobsDescending(allJobsStore);
       populateFilterDropdowns();
+      const openCount = allJobsStore.filter(j => j.status !== "Closed").length;
+      const closedCount = allJobsStore.filter(j => j.status === "Closed").length;
+      if (typeof updateHeaderBadges === "function") updateHeaderBadges(openCount, closedCount);
       filterAndRenderJobs();
       return;
     }
@@ -189,6 +192,9 @@ async function loadAllJobsFromAPI() {
       area: j.area || "General Area"
     }));
     sortJobsDescending(allJobsStore);
+    const openCount = allJobsStore.filter(j => j.status !== "Closed").length;
+    const closedCount = allJobsStore.filter(j => j.status === "Closed").length;
+    if (typeof updateHeaderBadges === "function") updateHeaderBadges(openCount, closedCount);
   }
 
   populateFilterDropdowns();
@@ -341,6 +347,19 @@ function filterAndRenderJobs() {
   const priorityFilter = document.getElementById("filterPriority")?.value || "";
   const assignedFilter = document.getElementById("filterAssignedTo")?.value || "";
   const dateSpanFilter = document.getElementById("filterDateSpan")?.value || "";
+
+  // Sync Header Segmented Tabs
+  const allJobsTab = document.getElementById("headerNavAllJobs");
+  const closedJobsTab = document.getElementById("headerNavClosedJobs");
+  if (allJobsTab && closedJobsTab) {
+    if (statusFilter === "Closed") {
+      closedJobsTab.classList.add("on");
+      allJobsTab.classList.remove("on");
+    } else {
+      allJobsTab.classList.add("on");
+      closedJobsTab.classList.remove("on");
+    }
+  }
 
   const now = new Date().getTime();
 

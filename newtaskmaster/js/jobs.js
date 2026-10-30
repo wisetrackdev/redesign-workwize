@@ -182,6 +182,10 @@ function updateAreaStats(areas) {
   if (openEl) openEl.textContent = open;
   if (closedEl) closedEl.textContent = closed;
   if (safetyEl) safetyEl.textContent = safety;
+
+  if (typeof updateHeaderBadges === "function") {
+    updateHeaderBadges(open, closed);
+  }
 }
 
 function renderJobsByAreaTable(filterQuery = "") {

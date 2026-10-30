@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
   initPropertyDropdown();
   initAddJobModal();
   initUserDropdown();
+  initHeaderNavAndBadges();
 });
 
 // Highlight active sidebar item according to URL & on click set active blue
@@ -778,3 +779,127 @@ window.handleModalAreaChange = handleModalAreaChange;
 window.handleModalCcfChange = handleModalCcfChange;
 window.populateModalDropdowns = populateModalDropdowns;
 window.submitJobForm = submitJobForm;
+window.updateHeaderBadges = updateHeaderBadges;
+window.initHeaderNavAndBadges = initHeaderNavAndBadges;
+
+// Header Segmented Navigation & Live Badge Counts
+async function updateHeaderBadges(openCount, closedCount) {
+  const openBadge = document.getElementById("headerOpenBadge");
+  const closedBadge = document.getElementById("headerClosedBadge");
+
+  if (openCount !== undefined && closedCount !== undefined) {
+    if (openBadge) openBadge.textContent = openCount;
+    if (closedBadge) closedBadge.textContent = closedCount;
+    try {
+      localStorage.setItem("workwize_open_count", String(openCount));
+      localStorage.setItem("workwize_closed_count", String(closedCount));
+    } catch (_) {}
+    return;
+  }
+
+  // Restore cached values for instant rendering
+  try {
+    const cachedOpen = localStorage.getItem("workwize_open_count");
+    const cachedClosed = localStorage.getItem("workwize_closed_count");
+    if (cachedOpen !== null && openBadge) openBadge.textContent = cachedOpen;
+    if (cachedClosed !== null && closedBadge) closedBadge.textContent = cachedClosed;
+  } catch (_) {}
+
+  // Check DOM statistics if present on page
+  const domOpen = document.getElementById("statOpenJobs");
+  const domClosed = document.getElementById("statClosedJobs");
+  if (domOpen && domClosed && domOpen.textContent && domClosed.textContent && domOpen.textContent !== "-") {
+    if (openBadge) openBadge.textContent = domOpen.textContent;
+    if (closedBadge) closedBadge.textContent = domClosed.textContent;
+    return;
+  }
+
+  // Fetch from API
+  if (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getCurrentProperty === "function") {
+    try {
+      const propId = WorkWizeAPI.getCurrentProperty();
+      if (propId && typeof WorkWizeAPI.getJobOverview === "function") {
+        const overview = await WorkWizeAPI.getJobOverview(propId);
+        if (Array.isArray(overview) && overview.length > 0) {
+          const tot = overview.reduce((s, a) => s + (Number(a.totalJobs || a.total) || 0), 0);
+          const opn = overview.reduce((s, a) => s + (Number(a.openJobs || a.open) || 0), 0);
+          const cls = Math.max(0, tot - opn);
+          if (openBadge) openBadge.textContent = opn;
+          if (closedBadge) closedBadge.textContent = cls;
+          try {
+            localStorage.setItem("workwize_open_count", String(opn));
+            localStorage.setItem("workwize_closed_count", String(cls));
+          } catch (_) {}
+        }
+      }
+    } catch (err) {
+      console.debug("Badge overview fetch fallback:", err);
+    }
+  }
+}
+
+function initHeaderNavAndBadges() {
+  const currentPath = window.location.pathname.split("/").pop() || "index.html";
+  const urlParams = new URLSearchParams(window.location.search);
+  const statusParam = urlParams.get("status");
+
+  const dashboardTab = document.getElementById("headerNavDashboard");
+  const jobByAreaTab = document.getElementById("headerNavJobByArea");
+  const allJobsTab = document.getElementById("headerNavAllJobs");
+  const closedJobsTab = document.getElementById("headerNavClosedJobs");
+
+  const tabs = [dashboardTab, jobByAreaTab, allJobsTab, closedJobsTab].filter(Boolean);
+  tabs.forEach(t => t.classList.remove("on"));
+
+  // Highlight active tab according to current page & URL filter
+  if (currentPath === "dashboard.html" || currentPath === "index.html") {
+    if (dashboardTab) dashboardTab.classList.add("on");
+  } else if (currentPath === "job-by-area.html" || currentPath === "jobs.html") {
+    if (jobByAreaTab) jobByAreaTab.classList.add("on");
+  } else if (currentPath === "all-jobs.html") {
+    if (statusParam === "Closed") {
+      if (closedJobsTab) closedJobsTab.classList.add("on");
+    } else {
+      if (allJobsTab) allJobsTab.classList.add("on");
+    }
+  }
+
+  // When already on all-jobs.html, allow instant in-page tab switching between All Jobs and Closed Jobs
+  if (currentPath === "all-jobs.html") {
+    if (allJobsTab) {
+      allJobsTab.addEventListener("click", function (e) {
+        const statusSelect = document.getElementById("filterStatus");
+        if (statusSelect) {
+          e.preventDefault();
+          statusSelect.value = "";
+          if (typeof filterAndRenderJobs === "function") filterAndRenderJobs();
+          tabs.forEach(t => t.classList.remove("on"));
+          allJobsTab.classList.add("on");
+          history.pushState(null, "", "all-jobs.html");
+        }
+      });
+    }
+
+    if (closedJobsTab) {
+      closedJobsTab.addEventListener("click", function (e) {
+        const statusSelect = document.getElementById("filterStatus");
+        if (statusSelect) {
+          e.preventDefault();
+          statusSelect.value = "Closed";
+          if (typeof filterAndRenderJobs === "function") filterAndRenderJobs();
+          tabs.forEach(t => t.classList.remove("on"));
+          closedJobsTab.classList.add("on");
+          history.pushState(null, "", "all-jobs.html?status=Closed");
+        }
+      });
+    }
+  }
+
+  // Initial badge update
+  updateHeaderBadges();
+
+  // Listen for property switch event
+  window.addEventListener("workwize:propertyChanged", function () {
+    updateHeaderBadges();
+  });
+}
