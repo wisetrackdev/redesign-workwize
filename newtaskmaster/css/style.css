@@ -13,7 +13,7 @@
   --sidebar-text: #475569;
   --sidebar-active: #1a68ff;
   
-  --bg-app: #f4f7fb;
+  --bg-app: #F2F5FB;
   --card-bg: #ffffff;
   --card-border: #e6edf5;
   --text-main: #0f172a;
@@ -46,7 +46,7 @@
 }
 
 body {
-  background-color: var(--bg-app);
+  background-color: #F2F5FB !important;
   color: var(--text-main);
   min-height: 100vh;
   overflow-x: hidden;
@@ -260,7 +260,7 @@ body {
 
 /* Top Header Bar */
 .top-header {
-  background-color: #ffffff;
+  background-color: #F2F5FB !important;
   border-bottom: 1px solid var(--card-border);
   height: 74px;
   padding: 0 32px;
@@ -271,7 +271,7 @@ body {
   top: 0;
   z-index: 40;
   gap: 16px;
-  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 4px 20px rgba(27, 37, 72, 0.08), 0 1px 3px rgba(27, 37, 72, 0.04);
 }
 
 .logo-pill {
