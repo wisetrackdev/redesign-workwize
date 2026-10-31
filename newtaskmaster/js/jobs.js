@@ -129,9 +129,15 @@ function jobMatchesArea(j, areaId, areaName) {
   return false;
 }
 
-function isClosedStatus(statusStr) {
-  if (!statusStr) return false;
-  const s = String(statusStr).toLowerCase();
+function isClosedStatus(j) {
+  if (!j) return false;
+  if (typeof j === "object") {
+    if (j.isActive === false || j.isActive === 0) return true;
+    if (j.jobCloseOn && !String(j.jobCloseOn).startsWith("0001") && String(j.jobCloseOn) !== "1970-01-01T00:00:00") return true;
+    const s = String(j.jobStatus || j.status || "").toLowerCase();
+    return s.includes("close") || s.includes("complet");
+  }
+  const s = String(j).toLowerCase();
   return s.includes("close") || s.includes("complet");
 }
 
@@ -643,7 +649,7 @@ async function showAreaOpenJobsModal(areaId, areaName) {
     if (!propertyJobsCache || propertyJobsCache.length === 0) {
       await loadPropertyJobsCache(currentPropId);
     }
-    jobs = propertyJobsCache.filter(j => jobMatchesArea(j, areaId, areaName) && !isClosedStatus(j.jobStatus));
+    jobs = propertyJobsCache.filter(j => jobMatchesArea(j, areaId, areaName) && !isClosedStatus(j));
   }
 
   // Step C: Include local DB open jobs
@@ -730,7 +736,7 @@ async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
 
     jobs = propertyJobsCache.filter(j => {
       if (!jobMatchesArea(j, areaId, areaName)) return false;
-      if (isClosedStatus(j.jobStatus)) return false;
+      if (isClosedStatus(j)) return false;
 
       const createdTime = (j.jobCreatedOn || j.openedOn) ? new Date(j.jobCreatedOn || j.openedOn).getTime() : 0;
       if (!createdTime || isNaN(createdTime)) return dateSpan === "d30";
@@ -893,7 +899,7 @@ async function showPropertyOpenJobsModal() {
     allJobs = await loadPropertyJobsCache(currentPropId);
   }
 
-  const openJobs = (allJobs || []).filter(j => !isClosedStatus(j.jobStatus)).map(normalizeJobObject);
+  const openJobs = (allJobs || []).filter(j => !isClosedStatus(j)).map(normalizeJobObject);
   currentAreaModalJobs = openJobs;
   renderAreaModalRows(openJobs);
 
@@ -937,12 +943,28 @@ async function showPropertyClosedJobsModal() {
   modal.classList.add("open");
   initAreaModalCloseListeners();
 
-  let allJobs = propertyJobsCache;
-  if (!allJobs || allJobs.length === 0) {
-    allJobs = await loadPropertyJobsCache(currentPropId);
+  let closedJobs = [];
+  if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.getClosedJobs) {
+    try {
+      const res = await WorkWizeAPI.getClosedJobs(currentPropId);
+      if (res && Array.isArray(res.jobs)) closedJobs = res.jobs;
+      else if (res && Array.isArray(res.Jobs)) closedJobs = res.Jobs;
+      else if (res && Array.isArray(res.data)) closedJobs = res.data;
+      else if (Array.isArray(res)) closedJobs = res;
+    } catch (err) {
+      console.warn("API getClosedJobs error:", err);
+    }
   }
 
-  const closedJobs = (allJobs || []).filter(j => isClosedStatus(j.jobStatus)).map(normalizeJobObject);
+  if (!closedJobs || closedJobs.length === 0) {
+    let allJobs = propertyJobsCache;
+    if (!allJobs || allJobs.length === 0) {
+      allJobs = await loadPropertyJobsCache(currentPropId);
+    }
+    closedJobs = (allJobs || []).filter(j => isClosedStatus(j));
+  }
+
+  closedJobs = (closedJobs || []).map(normalizeJobObject).map(j => ({ ...j, jobStatus: "Closed", status: "Closed" }));
   currentAreaModalJobs = closedJobs;
   renderAreaModalRows(closedJobs);
 

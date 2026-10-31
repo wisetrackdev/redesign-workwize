@@ -220,7 +220,6 @@ const WorkWizeAPI = (function () {
     const pId = propId || getCurrentProperty();
     const form = new FormData();
     form.append("propId", pId);
-    form.append("propID", pId);
 
     return await request("api/jobtracker/getpropertyjobs", {
       method: "POST",
@@ -233,8 +232,6 @@ const WorkWizeAPI = (function () {
     const pId = propId || getCurrentProperty();
     const form = new FormData();
     form.append("propId", pId);
-    form.append("propID", pId);
-    form.append("areaId", areaId);
     form.append("areaID", areaId);
 
     return await request("api/jobtracker/getareajobs", {
@@ -247,11 +244,8 @@ const WorkWizeAPI = (function () {
   async function getAreaJobsByDate(areaId, dateSpan, propId) {
     const pId = propId || getCurrentProperty();
     const form = new FormData();
-    form.append("propId", pId);
     form.append("propID", pId);
-    form.append("areaId", areaId);
     form.append("areaID", areaId);
-    form.append("dateId", dateSpan);
     form.append("dateID", dateSpan); // 'd30', 'd60', 'd90'
 
     return await request("api/jobtracker/getareajobsbydate", {
@@ -264,7 +258,6 @@ const WorkWizeAPI = (function () {
   async function getClosedJobs(propId) {
     const pId = propId || getCurrentProperty();
     const form = new FormData();
-    form.append("propId", pId);
     form.append("propID", pId);
 
     return await request("api/jobtracker/getclosedjobs", {

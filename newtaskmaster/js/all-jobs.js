@@ -161,10 +161,41 @@ async function loadAllJobsFromAPI() {
 
   try {
     const currentPropId = WorkWizeAPI.getCurrentProperty();
-    const response = await WorkWizeAPI.getPropertyJobs(currentPropId);
+    
+    // Fetch property jobs & closed jobs in parallel
+    const [propRes, closedRes] = await Promise.allSettled([
+      WorkWizeAPI.getPropertyJobs(currentPropId),
+      WorkWizeAPI.getClosedJobs(currentPropId)
+    ]);
 
-    if (response && Array.isArray(response.jobs)) {
-      allJobsStore = response.jobs.map(j => mapApiJobToModel(j));
+    let combinedMap = new Map();
+
+    // 1. Process property jobs
+    if (propRes.status === "fulfilled" && propRes.value) {
+      const rawJobs = propRes.value?.jobs || propRes.value?.Jobs || propRes.value?.data || (Array.isArray(propRes.value) ? propRes.value : null);
+      if (Array.isArray(rawJobs)) {
+        rawJobs.forEach(j => {
+          const m = mapApiJobToModel(j);
+          const key = m.rawId || m.id;
+          if (key) combinedMap.set(key, m);
+        });
+      }
+    }
+
+    // 2. Process closed jobs
+    if (closedRes.status === "fulfilled" && closedRes.value) {
+      const rawClosed = closedRes.value?.jobs || closedRes.value?.Jobs || closedRes.value?.data || (Array.isArray(closedRes.value) ? closedRes.value : null);
+      if (Array.isArray(rawClosed)) {
+        rawClosed.forEach(j => {
+          const m = mapApiJobToModel(j, true);
+          const key = m.rawId || m.id;
+          if (key) combinedMap.set(key, m);
+        });
+      }
+    }
+
+    if (combinedMap.size > 0) {
+      allJobsStore = Array.from(combinedMap.values());
       sortJobsDescending(allJobsStore);
       populateFilterDropdowns();
       const openCount = allJobsStore.filter(j => j.status !== "Closed").length;
@@ -174,7 +205,7 @@ async function loadAllJobsFromAPI() {
       return;
     }
   } catch (error) {
-    console.warn("API getpropertyjobs failed:", error.message);
+    console.warn("API loadAllJobsFromAPI failed:", error.message);
   }
 
   // If no jobs returned from API or API failed, strictly clear store (no static mock data)
@@ -242,42 +273,60 @@ function toggleSort(field) {
 }
 window.toggleSort = toggleSort;
 
-function mapApiJobToModel(job) {
-  const statusStr = normalizeStatus(job.jobStatus);
-  const priorityStr = normalizePriority(job.priority);
+function isClosedStatus(j) {
+  if (!j) return false;
+  if (typeof j === "object") {
+    if (j.isActive === false || j.isActive === 0) return true;
+    if (j.jobCloseOn && !String(j.jobCloseOn).startsWith("0001") && String(j.jobCloseOn) !== "1970-01-01T00:00:00") return true;
+    const s = String(j.jobStatus || j.status || "").toLowerCase();
+    return s.includes("close") || s.includes("complet");
+  }
+  const s = String(j).toLowerCase();
+  return s.includes("close") || s.includes("complet");
+}
+
+function mapApiJobToModel(job, forceClosed = false) {
+  const isClosed = forceClosed ||
+    job.isActive === false || job.isActive === 0 ||
+    isClosedStatus(job.jobStatus || job.JobStatus || job.status || job.Status) ||
+    (job.jobCloseOn && !String(job.jobCloseOn).startsWith("0001") && String(job.jobCloseOn) !== "1970-01-01T00:00:00");
+
+  const statusStr = isClosed ? "Closed" : normalizeStatus(job.jobStatus || job.JobStatus || job.status || job.Status);
+  const priorityStr = normalizePriority(job.priority || job.Priority);
   const assignees = formatAssignee(job);
 
   return {
-    id: job.orgjobId || job.jobId,
-    rawId: job.jobId,
-    orgjobId: job.orgjobId,
-    villaNumber: job.villaNumber || "",
-    details: job.jobDetail || "No description",
-    createdOn: job.jobCreatedOn,
-    location: job.jobLocation || "",
+    id: job.orgjobId || job.OrgjobId || job.jobId || job.JobId,
+    rawId: job.jobId || job.JobId,
+    orgjobId: job.orgjobId || job.OrgjobId,
+    villaNumber: job.villaNumber || job.VillaNumber || "",
+    details: job.jobDetail || job.JobDetail || job.details || job.Details || "No description",
+    createdOn: job.jobCreatedOn || job.JobCreatedOn || job.createdOn || job.CreatedOn,
+    location: job.jobLocation || job.JobLocation || job.location || job.Location || "",
     priority: priorityStr,
     status: statusStr,
-    refNum: job.refNum || "",
+    isActive: job.isActive !== undefined ? job.isActive : (isClosed ? false : true),
+    refNum: job.refNum || job.RefNum || job.refNo || job.RefNo || "",
     assignedTo: assignees,
-    expectedCompletion: job.expectedCompletion,
-    closeDate: job.jobCloseOn,
-    uploadCount: job.uploadCount !== undefined ? job.uploadCount : (Array.isArray(job.imageUploads) ? job.imageUploads.length : 0),
-    commentCount: job.commentCount !== undefined ? job.commentCount : (Array.isArray(job.comments) ? job.comments.length : 0),
-    createdBy: `${job.firstname || ""} ${job.lastname || ""}`.trim() || "-",
-    propName: job.propName || WorkWizeAPI.getCurrentPropertyName() || "-",
-    area: job.areaName || "General Area"
+    expectedCompletion: job.expectedCompletion || job.ExpectedCompletion,
+    closeDate: job.jobCloseOn || job.JobCloseOn || job.closeDate,
+    uploadCount: job.uploadCount !== undefined ? job.uploadCount : (job.UploadCount !== undefined ? job.UploadCount : (Array.isArray(job.imageUploads) ? job.imageUploads.length : 0)),
+    commentCount: job.commentCount !== undefined ? job.commentCount : (job.CommentCount !== undefined ? job.CommentCount : (Array.isArray(job.comments) ? job.comments.length : 0)),
+    createdBy: `${job.firstname || job.Firstname || ""} ${job.lastname || job.Lastname || ""}`.trim() || "-",
+    propName: job.propName || job.PropName || WorkWizeAPI.getCurrentPropertyName() || "-",
+    area: job.areaName || job.AreaName || job.area || job.Area || "General Area"
   };
 }
 
 function normalizeStatus(st) {
   if (!st) return "Yet to Commence";
   const s = String(st).toUpperCase();
+  if (s.includes("CLOSE") || s.includes("COMPLET")) return "Closed";
   if (s.includes("YET") || s.includes("COMMENCE")) return "Yet to Commence";
   if (s.includes("PROGRESS")) return "In Progress";
   if (s.includes("DISCUSSION")) return "Under Discussion";
   if (s.includes("SPARES") || s.includes("ORDER")) return "Spares on Order";
   if (s.includes("FIX")) return "Fixed";
-  if (s.includes("CLOSE") || s.includes("COMPLET")) return "Closed";
   return st;
 }
 
