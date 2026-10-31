@@ -44,6 +44,10 @@
           <i class="fa-regular fa-circle-check text-xs"></i>
           <span>Closed Jobs</span>
         </a>
+        <a href="opro-dashboard.html" class="tab" id="headerNavOproDashboard" data-tab="opro-dashboard">
+          <i class="fa-solid fa-chart-pie text-xs text-indigo-500"></i>
+          <span>OPRO Dashboard</span>
+        </a>
       </nav>
 
       <!-- Right Header Actions (Property Selector & User Profile) -->
@@ -157,14 +161,20 @@
                 <th style="min-width: 140px;">ID</th>
                 <th style="min-width: 90px;" id="allJobsVillaColHeader">VILLA</th>
                 <th style="min-width: 240px;">DETAILS</th>
-                <th style="min-width: 130px;">CREATE DATE</th>
+                <th style="min-width: 135px;" class="cursor-pointer hover:text-blue-600 select-none" onclick="toggleSort('createdOn')" title="Click to sort by Create Date">
+                  CREATE DATE <i id="sortIcon_createdOn" class="fa-solid fa-arrow-down-short-wide ml-1 text-blue-500"></i>
+                </th>
                 <th style="min-width: 140px;">LOCATION</th>
                 <th style="min-width: 100px;">PRIORITY</th>
                 <th style="min-width: 120px;">STATUS</th>
                 <th style="min-width: 110px;">REF NO</th>
                 <th style="min-width: 150px;">ASSIGNED TO</th>
-                <th style="min-width: 160px;">EXPECTED COMPLETION DATE</th>
-                <th style="min-width: 130px;">CLOSE DATE</th>
+                <th style="min-width: 165px;" class="cursor-pointer hover:text-blue-600 select-none" onclick="toggleSort('expectedCompletion')" title="Click to sort by Expected Completion Date">
+                  EXPECTED COMPLETION DATE <i id="sortIcon_expectedCompletion" class="fa-solid fa-sort ml-1 text-slate-400"></i>
+                </th>
+                <th style="min-width: 135px;" class="cursor-pointer hover:text-blue-600 select-none" onclick="toggleSort('closeDate')" title="Click to sort by Close Date">
+                  CLOSE DATE <i id="sortIcon_closeDate" class="fa-solid fa-sort ml-1 text-slate-400"></i>
+                </th>
                 <th style="min-width: 110px;" class="text-center">ATTACHMENTS</th>
                 <th style="min-width: 100px;" class="text-center">COMMENTS</th>
                 <th style="min-width: 140px;">CREATED BY</th>
@@ -281,6 +291,18 @@
           <option value="d30">Within 30 Days</option>
           <option value="d60">31 to 89 Days</option>
           <option value="d90">90+ Days Ago</option>
+        </select>
+      </div>
+
+      <!-- Date Sort Order Filter (Point 11) -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-arrow-down-up-across-line text-purple-500 text-[10px]"></i>
+          <span>Sort By Date Order</span>
+        </label>
+        <select id="filterSortOrder" class="w-full text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium transition-all">
+          <option value="desc">Newest to Oldest (Descending)</option>
+          <option value="asc">Oldest to Newest (Ascending)</option>
         </select>
       </div>
 
@@ -464,12 +486,12 @@
         <div id="stepContent3" class="space-y-4 hidden">
           <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attachments</h4>
           <div id="fileDropZone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-slate-50 transition-all">
-            <input type="file" id="fileUploadInput" multiple accept=".jpg,.jpeg,.png,.pdf" class="hidden">
+            <input type="file" id="fileUploadInput" multiple accept="*/*" class="hidden">
             <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto mb-3">
               <i class="fa-regular fa-file-image"></i>
             </div>
             <p class="text-sm font-semibold text-slate-700">Drag & drop files here or <span class="text-blue-600 underline">click to upload</span></p>
-            <p class="text-[11px] text-slate-400 mt-1">Only JPG, JPEG, and PNG files are allowed with maximum size limit of 5MB</p>
+            <p class="text-[11px] text-slate-400 mt-1">All file types supported (Images, PDFs, Word, Excel, ZIP) up to 25MB</p>
           </div>
           <div id="uploadedFileList" class="space-y-2"></div>
         </div>

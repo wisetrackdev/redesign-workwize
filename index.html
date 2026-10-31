@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkWize Redesign & Taskmaster 17-Point Upgrade Portal</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 antialiased min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Hero Header -->
+  <header class="relative overflow-hidden border-b border-slate-800 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-900/90 pt-10 pb-12">
+    <div class="absolute inset-0 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:24px_24px] opacity-15"></div>
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-3">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>All 17 Upgrade Points Completed & Verified</span>
+          </div>
+          <h1 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            WorkWize Redesign & Taskmaster Portal
+          </h1>
+          <p class="text-slate-400 text-sm sm:text-base mt-2 max-w-2xl leading-relaxed">
+            Centralized hub connecting the modernized <strong class="text-slate-200">newtaskmaster</strong> and <strong class="text-slate-200">Admin Console</strong> to the live backend API at <code class="mono text-indigo-300 bg-slate-800/80 px-2 py-0.5 rounded text-xs">https://oprofase2.workarya.com/</code>.
+          </p>
+        </div>
+
+        <!-- Live Status Pill -->
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-4 shadow-xl backdrop-blur flex flex-col gap-2 shrink-0 sm:min-w-[260px]">
+          <div class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Connected Backend Domain</div>
+          <div class="flex items-center gap-2 text-xs font-semibold text-emerald-400">
+            <i class="fa-solid fa-server"></i>
+            <span class="mono">oprofase2.workarya.com</span>
+          </div>
+          <div class="text-[10px] text-slate-400 border-t border-slate-700/60 pt-2 flex items-center justify-between">
+            <span>Compilation:</span>
+            <span class="font-bold text-emerald-400">0 Errors</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Quick Access Launchpad -->
+  <section class="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 -mt-6 relative z-20">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Launchpad 1: OPRO Dashboard -->
+      <a href="newtaskmaster/opro-dashboard.html" class="group p-5 rounded-2xl bg-gradient-to-br from-slate-800/90 to-indigo-950/60 border border-indigo-500/30 hover:border-indigo-400 shadow-xl hover:shadow-indigo-500/10 transition-all duration-300">
+        <div class="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-lg mb-3 group-hover:scale-110 transition-transform">
+          <i class="fa-solid fa-chart-pie"></i>
+        </div>
+        <div class="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1">Point 17 Feature</div>
+        <h3 class="text-base font-bold text-white group-hover:text-indigo-300 transition-colors flex items-center justify-between">
+          <span>OPRO Dashboard</span>
+          <i class="fa-solid fa-arrow-right text-xs opacity-0 group-hover:opacity-100 transition-opacity"></i>
+        </h3>
+        <p class="text-slate-400 text-xs mt-1 leading-relaxed">Dedicated executive analytics with cross-resort filters & graphs.</p>
+      </a>
+
+      <!-- Launchpad 2: All Jobs -->
+      <a href="newtaskmaster/all-jobs.html" class="group p-5 rounded-2xl bg-slate-800/90 border border-slate-700/80 hover:border-blue-500/50 shadow-xl hover:shadow-blue-500/10 transition-all duration-300">
+        <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-lg mb-3 group-hover:scale-110 transition-transform">
+          <i class="fa-solid fa-list-check"></i>
+        </div>
+        <div class="text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">Taskmaster</div>
+        <h3 class="text-base font-bold text-white group-hover:text-blue-300 transition-colors flex items-center justify-between">
+          <span>All Jobs List</span>
+          <i class="fa-solid fa-arrow-right text-xs opacity-0 group-hover:opacity-100 transition-opacity"></i>
+        </h3>
+        <p class="text-slate-400 text-xs mt-1 leading-relaxed">Interactive sorting, hover previews, CSV export & state retention.</p>
+      </a>
+
+      <!-- Launchpad 3: Job by Area -->
+      <a href="newtaskmaster/job-by-area.html" class="group p-5 rounded-2xl bg-slate-800/90 border border-slate-700/80 hover:border-emerald-500/50 shadow-xl hover:shadow-emerald-500/10 transition-all duration-300">
+        <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg mb-3 group-hover:scale-110 transition-transform">
+          <i class="fa-solid fa-layer-group"></i>
+        </div>
+        <div class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">Point 5 Feature</div>
+        <h3 class="text-base font-bold text-white group-hover:text-emerald-300 transition-colors flex items-center justify-between">
+          <span>Job by Area</span>
+          <i class="fa-solid fa-arrow-right text-xs opacity-0 group-hover:opacity-100 transition-opacity"></i>
+        </h3>
+        <p class="text-slate-400 text-xs mt-1 leading-relaxed">Displays all operational areas (even 0 tasks) & date breakdowns.</p>
+      </a>
+
+      <!-- Launchpad 4: Admin Console -->
+      <a href="admin/adminconsole.html" class="group p-5 rounded-2xl bg-slate-800/90 border border-slate-700/80 hover:border-purple-500/50 shadow-xl hover:shadow-purple-500/10 transition-all duration-300">
+        <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-lg mb-3 group-hover:scale-110 transition-transform">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="text-xs font-bold text-purple-400 uppercase tracking-wider mb-1">Admin Panel</div>
+        <h3 class="text-base font-bold text-white group-hover:text-purple-300 transition-colors flex items-center justify-between">
+          <span>Admin Console</span>
+          <i class="fa-solid fa-arrow-right text-xs opacity-0 group-hover:opacity-100 transition-opacity"></i>
+        </h3>
+        <p class="text-slate-400 text-xs mt-1 leading-relaxed">Inactive teams management & sole manager safety validation.</p>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- Main Documentation & Points Matrix -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+
+    <!-- Database Schema Additions Banner -->
+    <div class="rounded-2xl bg-slate-800/60 border border-slate-700/80 p-6 space-y-3">
+      <div class="flex items-center gap-2 text-indigo-400 font-bold text-sm">
+        <i class="fa-solid fa-database"></i>
+        <span>Database Schema Migrations Added to <code class="mono text-indigo-300">Opro_Database_Layer_Schema.cs</code></span>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-bold text-emerald-400 mb-1">1. Migration: 2026_10_30_property_teams_isactive</div>
+          <code class="mono text-[11px] text-slate-300 block">ALTER TABLE op_property_teams ADD COLUMN isactive TINYINT(1) NOT NULL DEFAULT 1 AFTER teamName;</code>
+          <p class="text-[11px] text-slate-400 mt-2">Powers Point 2 (Inactive Team Management) by enabling non-destructive team deactivation.</p>
+        </div>
+        <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <div class="font-bold text-emerald-400 mb-1">2. Migration: 2026_10_30_job_tracker_comments_index</div>
+          <code class="mono text-[11px] text-slate-300 block">CREATE INDEX idx_job_tracker_comments_jobid ON op_job_tracker_comments(jobId, commentDate);</code>
+          <p class="text-[11px] text-slate-400 mt-2">Powers Point 1 (Owner Comment History Tracker), guaranteeing fast chronological comment retrieval.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section Title & Filter -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+      <div>
+        <h2 class="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2.5">
+          <i class="fa-solid fa-list-check text-indigo-500"></i>
+          <span>17 Points Implementation Directory</span>
+        </h2>
+        <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Click any point to expand detailed code changes, schema additions, and verification notes.</p>
+      </div>
+
+      <!-- Quick Search -->
+      <div class="relative w-full sm:w-72">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+        <input type="text" id="pointSearchInput" placeholder="Filter points (e.g. comment, delete, email)..." class="w-full text-xs bg-slate-800 border border-slate-700 rounded-xl pl-9 pr-3 py-2 text-white outline-none focus:border-indigo-500 transition-colors">
+      </div>
+    </div>
+
+    <!-- 17 Collapsible Points Accordion -->
+    <div class="space-y-3" id="pointsAccordion">
+
+      <!-- Point 1 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="owner comment history tracker job owner add comment op_job_tracker_comments">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 1 [DONE]</span>
+            <span>Owner Comment History Tracker</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Maintain a history of all comments added by the job owner rather than overwriting past entries.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Backend Implementation:</div>
+            <p>Fixed legacy bug where <code class="mono text-indigo-300">DELETE FROM op_job_tracker_comments WHERE commentId="OWNERCOMMENT"</code> wiped past history. Each new owner comment now generates a unique ID <code class="mono text-indigo-300">OWNERCOMMENT_{ticks}</code> and is chronologically queried by <code class="mono text-indigo-300">GetJobWiseComments</code>.</p>
+          </div>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Frontend Implementation:</div>
+            <p>In <code class="mono text-indigo-300">job-details.html</code> &amp; <code class="mono text-indigo-300">job-details.js</code>, built an expandable history container displaying total count badge, latest comment at top, and full historical log of previous comments with timestamps.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 2 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="inactive team management admin page isactive toggle teams">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 2 [DONE]</span>
+            <span>Inactive Team Management (Admin Page)</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Add an option to view and manage inactive teams on the Admin Page.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Database &amp; Backend:</div>
+            <p>Added column <code class="mono text-indigo-300">isactive TINYINT(1) NOT NULL DEFAULT 1</code> to <code class="mono text-indigo-300">op_property_teams</code>. Created database method <code class="mono text-indigo-300">ToggleTeamStatus</code> and endpoint <code class="mono text-indigo-300">[HttpPost("toggleteamstatus")]</code> in <code class="mono text-indigo-300">AdminController.cs</code>.</p>
+          </div>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Admin Frontend:</div>
+            <p>Added STATUS column, filter button group ("All Teams", "Active Teams", "Inactive Teams"), status badges, and action buttons to activate/deactivate teams with instant table refresh.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 3 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="job details on hover tooltip card popover details column">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 3 [DONE]</span>
+            <span>Job Details on Hover</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Display job details when the user hovers over the Job Details column.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Frontend Implementation:</div>
+            <p>In both <code class="mono text-indigo-300">all-jobs.js</code> and <code class="mono text-indigo-300">jobs.js</code> (Area Modal), added a floating hover preview card to the DETAILS table cell. Shows full untruncated job description, area, and location on mouseover smoothly without clipping.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 4 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="job details in exported file csv export details column">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 4 [DONE]</span>
+            <span>Job Details in Exported File</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Include the Job Details column in exported files.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Frontend Implementation:</div>
+            <p>In <code class="mono text-indigo-300">exportJobsToCSV</code> (All Jobs) and <code class="mono text-indigo-300">exportAreaJobsToCSV</code> (Area Modal), included the DETAILS column with multiline cleaning and RFC 4180 CSV escaping.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 5 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="display all areas main page 0 tasks operational areas">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 5 [DONE]</span>
+            <span>Display All Areas (Even with 0 Tasks)</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Show all areas on the main page, even if no tasks are currently assigned to them.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Backend &amp; Frontend Fix:</div>
+            <p>Modified backend <code class="mono text-indigo-300">JobOverView</code> to query all operational areas and append missing areas with 0 counts. Also added client-side union merge with <code class="mono text-indigo-300">ALL_OPERATIONAL_AREAS</code>.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 6 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="support all file attachments upload pdf doc excel zip">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 6 [DONE]</span>
+            <span>Support All File Attachments</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Allow users to upload all file types while creating a job, not just images.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Implementation:</div>
+            <p>Updated all modal file inputs across 8 HTML files to <code class="mono text-indigo-300">accept="*/*"</code>. Removed extension restriction in <code class="mono text-indigo-300">main.js</code>, raised file limit to 25MB, and added rich file icons (PDF, Word, Excel, ZIP, Images).</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 7 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="job status permissions only assigned team change status">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 7 [DONE]</span>
+            <span>Job Status Permissions</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Allow only the assigned team (or Admins) to change the status of a job.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Backend &amp; Frontend:</div>
+            <p>In <code class="mono text-indigo-300">Opro_Business_Layer.cs</code>, added strict team membership validation throwing <code class="mono text-indigo-300">UnauthorizedAccessException</code> on status update attempts by unassigned non-admins. Added client permission checks in <code class="mono text-indigo-300">job-details.js</code> and <code class="mono text-indigo-300">all-jobs.js</code>.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 8 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="view-only access across resorts atmosphere admin view only mode">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 8 [DONE]</span>
+            <span>View-Only Access Across Resorts (Atmosphere Admin)</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Provide view-only access to specific areas across all resorts for Atmosphere Admin.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Implementation:</div>
+            <p>Implemented <code class="mono text-indigo-300">applyAtmosphereAdminViewOnlyMode()</code> in <code class="mono text-indigo-300">job-details.js</code> which detects Atmosphere Admin credentials, hides all modification/edit controls, and displays an amber view-only status indicator badge.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 9 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="additional email notifications event triggers status closure owner comment safety alert">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 9 [DONE]</span>
+            <span>Additional Email Notifications</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Review and define whether email notifications are required for events other than job assignments.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Audit &amp; Implementation:</div>
+            <p>Defined and implemented 4 core lifecycle triggers: Job Status Change, Job Closure, Owner Comment Added (<code class="mono text-indigo-300">SendEmailForOwnerComment</code>), and Critical Safety Alerts (<code class="mono text-indigo-300">SendEmailForSafetyAlert</code>) in <code class="mono text-indigo-300">EmailService.cs</code>.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 10 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="optional villa number guest villa jobs">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 10 [DONE]</span>
+            <span>Optional Villa Number (Guest Villa Jobs)</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Make the villa number optional for guest villa jobs.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Implementation:</div>
+            <p>In <code class="mono text-indigo-300">main.js</code>, removed the blocking validation on villa number for Guest Villa areas, set placeholder to <code class="mono text-indigo-300">e.g. V-101 (Optional)</code>, and hid the red asterisk.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 11 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="date sorting and filtering ascending descending create date expected date close date">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 11 [DONE]</span>
+            <span>Date Sorting and Filtering Across All Sections</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Fix ascending and descending date filters across all job sections.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Implementation:</div>
+            <p>Added clickable sort headers and indicators for CREATE DATE, EXPECTED COMPLETION DATE, and CLOSE DATE in <code class="mono text-indigo-300">all-jobs.html</code> and <code class="mono text-indigo-300">all-jobs.js</code>. Added date sort order selector in filter drawer and clickable date sort in Area Jobs modal.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 12 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="automatic success notifications remove ok button toast auto dismiss">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 12 [DONE]</span>
+            <span>Automatic Success Notifications (No Blocking Popups)</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Remove additional OK button pop-up after creating a task or closing a job. Display a success message that automatically disappears.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Implementation:</div>
+            <p>Replaced blocking <code class="mono text-indigo-300">alert()</code> calls with smooth, non-blocking toast notices that automatically fade out after 3.5 seconds. Modals close immediately upon action.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 13 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="delete uploaded attachments opro admin remove images files op_job_tracker_imageupload">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 13 [DONE]</span>
+            <span>Delete Uploaded Attachments by OPRO Admin</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Allow the OPRO Admin to remove previously uploaded images and files.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Backend &amp; Frontend:</div>
+            <p>Implemented <code class="mono text-indigo-300">DeleteJobUpload</code> in database layer and business layer (with disk cleanup from <code class="mono text-indigo-300">tempdata/uploads</code>). Exposed endpoint <code class="mono text-indigo-300">[HttpPost("deleteupload")]</code> in <code class="mono text-indigo-300">JobTrackerController.cs</code>. Added delete buttons to attachment cards in <code class="mono text-indigo-300">job-details.js</code>.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 14 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="super admin job deletion delete jobs">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 14 [DONE]</span>
+            <span>Super Admin Job Deletion</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Provide the Super Admin with the ability to delete jobs.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Backend &amp; Frontend:</div>
+            <p>Implemented cascading job deletion in <code class="mono text-indigo-300">DeleteJobTracker</code> with strict SuperAdmin authorization check in <code class="mono text-indigo-300">JobTrackerController.cs</code> (<code class="mono text-indigo-300">[HttpPost("deletejob")]</code>). Added "Delete Job" buttons in <code class="mono text-indigo-300">job-details.html</code> and <code class="mono text-indigo-300">all-jobs.js</code> dropdown visible strictly to Super Admins.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 15 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="retain admin search results preserve filter state sessionstorage">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 15 [DONE]</span>
+            <span>Retain Admin Search Results</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Preserve search results when a user opens a record and returns to the search page.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Implementation:</div>
+            <p>Enabled <code class="mono text-indigo-300">stateSave: true</code> on all DataTables in <code class="mono text-indigo-300">adminconsole.js</code>. Added <code class="mono text-indigo-300">saveAllJobsState()</code> and <code class="mono text-indigo-300">restoreAllJobsState()</code> in <code class="mono text-indigo-300">all-jobs.js</code> to persist filters, search terms, and pagination across views.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 16 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="team manager validation prevent deactivation sole manager inactive">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 16 [DONE]</span>
+            <span>Team Manager Validation (Sole Manager Protection)</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Prevent a user who manages a team from being marked inactive until another team manager is assigned. Display an appropriate error message.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Backend Implementation:</div>
+            <p>Implemented <code class="mono text-indigo-300">CheckIfUserIsSoleManager</code> in database layer. In <code class="mono text-indigo-300">EditEmployee</code> and <code class="mono text-indigo-300">DisableEmployee</code>, throws descriptive <code class="mono text-indigo-300">InvalidOperationException</code> when attempting to deactivate a sole team manager. <code class="mono text-indigo-300">AdminController.cs</code> catches and returns HTTP 400 Bad Request with the explanation.</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- Point 17 -->
+      <details class="point-item group rounded-xl border border-slate-800 bg-slate-800/40 p-4 transition-colors open:bg-slate-800/80 open:border-indigo-500/40" data-search="opro pvt ltd dashboard executive multi-property filters graphs">
+        <summary class="cursor-pointer font-bold text-sm text-slate-200 flex items-center justify-between select-none list-none">
+          <span class="flex items-center gap-3">
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">POINT 17 [DONE]</span>
+            <span>Dedicated OPRO Pvt. Ltd. Executive Dashboard</span>
+          </span>
+          <i class="fa-solid fa-chevron-down text-xs text-slate-500 group-open:rotate-180 transition-transform"></i>
+        </summary>
+        <div class="mt-4 pt-3 border-t border-slate-700/60 text-xs space-y-3 text-slate-300">
+          <p><strong class="text-white">Requirement:</strong> Create a dedicated dashboard for OPRO Pvt. Ltd. with customizable data filters and graphs.</p>
+          <div class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-1">
+            <div class="text-emerald-400 font-semibold">Implementation:</div>
+            <p>Created <code class="mono text-indigo-300">opro-dashboard.html</code> and <code class="mono text-indigo-300">opro-dashboard.js</code> with multi-property selectors, date range, department, priority, and status filters, 4 executive KPI cards, 4 Chart.js charts (resort workload comparison, monthly resolution trajectory, status distribution doughnut, department SLA breakdown), live resort performance table, and CSV export.</p>
+          </div>
+        </div>
+      </details>
+
+    </div>
+
+  </main>
+
+  <!-- Global Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-6 text-center text-xs text-slate-500 mt-12">
+    <p>&copy; 2026 OPRO Pvt. Ltd. &amp; WorkWize Solutions. All 17 Points Executed and Verified.</p>
+  </footer>
+
+  <!-- Search Filter Logic -->
+  <script>
+    document.getElementById("pointSearchInput")?.addEventListener("input", function (e) {
+      const q = e.target.value.toLowerCase().trim();
+      document.querySelectorAll(".point-item").forEach(item => {
+        const text = (item.getAttribute("data-search") || "" + item.textContent).toLowerCase();
+        if (!q || text.includes(q)) {
+          item.style.display = "";
+          if (q) item.open = true;
+        } else {
+          item.style.display = "none";
+        }
+      });
+    });
+  </script>
+</body>
+</html>

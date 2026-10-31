@@ -272,17 +272,76 @@ function renderJobDetails(data) {
     }
   }
 
-  // 10. Owner's Comment Card
+  // 10. Owner's Comment Card & History Tracker (Point 1)
   const ownerCard = document.getElementById("ownerCommentCard");
   const ownerText = document.getElementById("dynJobOwnerComment");
+  const ownerHistoryContainer = document.getElementById("dynOwnerCommentHistoryContainer");
+  const ownerHistoryList = document.getElementById("dynOwnerCommentHistoryList");
+  const ownerCountBadge = document.getElementById("dynOwnerCommentsCount");
+
   if (ownerCard && ownerText) {
-    if (data.owner_comment && String(data.owner_comment).trim().length > 0 && data.owner_comment !== "null") {
+    const commentsHistory = Array.isArray(data.owner_comments_history) ? [...data.owner_comments_history] : [];
+    // Also extract owner comments from data.comments if present
+    if (Array.isArray(data.comments)) {
+      data.comments.forEach(c => {
+        if (c.commentId && c.commentId.startsWith("OWNERCOMMENT") && !commentsHistory.some(h => h.commentDetail === c.commentDetail && h.commentDate === c.commentDate)) {
+          commentsHistory.push(c);
+        }
+      });
+    }
+
+    if (data.owner_comment || commentsHistory.length > 0) {
       ownerCard.classList.remove("hidden");
-      ownerText.innerHTML = escapeHtml(data.owner_comment).replace(/\n/g, "<br>");
+      const latestComment = data.owner_comment || (commentsHistory[0] ? commentsHistory[0].commentDetail : "");
+      const latestDate = commentsHistory[0]?.commentDate ? formatDate(commentsHistory[0].commentDate) : "Latest";
+      const latestAuthor = ((commentsHistory[0]?.firstName || "Job Owner") + " " + (commentsHistory[0]?.lastName || "")).trim();
+
+      ownerText.innerHTML = `
+        <div class="flex items-center justify-between mb-1.5 text-[11px] text-purple-700 font-semibold border-b border-purple-200/60 pb-1">
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-purple-600"></i> ${escapeHtml(latestAuthor)}</span>
+          <span class="text-purple-500 font-mono text-[10px]">${latestDate}</span>
+        </div>
+        <div class="text-xs text-purple-950 whitespace-pre-wrap leading-relaxed">${escapeHtml(latestComment)}</div>
+      `;
+
+      if (ownerCountBadge) {
+        ownerCountBadge.textContent = Math.max(commentsHistory.length, data.owner_comment ? 1 : 0);
+      }
+
+      if (ownerHistoryContainer && ownerHistoryList) {
+        if (commentsHistory.length > 1) {
+          ownerHistoryContainer.classList.remove("hidden");
+          ownerHistoryList.innerHTML = commentsHistory.slice(1).map(h => `
+            <div class="p-2.5 rounded-lg bg-white/90 border border-purple-200 text-xs text-purple-900 shadow-2xs">
+              <div class="flex items-center justify-between text-[10px] text-purple-600 font-semibold mb-1">
+                <span>${escapeHtml(h.firstName || "Owner")} ${escapeHtml(h.lastName || "")}</span>
+                <span class="font-mono text-slate-400">${formatDate(h.commentDate)}</span>
+              </div>
+              <div class="whitespace-pre-wrap leading-relaxed text-slate-800">${escapeHtml(h.commentDetail || "")}</div>
+            </div>
+          `).join("");
+        } else {
+          ownerHistoryContainer.classList.add("hidden");
+        }
+      }
     } else {
       ownerCard.classList.add("hidden");
     }
   }
+
+  // Point 14: Show Delete button for Super Admin
+  const deleteBtn = document.getElementById("detailDeleteJobBtn");
+  if (deleteBtn) {
+    const role = (typeof UserSession !== "undefined" && UserSession.getUserRole) ? UserSession.getUserRole().toUpperCase() : "";
+    if (role.includes("SUPERADMIN") || role.includes("SUPER ADMIN")) {
+      deleteBtn.classList.remove("hidden");
+    } else {
+      deleteBtn.classList.add("hidden");
+    }
+  }
+
+  // Point 8: Atmosphere Admin View-Only Mode Across Resorts
+  applyAtmosphereAdminViewOnlyMode();
 
   // 11. Assigned Team
   const assignedEl = document.getElementById("dynJobAssigned");
@@ -380,34 +439,60 @@ function renderDocumentationPhotos(allPhotos) {
       return;
     }
 
+    const role = (typeof UserSession !== "undefined" && UserSession.getUserRole) ? UserSession.getUserRole().toUpperCase() : "";
+    const canDeleteUpload = role.includes("ADMIN") || role.includes("SUPERADMIN") || role.includes("OPROADMIN");
+
     container.innerHTML = allPhotos.map((item) => {
       const rawFileName = item.name || "Job_Photo.jpg";
-      const cleanFileName = rawFileName.length > 20 ? rawFileName.slice(0, 17) + "..." : rawFileName;
+
+      const cleanFileName = rawFileName.length > 18 ? rawFileName.slice(0, 15) + "..." : rawFileName;
+      const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(rawFileName) || (item.url && item.url.startsWith("data:image"));
+      const isPdf = /\.pdf$/i.test(rawFileName);
 
       return `
-        <div 
-          class="group relative rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
-          onclick="openImagePreview('${escapeHtml(item.url)}', '${escapeHtml(rawFileName)}')"
-          title="Click to view full photo: ${escapeHtml(rawFileName)}"
-        >
-          <div class="h-32 w-full overflow-hidden bg-slate-900 flex items-center justify-center relative">
-            <img 
-              src="${item.url}" 
-              alt="${escapeHtml(cleanFileName)}" 
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-              loading="lazy"
-            >
+        <div class="group relative rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-blue-400 hover:shadow-md transition-all">
+          <div 
+            class="h-28 w-full overflow-hidden bg-slate-900 flex items-center justify-center relative cursor-pointer"
+            onclick="openImagePreview('${escapeHtml(item.url)}', '${escapeHtml(rawFileName)}')"
+            title="Click to view file: ${escapeHtml(rawFileName)}"
+          >
+            ${isImg ? `
+              <img src="${item.url}" alt="${escapeHtml(cleanFileName)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+            ` : isPdf ? `
+              <div class="flex flex-col items-center justify-center text-rose-400">
+                <i class="fa-solid fa-file-pdf text-3xl mb-1"></i>
+                <span class="text-[10px] text-slate-300 uppercase font-semibold">PDF Document</span>
+              </div>
+            ` : `
+              <div class="flex flex-col items-center justify-center text-blue-400">
+                <i class="fa-solid fa-file text-3xl mb-1"></i>
+                <span class="text-[10px] text-slate-300 uppercase font-semibold">Attachment</span>
+              </div>
+            `}
             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span class="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center text-sm shadow-md">
-                <i class="fa-solid fa-magnifying-glass-plus"></i>
+              <span class="w-8 h-8 rounded-full bg-white/90 text-slate-900 flex items-center justify-center text-xs shadow-md">
+                <i class="fa-solid fa-arrow-up-right-from-square"></i>
               </span>
             </div>
           </div>
-          <div class="p-2.5 border-t border-slate-100 bg-white">
-            <span class="text-xs font-semibold text-slate-800 block truncate">${escapeHtml(cleanFileName)}</span>
-            <span class="text-[10px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
-              <i class="fa-regular fa-eye text-[9px]"></i> View Full Photo
-            </span>
+          <div class="p-2 border-t border-slate-100 flex items-center justify-between gap-1">
+            <div class="truncate flex-1">
+              <span class="text-[11px] font-semibold text-slate-800 block truncate">${escapeHtml(cleanFileName)}</span>
+              <span class="text-[10px] text-blue-600 font-medium flex items-center gap-1 mt-0.5 cursor-pointer" onclick="openImagePreview('${escapeHtml(item.url)}', '${escapeHtml(rawFileName)}')">
+                <i class="fa-regular fa-eye text-[9px]"></i> View File
+              </span>
+            </div>
+            ${canDeleteUpload ? `
+              <button 
+                type="button" 
+                onclick="deleteJobAttachment('${escapeHtml(rawFileName)}')" 
+                class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0" 
+                title="Delete attachment (OPRO Admin)"
+              >
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            ` : ''}
+
           </div>
         </div>
       `;
@@ -583,3 +668,115 @@ function setLoadingState(isLoading) {
     orgIdEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-blue-600 text-xl mr-2"></i> Loading Job...';
   }
 }
+
+// Export for inline triggers
+window.openImagePreview = openImagePreview;
+window.closeImagePreview = closeImagePreview;
+
+// ==========================================
+// Point 7: Job Status Permissions
+// Only assigned team (or SuperAdmin/Admin) can change status
+// ==========================================
+function canUserChangeStatus(jobData) {
+  if (!jobData) return true;
+  const role = (typeof UserSession !== "undefined" && UserSession.getUserRole) ? UserSession.getUserRole().toUpperCase() : "";
+  if (role.includes("SUPERADMIN") || role.includes("ADMIN") || role.includes("OPROADMIN")) {
+    return true;
+  }
+  const user = (typeof UserSession !== "undefined" && UserSession.getUser) ? UserSession.getUser() : null;
+  const userEmail = (user?.email || user?.userName || "").toLowerCase();
+
+  if (Array.isArray(jobData.data1)) {
+    if (jobData.data1.some(m => (m.userid || m.userId || m.email || "").toLowerCase() === userEmail)) {
+      return true;
+    }
+  }
+  if (Array.isArray(jobData.teams)) {
+    if (jobData.teams.some(m => (m.userid || m.userId || m.email || "").toLowerCase() === userEmail)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// ==========================================
+// Point 8: Atmosphere Admin View-Only Mode Across Resorts
+// ==========================================
+function applyAtmosphereAdminViewOnlyMode() {
+  const role = (typeof UserSession !== "undefined" && UserSession.getUserRole) ? UserSession.getUserRole().toUpperCase() : "";
+  const isAtmosphereAdmin = role.includes("ATMOSPHERE") || role === "ATMOSPHERE_ADMIN" || role === "ATMOSPHERE ADMIN";
+
+  if (isAtmosphereAdmin) {
+    const heroBtn = document.getElementById("heroUpdateJobBtn");
+    const bottomBtn = document.getElementById("bottomUpdateJobBtn");
+    const deleteBtn = document.getElementById("detailDeleteJobBtn");
+    if (heroBtn) heroBtn.classList.add("hidden");
+    if (bottomBtn) bottomBtn.classList.add("hidden");
+    if (deleteBtn) deleteBtn.classList.add("hidden");
+
+    if (!document.getElementById("atmosphereAdminBadge")) {
+      const titleWrap = document.querySelector("#dynJobOrgId")?.parentElement;
+      if (titleWrap) {
+        const badge = document.createElement("span");
+        badge.id = "atmosphereAdminBadge";
+        badge.className = "px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 inline-flex items-center gap-1";
+        badge.innerHTML = '<i class="fa-solid fa-eye text-xs"></i> Atmosphere Admin (View-Only Mode)';
+        titleWrap.appendChild(badge);
+      }
+    }
+  }
+}
+
+// ==========================================
+// Point 13: Delete Uploaded Attachments
+// ==========================================
+async function deleteJobAttachment(fileName) {
+  if (!confirm(`Are you sure you want to permanently delete "${fileName}"? This action cannot be undone.`)) return;
+
+  try {
+    const propId = currentJobData?.propId || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "");
+    await WorkWizeAPI.request("api/jobtracker/deleteupload", {
+      method: "POST",
+      body: {
+        fileId: currentJobId,
+        jobId: currentJobId,
+        fileName: fileName,
+        propId: propId
+      }
+    });
+
+    showToast("Attachment removed successfully!", "success");
+    await loadJobDetails(currentJobId);
+  } catch (err) {
+    showToast(err.message || "Failed to delete attachment", "error");
+  }
+}
+window.deleteJobAttachment = deleteJobAttachment;
+
+// ==========================================
+// Point 14: Super Admin Job Deletion
+// ==========================================
+async function deleteCurrentJob() {
+  const displayId = currentJobData?.orgjobId || currentJobId;
+  if (!confirm(`Are you sure you want to permanently delete Job ${displayId}? All records and attachments will be deleted.`)) return;
+
+  try {
+    const propId = currentJobData?.propId || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "");
+    await WorkWizeAPI.request("api/jobtracker/deletejob", {
+      method: "POST",
+      body: {
+        jobId: currentJobId,
+        propId: propId
+      }
+    });
+
+    showToast(`Job ${displayId} deleted successfully.`, "success");
+    setTimeout(() => {
+      window.location.href = "all-jobs.html";
+    }, 900);
+  } catch (err) {
+    showToast(err.message || "Failed to delete job", "error");
+  }
+}
+window.deleteCurrentJob = deleteCurrentJob;
+

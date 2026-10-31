@@ -1,0 +1,151 @@
+#selectedFile img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+#selectedFilec {
+    background-image: url('../../assets/img/AppImages/uploadphoto.png'); /* Set the URL of your image */
+    background-position: center; /* Position the image at the center */
+    background-repeat: no-repeat; /* Prevent the image from repeating */
+    background-size: auto 145px;
+} 
+
+.bglogins {
+    background-image: url('../../assets/img/pages/design14.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f3fdff;
+    
+}
+
+
+.bgimg {
+    background-image: url('../../assets/img/pages/design61.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: rgba(243, 253, 255, 0.8);
+    
+}
+.bgimg2 {
+    background-image: url('../../assets/img/pages/design10.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+}
+.bgimg3 {
+    background-image: url('../../assets/img/pages/profile-banner.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f3fdff;
+    
+}
+.nav-pills .nav-link.active, .nav-pills .nav-link.active:hover, .nav-pills .nav-link.active:focus {
+    background-color: #0077b5;
+    color: #fff;
+    box-shadow: rgb(194 223 237) 0px 2px 4px 0px;
+}
+
+
+.form-check-input:checked, .form-check-input[type=checkbox]:indeterminate {
+    background-color: #4058a7;
+    border-color: #cb202778;
+    box-shadow: 0 2px 4px 0 #71dd3759;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #4058a7;
+}
+
+
+.input-group:focus-within .form-control, .input-group:focus-within .input-group-text {
+    border-color: #4058a7;
+}
+
+
+
+a {
+    color: #75c364;
+}
+a:hover {
+    color: #75c364;
+}
+
+.dropdown-item:not(.disabled).active, .dropdown-item:not(.disabled):active {
+    background-color: #83baf812;
+    color: #0b08c0 !important;
+}
+
+
+
+.select2-container--classic.select2-container--open .select2-selection--single {
+    border: 1px solid #ffbe00;
+}
+.select2-container--classic .select2-results__option--highlighted.select2-results__option--selectable {
+    background-color: #ffbe00;
+    color: #fff;
+}
+.select2-container--classic .select2-selection--single:focus {
+    border: 1px solid #ffbe00;
+}
+.select2-container--classic.select2-container--open .select2-dropdown {
+    border-color: #ffab00;
+}
+
+
+.misc-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: auto;
+    text-align: center;
+}
+
+
+@media (min-width: 1200px) {
+    .modal-xxl {
+        --bs-modal-width: 90vw;
+    }
+}
+
+.img-cust{
+    max-height: 20vh; /* Set maximum height */
+    max-width: 15vw; /* Set maximum width */
+    height: auto; /* Let the height adjust automatically */
+    width: auto; /* Let the width adjust automatically */
+    transition: all 0.3s ease; 
+}
+
+.img-cust.enlarged {
+    height: 80vh; /* Adjust as needed */
+    width: 60vw; /* Adjust as needed */
+    z-index: 999; /* Ensure the enlarged image appears on top */
+    position: fixed; /* Position the enlarged image relative to the viewport */
+    top: 50%; /* Position the enlarged image at the center of the viewport */
+    left: 50%; /* Position the enlarged image at the center of the viewport */
+    transform: translate(-50%, -50%); /* Center the enlarged image */
+}
+
+ .imgt {
+    width: 100px;
+    height: 85px;
+    border: 1px solid #c78807a8;
+    padding: 1px;
+    transition: width 0.3s, height 0.3s, box-shadow 0.3s;
+  }
+  .imgt:hover {
+     box-shadow: 0 0 2px 1px #ffab00bd;
+     width: 400px;
+     height: 300px;
+  }
+
+  .truncate {
+    max-width: 0; /* Set maximum width to limit content */
+    white-space: nowrap; /* Prevent text from wrapping */
+    overflow: hidden; /* Hide overflowing content */
+    text-overflow: ellipsis; /* Display ellipsis (...) for truncated text */
+}

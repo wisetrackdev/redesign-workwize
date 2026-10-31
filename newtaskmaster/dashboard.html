@@ -46,6 +46,10 @@
           <i class="fa-regular fa-circle-check text-xs"></i>
           <span>Closed Jobs</span>
         </a>
+        <a href="opro-dashboard.html" class="tab" id="headerNavOproDashboard" data-tab="opro-dashboard">
+          <i class="fa-solid fa-chart-pie text-xs text-indigo-500"></i>
+          <span>OPRO Dashboard</span>
+        </a>
       </nav>
 
       <!-- Right Header Actions (Property Selector & User Profile) -->
@@ -438,12 +442,12 @@
 
           <!-- Drag and Drop Box -->
           <div id="fileDropZone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-slate-50 transition-all">
-            <input type="file" id="fileUploadInput" multiple accept=".jpg,.jpeg,.png,.pdf" class="hidden">
+            <input type="file" id="fileUploadInput" multiple accept="*/*" class="hidden">
             <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto mb-3">
               <i class="fa-regular fa-file-image"></i>
             </div>
             <p class="text-sm font-semibold text-slate-700">Drag & drop files here or <span class="text-blue-600 underline">click to upload</span></p>
-            <p class="text-[11px] text-slate-400 mt-1">Only JPG, JPEG, and PNG files are allowed with maximum size limit of 5MB</p>
+            <p class="text-[11px] text-slate-400 mt-1">All file types supported (Images, PDFs, Word, Excel, ZIP) up to 25MB</p>
           </div>
 
           <!-- Uploaded files list preview -->
