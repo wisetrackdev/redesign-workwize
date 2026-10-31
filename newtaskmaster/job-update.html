@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkWize | Update Job</title>
+  <link rel="icon" type="image/jpeg" href="assets/logo.jpeg">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen flex flex-col" style="background-color: #F2F5FB !important;">
+
+  <!-- Main Content Area -->
+  <div class="w-full flex-1 flex flex-col">
+    
+    <!-- Top Header -->
+    <header class="top-header">
+      <!-- WorkWize Brand Logo on the Left -->
+      <div class="logo-pill">
+        <a href="job-by-area.html" class="flex items-center">
+          <img src="assets/logo.png" alt="WorkWize Logo" class="header-logo-img">
+        </a>
+      </div>
+
+      <!-- Segmented Navigation Pills in Center -->
+      <nav class="seg" id="tabs">
+        <a href="dashboard.html" class="tab" id="headerNavDashboard" data-tab="dashboard">
+          <i class="fa-solid fa-house text-xs"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="job-by-area.html" class="tab" id="headerNavJobByArea" data-tab="job-by-area">
+          <i class="fa-solid fa-layer-group text-xs"></i>
+          <span>Job by Area</span>
+        </a>
+        <a href="all-jobs.html" class="tab on" id="headerNavAllJobs" data-tab="all-jobs">
+          <i class="fa-solid fa-list-check text-xs"></i>
+          <span>All Jobs</span>
+        </a>
+        <a href="all-jobs.html?status=Closed" class="tab" id="headerNavClosedJobs" data-tab="closed-jobs">
+          <i class="fa-regular fa-circle-check text-xs"></i>
+          <span>Closed Jobs</span>
+        </a>
+      </nav>
+
+      <!-- Right Header Actions (Property Selector & User Profile) -->
+      <div class="flex items-center gap-3 sm:gap-4 header-right-actions">
+        <!-- Property Selector Dropdown -->
+        <div class="relative header-property-selector" id="headerPropertyDropdownContainer">
+          <button id="headerPropertyDropdownBtn" type="button" class="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200/80 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-all shadow-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+            <i class="fa-solid fa-hotel text-blue-600 text-xs"></i>
+            <span id="headerCurrentPropertyName" class="truncate max-w-[150px]">Loading Property...</span>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+          </button>
+          <div id="headerPropertyMenu" class="hidden absolute right-0 mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs text-slate-700 animate-fade-in max-h-72 overflow-y-auto">
+            <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+              <span>Select Property</span>
+              <i class="fa-solid fa-building-circle-check text-blue-500"></i>
+            </div>
+            <div id="headerPropertyList" class="p-1 space-y-1">
+              <!-- Dynamically populated property options -->
+            </div>
+          </div>
+        </div>
+
+        <!-- User Profile Pill -->
+        <div class="relative">
+          <button id="userProfileBtn" class="flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-slate-50 transition-colors">
+            <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs uppercase" id="headerUserAvatar">
+              <i class="fa-regular fa-user"></i>
+            </div>
+            <div class="text-left leading-none hidden sm:block max-w-[150px]">
+              <span class="text-xs font-bold text-slate-800 block truncate header-user-display-name">Loading...</span>
+              <span class="text-[10px] text-slate-400 font-medium block header-user-display-role">Staff</span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+          </button>
+
+          <div id="userProfileMenu" class="hidden absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 animate-fade-in">
+            <div class="px-4 py-2 border-b border-slate-100 font-medium">
+              <p class="text-slate-800 font-semibold header-menu-user-name">User</p>
+              <p class="text-slate-400 text-[11px] truncate header-menu-user-email">user@workwize.io</p>
+            </div>
+            <a href="job-by-area.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-solid fa-layer-group mr-2 text-slate-400"></i> Job by Area</a>
+            <a href="all-jobs.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-solid fa-list-check mr-2 text-slate-400"></i> All Jobs</a>
+            <a href="dashboard.html" class="block px-4 py-2 hover:bg-slate-50"><i class="fa-solid fa-house mr-2 text-slate-400"></i> Dashboard</a>
+            <div class="border-t border-slate-100 my-1"></div>
+            <a href="login.html" class="block px-4 py-2 hover:bg-rose-50 text-rose-600"><i class="fa-solid fa-arrow-right-from-bracket mr-2"></i> Log Out</a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Body -->
+    <main class="p-6 sm:p-8 max-w-[80rem] w-full mx-auto space-y-6">
+
+      <!-- Breadcrumbs & Navigation -->
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-2 text-xs text-slate-500">
+          <a href="job-by-area.html" class="hover:text-blue-600 transition-colors">Job by Area</a>
+          <span>/</span>
+          <a href="all-jobs.html" class="hover:text-blue-600 transition-colors">All Jobs</a>
+          <span>/</span>
+          <a id="breadcrumbViewJobLink" href="#" class="hover:text-blue-600 font-medium transition-colors">Job Details</a>
+          <span>/</span>
+          <span class="text-slate-900 font-bold">Update Job</span>
+        </div>
+        <a id="backToJobDetailsBtn" href="all-jobs.html" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors">
+          <i class="fa-solid fa-arrow-left"></i> Back to Job Details
+        </a>
+      </div>
+
+      <!-- Job Reference Banner -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Editing Job Order:</span>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900" id="updateJobDisplayId">Loading...</h1>
+            <span id="updateCurrentStatusBadge" class="badge-status badge-in-progress text-xs font-bold px-3 py-0.5 rounded-full">In Progress</span>
+            <span id="updateCurrentPriorityBadge" class="badge-priority badge-priority-medium text-xs font-bold px-3 py-0.5 rounded-full">Medium</span>
+          </div>
+          <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
+            <span id="updateJobPropName">Property</span> &bull; 
+            <span id="updateJobCreatedDate">Created -</span>
+          </p>
+        </div>
+
+        <div>
+          <a id="viewJobDetailsLink" href="#" class="btn-outline text-xs !py-2 !px-3 font-semibold text-slate-700 hover:text-blue-600">
+            <i class="fa-regular fa-eye mr-1.5 text-blue-600"></i> View Only Page
+          </a>
+        </div>
+      </div>
+
+      <!-- Main Update Form -->
+      <form id="jobUpdateForm" class="space-y-6">
+
+        <!-- 1. Status & Priority Section -->
+        <div class="ww-card space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-arrows-spin"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm">Status & Priority Settings</h3>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Job Status <span class="text-rose-500">*</span>
+              </label>
+              <select id="editJobStatus" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+                <option value="YET_TO_COMMENCE">Yet to Commence</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="UNDER_DISCUSSION">Under Discussion</option>
+                <option value="SPARES_ON_ORDER">Spares on Order</option>
+                <option value="FIXED">Fixed</option>
+                <option value="COMPLETED">Closed</option>
+              </select>
+              <p class="text-[11px] text-slate-400 mt-1">Select "Closed" if all repairs and inspections have been completed.</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Priority Level <span class="text-rose-500">*</span>
+              </label>
+              <select id="editJobPriority" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+                <option value="LOW">Low Priority</option>
+                <option value="MEDIUM">Medium Priority</option>
+                <option value="HIGH">High Priority</option>
+                <option value="SAFETY">Safety Issue</option>
+              </select>
+              <p class="text-[11px] text-slate-400 mt-1">Safety issues are given highest priority in work dispatch.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Operational Assignment & Schedule -->
+        <div class="ww-card space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-users-gear"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm">Assignment & Timeline</h3>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Assigned Team / Assignee <span class="text-rose-500">*</span>
+              </label>
+              <select id="editAssignedTo" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+                <option value="Facilities Team">Facilities Team</option>
+                <option value="Engineering Team">Engineering Team</option>
+                <option value="Electrical Maintenance">Electrical Maintenance</option>
+                <option value="Plumbing Maintenance">Plumbing Maintenance</option>
+                <option value="Housekeeping Team">Housekeeping Team</option>
+                <option value="Safety Team">Safety Team</option>
+                <option value="Testing - IT Admin">Testing - IT Admin</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Expected Completion Date
+              </label>
+              <input type="date" id="editExpectedCompletion" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Reference / Work Order #
+              </label>
+              <input type="text" id="editRefNum" placeholder="e.g. WO-9081" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Location & Area -->
+        <div class="ww-card space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-location-dot"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm">Location Details</h3>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Operational Area <span class="text-rose-500">*</span>
+              </label>
+              <select id="editAreaName" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+                <option value="Development/Project">Development/Project</option>
+                <option value="Fire Safety">Fire Safety</option>
+                <option value="Back of the House">Back of the House</option>
+                <option value="CAPEX">CAPEX</option>
+                <option value="SOP & Checklist">SOP & Checklist</option>
+                <option value="Energy Management">Energy Management</option>
+                <option value="Waste Management">Waste Management</option>
+                <option value="Utility">Utility</option>
+                <option value="Guest Villa">Guest Villa</option>
+                <option value="Statutory Compliance">Statutory Compliance</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Specific Location / Room
+              </label>
+              <input type="text" id="editJobLocation" placeholder="e.g. Pump Room / Master Bedroom" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+
+            <div id="villaFieldGroup">
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Villa Number (If Villa)
+              </label>
+              <input type="text" id="editVillaNumber" placeholder="e.g. 104" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Job Scope & Special Remarks -->
+        <div class="ww-card space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-file-pen"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm">Job Scope & Remarks</h3>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Job Description / Scope of Work <span class="text-rose-500">*</span>
+              </label>
+              <textarea id="editJobDetail" rows="4" required placeholder="Describe the operational task or repair..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none resize-y"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Special Remarks / Operational Notes
+              </label>
+              <textarea id="editRemarks" rows="2" placeholder="Any special instructions or considerations..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none resize-y"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Financials (Budget & Expense) -->
+        <div class="ww-card space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-dollar-sign"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm">Financial Allocation (Optional)</h3>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Budget Allocated ($)</label>
+              <input type="number" id="editBudget" min="0" step="any" placeholder="0" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Cost Center</label>
+              <input type="text" id="editCostCenter" placeholder="POMEC / CAPEX" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Final Expense ($)</label>
+              <input type="number" id="editFinalExp" min="0" step="any" placeholder="0" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Add Progress Note & Upload Photo -->
+        <div class="ww-card space-y-4">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-comment-medical"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm">Add Progress Note & Attach Photo</h3>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                New Progress Update / Activity Comment
+              </label>
+              <textarea id="editNewComment" rows="3" placeholder="Enter progress report, status changes, or work completed notes..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none resize-none"></textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">
+                Attach New Photo / Documentation File
+              </label>
+              <input type="file" id="editPhotoFile" accept="image/*" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer">
+              <p class="text-[11px] text-slate-400 mt-1">Upload JPEG, PNG or WebP images to append to this work order.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit & Cancel Bar -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-end gap-3">
+          <a id="cancelUpdateBtn" href="all-jobs.html" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-all">
+            Cancel
+          </a>
+          <button type="submit" id="saveJobUpdateBtn" class="px-7 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 inline-flex items-center gap-2 transition-all">
+            <i class="fa-solid fa-floppy-disk"></i>
+            <span id="saveBtnText">Save Changes</span>
+          </button>
+        </div>
+
+      </form>
+
+    </main>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/job-update.js"></script>
+</body>
+</html>

@@ -1,44 +1,13 @@
 /**
- * WorkWize Job Details View & Edit Logic
- * Full live API connectivity to:
- * - api/jobtracker/getjobbyid
- * - api/jobtracker/updatejobfields
- * - api/jobtracker/updatejob
- * - api/jobtracker/addcomment
- * Complete parity with taskmaster jobpage.js
+ * WorkWize Job Details View Logic
+ * Pure read-only presentation connected to WorkWizeAPI
  */
 
 let currentJobId = "";
 let currentJobData = null;
-let currentEditField = "";
-
-// Standard operational areas for Area dropdown (Mirrors taskmaster)
-const ALL_OPERATIONAL_AREAS_LIST = [
-  "Development/Project",
-  "Fire Safety",
-  "Back of the House",
-  "CAPEX",
-  "SOP & Checklist",
-  "Energy Management",
-  "Waste Management",
-  "Utility",
-  "Guest Villa",
-  "Statutory Compliance"
-];
-
-// Standard operational teams for Assigned To dropdown (Mirrors taskmaster)
-const ALL_OPERATIONAL_TEAMS_LIST = [
-  "Testing - IT Admin",
-  "Facilities Team",
-  "Engineering Team",
-  "Safety Team",
-  "Electrical Maintenance",
-  "Plumbing Maintenance",
-  "Housekeeping Team"
-];
 
 document.addEventListener("DOMContentLoaded", function () {
-  // Extract job ID from URL parameter (supports both ?id= and ?jobid= like taskmaster)
+  // Extract job ID from URL parameter (supports both ?id= and ?jobid=)
   const urlParams = new URLSearchParams(window.location.search);
   currentJobId = urlParams.get("id") || urlParams.get("jobid");
 
@@ -49,14 +18,13 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   if (!currentJobId) {
-    currentJobId = localStorage.getItem("workwize_last_job_id") || "Tes-313026-10738";
+    currentJobId = localStorage.getItem("workwize_last_job_id") || "";
   } else {
     localStorage.setItem("workwize_last_job_id", currentJobId);
   }
 
   // Initial load
   loadJobDetails(currentJobId);
-  initModalListeners();
 });
 
 async function loadJobDetails(jobId) {
@@ -64,31 +32,57 @@ async function loadJobDetails(jobId) {
 
   let loaded = false;
 
+  // 1. Try Live API (api/jobtracker/getjobbyid)
   if (typeof WorkWizeAPI !== "undefined" && jobId) {
     try {
       const res = await WorkWizeAPI.getJobById(jobId);
       if (res && res.success && res.jobdata) {
         currentJobData = res.jobdata;
-        renderJobDetails(res.jobdata, res.role);
+        renderJobDetails(res.jobdata);
         loaded = true;
       }
     } catch (err) {
-      console.warn("API getJobById error, falling back to local database:", err);
+      console.warn("API getJobById error, will try property jobs search:", err);
+    }
+
+    // 1b. If single getJobById didn't find it, check in property jobs
+    if (!loaded) {
+      try {
+        const propId = WorkWizeAPI.getCurrentProperty();
+        const propJobsRes = await WorkWizeAPI.getPropertyJobs(propId);
+        if (propJobsRes && Array.isArray(propJobsRes.jobs)) {
+          const matched = propJobsRes.jobs.find(j => 
+            (j.jobId && j.jobId.toLowerCase() === jobId.toLowerCase()) || 
+            (j.orgjobId && j.orgjobId.toLowerCase() === jobId.toLowerCase())
+          );
+          if (matched) {
+            currentJobData = matched;
+            renderJobDetails(matched);
+            loaded = true;
+          }
+        }
+      } catch (e) {
+        console.warn("Property jobs lookup failed:", e);
+      }
     }
   }
 
-  // Fallback to local DB if API fails or offline
+  // 2. Fallback to local database if API not available or job not found on server
   if (!loaded) {
     if (typeof WorkWizeDB !== "undefined") {
       const allLocal = WorkWizeDB.getJobs();
-      const localJob = allLocal.find(j => j.id === jobId || (j.refNo && j.refNo === jobId)) || allLocal[0];
+      const localJob = allLocal.find(j => 
+        (j.id && j.id.toLowerCase() === (jobId || "").toLowerCase()) || 
+        (j.refNo && j.refNo.toLowerCase() === (jobId || "").toLowerCase())
+      ) || (allLocal.length > 0 ? allLocal[0] : null);
+
       if (localJob) {
         currentJobData = {
           jobId: localJob.id,
           orgjobId: localJob.id,
-          propId: WorkWizeAPI.getCurrentProperty(),
-          propName: WorkWizeAPI.getCurrentPropertyName(),
-          areaName: localJob.area || "Development/Project",
+          propId: WorkWizeAPI ? WorkWizeAPI.getCurrentProperty() : "PROP-001",
+          propName: WorkWizeAPI ? WorkWizeAPI.getCurrentPropertyName() : "Main Facility",
+          areaName: localJob.area || "General Area",
           villaNumber: localJob.villaNumber || "-",
           jobLocation: localJob.location || "Main Building",
           priority: (localJob.priority || "MEDIUM").toUpperCase(),
@@ -98,20 +92,13 @@ async function loadJobDetails(jobId) {
           refNum: localJob.refNo || "-",
           budget: localJob.budget || 0,
           finalExp: 0,
-          ccf: localJob.costCenter || "POMEC",
-          ccf_dept: "",
-          jobDetail: localJob.details || localJob.title || "No detailed description provided.",
+          jobDetail: localJob.details || localJob.description || "Operational job order",
           remarks: localJob.remarks || "",
-          isActive: localJob.status !== "Closed" && localJob.status !== "Completed",
-          jobCloseOn: localJob.status === "Closed" ? localJob.expectedDate : null,
-          jobCloseBy: localJob.status === "Closed" ? "Admin" : null,
-          uploads: [],
-          imageUploads: [],
-          propImg: [],
+          teams: localJob.assignedTo ? [localJob.assignedTo] : ["Facilities Team"],
           comments: [],
-          teams: localJob.assignedTo ? [localJob.assignedTo] : ["Testing - IT Admin"]
+          uploads: []
         };
-        renderJobDetails(currentJobData, "ADMIN");
+        renderJobDetails(currentJobData);
         loaded = true;
       }
     }
@@ -120,80 +107,83 @@ async function loadJobDetails(jobId) {
   setLoadingState(false);
 
   if (!loaded) {
-    showToast("Could not load job details. Please check the job ID.", "error");
+    const orgIdEl = document.getElementById("dynJobOrgId");
+    if (orgIdEl) orgIdEl.textContent = "Job Not Found";
+    const detailTextEl = document.getElementById("dynJobDetailText");
+    if (detailTextEl) {
+      detailTextEl.innerHTML = `<span class="text-rose-500 font-medium">Unable to locate job #${escapeHtml(jobId || 'Unknown')}. It may have been removed or you may have switched properties.</span>`;
+    }
   }
 }
 
-function renderJobDetails(data, role) {
-  const displayId = data.orgjobId || data.jobId || currentJobId;
-  const isClosed = data.isActive === false || Boolean(data.jobCloseOn) || (data.jobStatus && String(data.jobStatus).toUpperCase().includes("CLOSE"));
+function renderJobDetails(data) {
+  const displayId = data.orgjobId || data.jobId || currentJobId || "Job Details";
+  const rawJobId = data.jobId || data.orgjobId || currentJobId;
+  const isClosed = data.isActive === false || 
+                   Boolean(data.jobCloseOn) || 
+                   (data.jobStatus && String(data.jobStatus).toUpperCase().includes("CLOSE")) ||
+                   (data.status && String(data.status).toUpperCase().includes("CLOSE"));
 
-  // 1. Breadcrumbs & Titles
-  const breadcrumbEl = document.getElementById("breadcrumbJobId");
+  // 1. Breadcrumbs & Org ID
+  const breadcrumbEl = document.getElementById("dynJobBreadcrumbId");
   const orgIdEl = document.getElementById("dynJobOrgId");
   if (breadcrumbEl) breadcrumbEl.textContent = displayId;
   if (orgIdEl) orgIdEl.textContent = displayId;
 
-  // 2. Property Banner (Taskmaster prop-img-banner)
-  const bannerEl = document.getElementById("propImgBanner");
-  const bannerTitle = document.getElementById("bannerPropTitle");
-  const bannerSub = document.getElementById("bannerPropSubtitle");
-  if (bannerEl) {
-    const bannerUrl = (Array.isArray(data.propImg) && data.propImg.length > 0) ? normalizeImageUrl(data.propImg[0]) : "";
-    if (bannerUrl) {
-      bannerEl.style.backgroundImage = `url(${bannerUrl})`;
-      bannerEl.classList.remove("hidden");
-      if (bannerTitle) bannerTitle.textContent = data.propName || "Property";
-      if (bannerSub) bannerSub.textContent = `[${data.areaName || "Facility"}] Operational Banner`;
-    } else {
-      bannerEl.classList.add("hidden");
-    }
-  }
+  // 2. Set Up "Update Job" buttons
+  const updateUrl = `job-update.html?id=${encodeURIComponent(rawJobId)}`;
+  const heroUpdateBtn = document.getElementById("heroUpdateJobBtn");
+  const bottomUpdateBtn = document.getElementById("bottomUpdateJobBtn");
+  if (heroUpdateBtn) heroUpdateBtn.href = updateUrl;
+  if (bottomUpdateBtn) bottomUpdateBtn.href = updateUrl;
 
-  // 3. Active / Closed Badge (Mirrors taskmaster text-bg-danger when active, text-bg-success when closed)
+  // 3. Active / Closed Badge
   const activeBadge = document.getElementById("dynJobActiveBadge");
-  const closeJobBtn = document.getElementById("detailCloseJobBtn");
   const closedInfo = document.getElementById("closedInfoContainer");
-  const newCommentBox = document.getElementById("newCommentBox");
 
   if (activeBadge) {
     if (isClosed) {
-      activeBadge.className = "badge-status badge-closed";
+      activeBadge.className = "badge-status badge-closed text-xs font-bold px-3 py-1 rounded-full";
       activeBadge.innerHTML = '<i class="fa-solid fa-circle-check text-[10px] mr-1"></i> Closed';
     } else {
-      activeBadge.className = "badge-status badge-yet-to-commence";
+      activeBadge.className = "badge-status badge-yet-to-commence text-xs font-bold px-3 py-1 rounded-full";
       activeBadge.innerHTML = '<i class="fa-solid fa-circle-dot text-[10px] mr-1"></i> Active Job';
     }
   }
 
   if (isClosed) {
-    if (closeJobBtn) closeJobBtn.classList.add("hidden");
-    if (newCommentBox) newCommentBox.classList.add("hidden");
     if (closedInfo) {
       closedInfo.classList.remove("hidden");
       const closedOnEl = document.getElementById("dynJobClosedOn");
       const closedByEl = document.getElementById("dynJobClosedBy");
-      if (closedOnEl) closedOnEl.textContent = formatDate(data.jobCloseOn);
-      if (closedByEl) closedByEl.textContent = data.jobCloseBy || "Authorized Officer";
+      if (closedOnEl) closedOnEl.textContent = formatDate(data.jobCloseOn || data.closeDate);
+      if (closedByEl) closedByEl.textContent = data.jobCloseBy || data.closedBy || "Authorized Officer";
     }
   } else {
-    if (closeJobBtn) closeJobBtn.classList.remove("hidden");
-    if (newCommentBox) newCommentBox.classList.remove("hidden");
     if (closedInfo) closedInfo.classList.add("hidden");
   }
 
   // 4. Status Badge
-  const normStatus = normalizeStatusString(data.jobStatus);
+  const normStatus = normalizeStatusString(data.jobStatus || data.status);
   let statusCls = "badge-in-progress";
-  if (isClosed) statusCls = "badge-closed";
+  if (isClosed || normStatus === "Closed") statusCls = "badge-closed";
   else if (normStatus === "Yet to Commence") statusCls = "badge-yet-to-commence";
   else if (normStatus === "Under Discussion") statusCls = "badge-under-discussion";
+  else if (normStatus === "Spares on Order") statusCls = "badge-spares-on-order";
   else if (normStatus === "Fixed") statusCls = "badge-open";
 
   const statusEl = document.getElementById("dynJobStatus");
   if (statusEl) {
-    statusEl.className = `badge-status ${statusCls} cursor-pointer hover:opacity-80 transition-opacity`;
+    statusEl.className = `badge-status ${statusCls} text-xs font-bold px-3 py-1 rounded-full`;
     statusEl.textContent = normStatus;
+  }
+
+  const viewStatusText = document.getElementById("viewJobStatusText");
+  const viewStatusBadge = document.getElementById("viewJobStatusBadge");
+  if (viewStatusText) viewStatusText.textContent = normStatus;
+  if (viewStatusBadge) {
+    viewStatusBadge.className = `badge-status ${statusCls} text-xs font-bold px-3 py-0.5 rounded-full`;
+    viewStatusBadge.textContent = normStatus;
   }
 
   // 5. Priority Badge
@@ -205,20 +195,33 @@ function renderJobDetails(data, role) {
 
   const priorityEl = document.getElementById("dynJobPriority");
   if (priorityEl) {
-    priorityEl.className = `badge-priority ${priorityCls} cursor-pointer hover:opacity-80 transition-opacity`;
+    priorityEl.className = `badge-priority ${priorityCls} text-xs font-bold px-3 py-1 rounded-full`;
     priorityEl.textContent = normPriority;
   }
 
-  // 6. Header Subtitle
+  const viewPriorityText = document.getElementById("viewJobPriorityText");
+  const viewPriorityBadge = document.getElementById("viewJobPriorityBadge");
+  if (viewPriorityText) viewPriorityText.textContent = `${normPriority} Priority`;
+  if (viewPriorityBadge) {
+    viewPriorityBadge.className = `badge-priority ${priorityCls} text-xs font-bold px-3 py-0.5 rounded-full`;
+    viewPriorityBadge.textContent = normPriority;
+  }
+
+  // 6. Header Area & Property Pills
   const areaTitleEl = document.getElementById("dynJobAreaTitle");
   const propTitleEl = document.getElementById("dynJobPropTitle");
-  if (areaTitleEl) areaTitleEl.textContent = data.areaName || "Area";
-  if (propTitleEl) propTitleEl.textContent = data.propName ? `[${data.propName}]` : "";
+  if (areaTitleEl) {
+    areaTitleEl.innerHTML = `<i class="fa-solid fa-layer-group text-blue-500"></i> ${escapeHtml(data.areaName || data.area || "Facility Area")}`;
+  }
+  if (propTitleEl) {
+    const propNameStr = data.propName || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentPropertyName() : "Property");
+    propTitleEl.innerHTML = `<i class="fa-solid fa-hotel text-slate-400"></i> ${escapeHtml(propNameStr)}`;
+  }
 
   // 7. Details / Scope Card
   const detailTextEl = document.getElementById("dynJobDetailText");
   if (detailTextEl) {
-    const rawDetail = data.jobDetail || data.details || "No details provided";
+    const rawDetail = data.jobDetail || data.details || data.description || "No specific details provided for this job order.";
     detailTextEl.innerHTML = escapeHtml(rawDetail).replace(/\n/g, "<br>");
   }
 
@@ -231,8 +234,8 @@ function renderJobDetails(data, role) {
   const expectedEl = document.getElementById("dynJobExpected");
   const refNumEl = document.getElementById("dynJobRefNum");
 
-  if (propNameEl) propNameEl.textContent = data.propName || WorkWizeAPI.getCurrentPropertyName() || "-";
-  if (areaNameEl) areaNameEl.textContent = data.areaName || "-";
+  if (propNameEl) propNameEl.textContent = data.propName || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentPropertyName() : "-");
+  if (areaNameEl) areaNameEl.textContent = data.areaName || data.area || "-";
   
   if (villaBadge) {
     if (data.villaNumber && data.villaNumber !== "-" && data.villaNumber !== "null") {
@@ -243,18 +246,29 @@ function renderJobDetails(data, role) {
     }
   }
 
-  if (locationEl) locationEl.textContent = data.jobLocation || "-";
-  if (createdOnEl) createdOnEl.textContent = formatDate(data.jobCreatedOn);
-  if (expectedEl) expectedEl.textContent = formatDate(data.expectedCompletion);
+  const villaDisplay = document.getElementById("dynJobVillaDisplay");
+  if (villaDisplay) {
+    if (data.villaNumber && data.villaNumber !== "-" && data.villaNumber !== "null") {
+      villaDisplay.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200">Villa ${escapeHtml(data.villaNumber)}</span>`;
+    } else {
+      villaDisplay.textContent = "N/A (General Facility)";
+    }
+  }
+
+  if (locationEl) locationEl.textContent = data.jobLocation || data.location || "-";
+  if (createdOnEl) createdOnEl.textContent = formatDate(data.jobCreatedOn || data.createdOn);
+  if (expectedEl) expectedEl.textContent = formatDate(data.expectedCompletion || data.expectedDate);
   if (refNumEl) refNumEl.textContent = (data.refNum && data.refNum !== "null") ? data.refNum : "-";
 
   // 9. Remarks Card
+  const remarksCard = document.getElementById("remarksCard");
   const remarksText = document.getElementById("dynJobRemarks");
-  if (remarksText) {
-    if (data.remarks) {
+  if (remarksCard && remarksText) {
+    if (data.remarks && String(data.remarks).trim().length > 0 && data.remarks !== "null") {
+      remarksCard.classList.remove("hidden");
       remarksText.innerHTML = escapeHtml(data.remarks).replace(/\n/g, "<br>");
     } else {
-      remarksText.textContent = "No remarks noted.";
+      remarksCard.classList.add("hidden");
     }
   }
 
@@ -262,7 +276,7 @@ function renderJobDetails(data, role) {
   const ownerCard = document.getElementById("ownerCommentCard");
   const ownerText = document.getElementById("dynJobOwnerComment");
   if (ownerCard && ownerText) {
-    if (data.owner_comment) {
+    if (data.owner_comment && String(data.owner_comment).trim().length > 0 && data.owner_comment !== "null") {
       ownerCard.classList.remove("hidden");
       ownerText.innerHTML = escapeHtml(data.owner_comment).replace(/\n/g, "<br>");
     } else {
@@ -299,9 +313,9 @@ function renderJobDetails(data, role) {
       ccfDeptEl.textContent = "";
     }
   }
-  if (finalExpEl) finalExpEl.textContent = `$${Number(data.finalExp || 0).toLocaleString()}`;
+  if (finalExpEl) finalExpEl.textContent = `$${Number(data.finalExp || data.expense || 0).toLocaleString()}`;
 
-  // 13. Render Photos & Attachments (Both in Scope card and Documentation Gallery)
+  // 13. Render Photos & Attachments
   const allImages = collectAllJobImages(data);
   renderDocumentationPhotos(allImages);
 
@@ -321,7 +335,6 @@ function collectAllJobImages(data) {
     arr.forEach((item, idx) => {
       const cleanUrl = extractImageUrl(item);
       if (cleanUrl) {
-        // Avoid duplicates
         if (!list.some(x => x.url === cleanUrl)) {
           const rawName = cleanUrl.split("/").pop() || `${tag}_${idx + 1}.jpg`;
           list.push({ url: cleanUrl, name: rawName, tag: tag });
@@ -337,7 +350,6 @@ function collectAllJobImages(data) {
   pushItems(data.images, "Photo");
   pushItems(data.propImg, "Property Image");
 
-  // Collect from comments as well
   if (Array.isArray(data.comments)) {
     data.comments.forEach((c, cIdx) => {
       pushItems(c.uploads, `Comment_${cIdx + 1}`);
@@ -357,13 +369,12 @@ function renderDocumentationPhotos(allPhotos) {
     countBadge.textContent = `${allPhotos.length} ${allPhotos.length === 1 ? 'File' : 'Files'}`;
   }
 
-  // Render in Documentation & Photos Gallery
   if (container) {
     if (allPhotos.length === 0) {
       container.innerHTML = `
-        <div class="col-span-2 sm:col-span-3 md:col-span-4 text-center py-6 text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-          <i class="fa-regular fa-image text-slate-300 text-2xl block mb-1"></i>
-          <span>No attachment files or photos uploaded for this job.</span>
+        <div class="col-span-2 sm:col-span-3 md:col-span-4 text-center py-8 text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+          <i class="fa-regular fa-image text-slate-300 text-3xl block mb-2"></i>
+          <span>No attachment photos uploaded for this job order.</span>
         </div>
       `;
       return;
@@ -371,15 +382,15 @@ function renderDocumentationPhotos(allPhotos) {
 
     container.innerHTML = allPhotos.map((item) => {
       const rawFileName = item.name || "Job_Photo.jpg";
-      const cleanFileName = rawFileName.length > 18 ? rawFileName.slice(0, 15) + "..." : rawFileName;
+      const cleanFileName = rawFileName.length > 20 ? rawFileName.slice(0, 17) + "..." : rawFileName;
 
       return `
         <div 
-          class="group relative rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-blue-400 hover:shadow-md transition-all cursor-pointer"
+          class="group relative rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-blue-500 hover:shadow-md transition-all cursor-pointer"
           onclick="openImagePreview('${escapeHtml(item.url)}', '${escapeHtml(rawFileName)}')"
           title="Click to view full photo: ${escapeHtml(rawFileName)}"
         >
-          <div class="h-28 w-full overflow-hidden bg-slate-900 flex items-center justify-center relative">
+          <div class="h-32 w-full overflow-hidden bg-slate-900 flex items-center justify-center relative">
             <img 
               src="${item.url}" 
               alt="${escapeHtml(cleanFileName)}" 
@@ -387,15 +398,15 @@ function renderDocumentationPhotos(allPhotos) {
               loading="lazy"
             >
             <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <span class="w-8 h-8 rounded-full bg-white/90 text-slate-900 flex items-center justify-center text-xs shadow-md">
+              <span class="w-9 h-9 rounded-full bg-white text-slate-900 flex items-center justify-center text-sm shadow-md">
                 <i class="fa-solid fa-magnifying-glass-plus"></i>
               </span>
             </div>
           </div>
-          <div class="p-2 border-t border-slate-100">
-            <span class="text-[11px] font-semibold text-slate-800 block truncate">${escapeHtml(cleanFileName)}</span>
-            <span class="text-[10px] text-blue-600 font-medium flex items-center gap-1 mt-0.5">
-              <i class="fa-regular fa-eye text-[9px]"></i> View Full Image
+          <div class="p-2.5 border-t border-slate-100 bg-white">
+            <span class="text-xs font-semibold text-slate-800 block truncate">${escapeHtml(cleanFileName)}</span>
+            <span class="text-[10px] text-blue-600 font-semibold flex items-center gap-1 mt-0.5">
+              <i class="fa-regular fa-eye text-[9px]"></i> View Full Photo
             </span>
           </div>
         </div>
@@ -428,749 +439,100 @@ function renderCommentsTimeline(comments, adminComment, closeOn, closeBy) {
   }
 
   if (countBadge) {
-    countBadge.textContent = `${timeline.length} ${timeline.length === 1 ? 'Comment' : 'Comments'}`;
+    countBadge.textContent = `${timeline.length} ${timeline.length === 1 ? 'Entry' : 'Entries'}`;
   }
 
   if (timeline.length === 0) {
     container.innerHTML = `
-      <p class="text-xs text-slate-400 italic text-center py-6">No comments or activity log recorded yet.</p>
+      <div class="text-center py-8 text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+        <i class="fa-regular fa-comments text-slate-300 text-3xl block mb-2"></i>
+        <span>No comments or activity notes recorded yet.</span>
+      </div>
     `;
     return;
   }
 
   container.innerHTML = timeline.map(c => {
-    const authorName = `${c.firstName || "Officer"} ${c.lastName || ""}`.trim();
-    const dateFormatted = c.commentDate ? formatDate(c.commentDate) : "Recently";
-    const msg = escapeHtml(c.commentDetail || "").replace(/\n/g, "<br>");
-    const isAdmin = Boolean(c.isAdminNote);
-
-    // Check if comment has attached image(s)
-    let mediaHtml = "";
-    const rawMedia = c.uploads || c.imageUploads || c.commentMedia || [];
-    const mediaArr = Array.isArray(rawMedia) ? rawMedia : (rawMedia ? [rawMedia] : []);
-    
-    if (mediaArr.length > 0) {
-      mediaHtml = `
-        <div class="flex items-center gap-2 mt-2 flex-wrap">
-          ${mediaArr.map((m, idx) => {
-            const cleanMUrl = extractImageUrl(m);
-            return `
-              <img 
-                src="${cleanMUrl}" 
-                alt="Comment Attachment" 
-                class="w-14 h-14 object-cover rounded-lg border border-slate-200 cursor-pointer hover:opacity-80 transition-opacity"
-                onclick="openImagePreview('${escapeHtml(cleanMUrl)}', 'Comment Attachment ${idx + 1}')"
-                title="Click to zoom image"
-                loading="lazy"
-              >
-            `;
-          }).join("")}
-        </div>
-      `;
-    }
+    const author = `${c.firstName || c.firstname || "User"} ${c.lastName || c.lastname || ""}`.trim();
+    const dateStr = formatDate(c.commentDate || c.createdOn || new Date());
+    const detail = c.commentDetail || c.comment || c.text || "-";
+    const isAdmin = c.isAdminNote;
 
     return `
-      <div class="p-3.5 rounded-xl border ${isAdmin ? 'bg-rose-50/60 border-rose-200' : 'bg-slate-50/80 border-slate-200/80'} space-y-1.5 transition-all">
-        <div class="flex items-center justify-between flex-wrap gap-1">
+      <div class="p-3.5 rounded-xl border text-xs ${isAdmin ? 'bg-emerald-50/70 border-emerald-200' : 'bg-slate-50 border-slate-200/80'}">
+        <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
           <div class="flex items-center gap-2">
-            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${isAdmin ? 'bg-rose-600 text-white' : 'bg-blue-100 text-blue-700'}">
-              ${authorName}
+            <span class="w-6 h-6 rounded-full ${isAdmin ? 'bg-emerald-600 text-white' : 'bg-blue-100 text-blue-700'} flex items-center justify-center text-[10px] font-bold">
+              ${isAdmin ? '<i class="fa-solid fa-lock text-[9px]"></i>' : (author ? author.slice(0, 1).toUpperCase() : 'U')}
             </span>
-            ${isAdmin ? '<span class="text-[10px] font-bold text-rose-600 tracking-wide uppercase">Final Sign-Off</span>' : ''}
+            <span class="font-bold text-slate-800">${escapeHtml(author)}</span>
+            ${isAdmin ? '<span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-200 text-emerald-800 font-bold uppercase">Closure</span>' : ''}
           </div>
-          <span class="text-[10px] text-slate-400">${dateFormatted}</span>
+          <span class="text-[11px] text-slate-400 font-medium">${dateStr}</span>
         </div>
-        <p class="text-xs text-slate-700 leading-relaxed">${msg}</p>
-        ${mediaHtml}
+        <p class="text-slate-700 leading-relaxed pl-8">${escapeHtml(detail)}</p>
       </div>
     `;
   }).join("");
 }
 
 // ==========================================
-// Image Preview Popup Modal Functionality
+// Lightbox Photo Preview Controls
 // ==========================================
-function openImagePreview(imgUrl, title) {
+function openImagePreview(url, title) {
   const modal = document.getElementById("imagePreviewModal");
-  const img = document.getElementById("previewModalImg");
+  const imgEl = document.getElementById("previewModalImg");
   const titleEl = document.getElementById("previewModalTitle");
   const captionEl = document.getElementById("previewModalCaption");
-  const downloadLink = document.getElementById("previewModalDownloadBtn");
+  const downloadBtn = document.getElementById("previewModalDownloadBtn");
 
-  if (!modal || !img) return;
+  if (!modal || !imgEl) return;
 
-  img.src = imgUrl;
-  if (titleEl) titleEl.textContent = title || "Photo Preview";
-  if (captionEl) captionEl.textContent = title || "WorkWize Attachment Preview";
-  if (downloadLink) downloadLink.href = imgUrl;
+  imgEl.src = url;
+  if (titleEl) titleEl.textContent = title || "Job Photo Preview";
+  if (captionEl) captionEl.textContent = title || "WorkWize Attachment";
+  if (downloadBtn) downloadBtn.href = url;
 
-  modal.classList.add("open");
+  modal.classList.add("active");
+  document.body.style.overflow = "hidden";
 }
 
 function closeImagePreview() {
   const modal = document.getElementById("imagePreviewModal");
-  const img = document.getElementById("previewModalImg");
-  if (modal) modal.classList.remove("open");
-  if (img) img.src = "";
+  if (!modal) return;
+  modal.classList.remove("active");
+  document.body.style.overflow = "";
 }
 
-// ==========================================
-// Universal Field Edit Modal Functionality
-// Mirrors taskmaster resetDataModel & ShowJobform
-// ==========================================
-function openEditModal(fieldKey) {
-  if (!currentJobData) return;
-
-  currentEditField = fieldKey;
-  const modal = document.getElementById("editFieldModal");
-  const titleEl = document.getElementById("editModalTitle");
-  const bodyEl = document.getElementById("editModalBody");
-  const iconEl = document.getElementById("editModalIcon");
-
-  if (!modal || !bodyEl) return;
-
-  let title = "Edit Field";
-  let icon = "fa-pen-to-square";
-  let inputHtml = "";
-
-  switch (fieldKey) {
-    case "JB-AREA":
-      title = "Edit Operational Area";
-      icon = "fa-layer-group";
-      const currentArea = (currentJobData.areaName || "").toLowerCase();
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Operational Area <span class="text-rose-500">*</span></label>
-          <select id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalAreaDropdownChange(this)">
-            ${ALL_OPERATIONAL_AREAS_LIST.map(a => `
-              <option value="${a}" ${currentArea.includes(a.toLowerCase()) || a.toLowerCase().includes(currentArea) ? "selected" : ""}>${a}</option>
-            `).join("")}
-          </select>
-        </div>
-        <div id="modalVillaFieldContainer" class="${currentArea.includes("villa") ? "" : "hidden"} pt-2">
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Villa Number <span class="text-rose-500">*</span></label>
-          <input type="text" id="editModalVillaNumber" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" value="${escapeHtml(currentJobData.villaNumber !== '-' ? currentJobData.villaNumber : '')}" placeholder="e.g. V-104">
-        </div>
-      `;
-      break;
-
-    case "JB-LOCATION":
-      title = "Edit Job Location";
-      icon = "fa-location-dot";
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Location <span class="text-rose-500">*</span></label>
-          <input type="text" id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" value="${escapeHtml(currentJobData.jobLocation || '')}" placeholder="Enter specific location">
-        </div>
-      `;
-      break;
-
-    case "JB-STATUS":
-      title = "Edit Job Status";
-      icon = "fa-list-check";
-      const currentStatus = (currentJobData.jobStatus || "").toUpperCase();
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Status Dropdown <span class="text-rose-500">*</span></label>
-          <select id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-            <option value="YET_TO_COMMENCE" ${currentStatus.includes("YET") ? "selected" : ""}>Yet to Commence</option>
-            <option value="IN_PROGRESS" ${currentStatus.includes("PROGRESS") ? "selected" : ""}>In Progress</option>
-            <option value="SPARES_ON_ORDER" ${currentStatus.includes("SPARES") ? "selected" : ""}>Spares on Order</option>
-            <option value="UNDER_DISCUSSION" ${currentStatus.includes("DISCUSSION") ? "selected" : ""}>Under Discussion</option>
-            <option value="FIXED" ${currentStatus.includes("FIXED") ? "selected" : ""}>Fixed</option>
-            <option value="COMPLETED" ${currentStatus.includes("COMPLET") ? "selected" : ""}>Completed</option>
-          </select>
-        </div>
-      `;
-      break;
-
-    case "JB-PRIORITY":
-      title = "Edit Priority";
-      icon = "fa-triangle-exclamation";
-      const currentPriority = (currentJobData.priority || "MEDIUM").toUpperCase();
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Priority Dropdown <span class="text-rose-500">*</span></label>
-          <select id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-            <option value="HIGH" ${currentPriority === "HIGH" ? "selected" : ""}>High</option>
-            <option value="MEDIUM" ${currentPriority === "MEDIUM" ? "selected" : ""}>Medium</option>
-            <option value="LOW" ${currentPriority === "LOW" ? "selected" : ""}>Low</option>
-            <option value="SAFETY" ${currentPriority === "SAFETY" ? "selected" : ""}>Safety</option>
-          </select>
-        </div>
-      `;
-      break;
-
-    case "JB-DETAIL":
-      title = "Edit Scope of Work";
-      icon = "fa-file-lines";
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Details Description <span class="text-rose-500">*</span></label>
-          <textarea id="editModalInputValue" rows="5" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none resize-none" placeholder="Enter detailed scope">${escapeHtml(currentJobData.jobDetail || '')}</textarea>
-        </div>
-      `;
-      break;
-
-    case "JB-REMARK":
-      title = "Edit Special Remarks";
-      icon = "fa-comment-dots";
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Remarks</label>
-          <textarea id="editModalInputValue" rows="4" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none resize-none" placeholder="Enter special remarks">${escapeHtml(currentJobData.remarks || '')}</textarea>
-        </div>
-      `;
-      break;
-
-    case "JB-EXPDATE":
-      title = "Edit Expected Completion Date";
-      icon = "fa-calendar-day";
-      const expDateVal = extractInputDate(currentJobData.expectedCompletion);
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Target Completion Date</label>
-          <input type="date" id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" value="${expDateVal}">
-        </div>
-      `;
-      break;
-
-    case "JB-CREATEDATE":
-      title = "Edit Job Creation Date";
-      icon = "fa-calendar-check";
-      const createDateVal = extractInputDate(currentJobData.jobCreatedOn);
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Creation Date</label>
-          <input type="date" id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" value="${createDateVal}">
-        </div>
-      `;
-      break;
-
-    case "JB-REFNUM":
-      title = "Edit Reference Number";
-      icon = "fa-hashtag";
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Reference No.</label>
-          <input type="text" id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none font-mono" value="${escapeHtml(currentJobData.refNum !== 'null' ? currentJobData.refNum : '')}" placeholder="e.g. REF-2026-001">
-        </div>
-      `;
-      break;
-
-    case "JB-BUDGET":
-      title = "Edit Budget";
-      icon = "fa-sack-dollar";
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Budget in USD ($)</label>
-          <input type="number" id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" value="${currentJobData.budget || 0}" placeholder="Budget amount">
-        </div>
-      `;
-      break;
-
-    case "JB-FINEXP":
-      title = "Edit Final Expense";
-      icon = "fa-receipt";
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Final Incurred Expense ($)</label>
-          <input type="number" id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" value="${currentJobData.finalExp || 0}" placeholder="Final expense amount">
-        </div>
-      `;
-      break;
-
-    case "JB-CCF":
-      title = "Edit Cost Center";
-      icon = "fa-building-columns";
-      const currentCcf = currentJobData.ccf || "";
-      const isDept = currentCcf === "Department Operational Budget";
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Cost Center Dropdown <span class="text-rose-500">*</span></label>
-          <select id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalCcfDropdownChange(this)">
-            <option value="POMEC" ${currentCcf === "POMEC" ? "selected" : ""}>POMEC</option>
-            <option value="CAPEX" ${currentCcf === "CAPEX" ? "selected" : ""}>CAPEX</option>
-            <option value="Department Operational Budget" ${isDept ? "selected" : ""}>Department Operational Budget</option>
-          </select>
-        </div>
-        <div id="modalCcfDeptContainer" class="${isDept ? '' : 'hidden'} pt-2">
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department Name <span class="text-rose-500">*</span></label>
-          <input type="text" id="editModalCcfDept" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" value="${escapeHtml(currentJobData.ccf_dept || '')}" placeholder="Enter Department Name">
-        </div>
-      `;
-      break;
-
-    case "JB-TEAMS":
-      title = "Edit Assigned Team";
-      icon = "fa-user-gear";
-      let assignedVal = "";
-      if (Array.isArray(currentJobData.teams) && currentJobData.teams.length > 0) assignedVal = currentJobData.teams.map(t => t.teamName || t.name || t).join(", ");
-      else if (currentJobData.assignedTo) assignedVal = currentJobData.assignedTo;
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Assigned To Dropdown <span class="text-rose-500">*</span></label>
-          <select id="editModalInputValue" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-            ${ALL_OPERATIONAL_TEAMS_LIST.map(t => `
-              <option value="${t}" ${assignedVal.includes(t) || t.includes(assignedVal) ? "selected" : ""}>${t}</option>
-            `).join("")}
-          </select>
-        </div>
-      `;
-      break;
-
-    case "JB-OWNERCOMMENT":
-      title = "Edit Owner's Comment";
-      icon = "fa-crown";
-      inputHtml = `
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Owner Comment</label>
-          <textarea id="editModalInputValue" rows="4" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none resize-none" placeholder="Enter owner instructions">${escapeHtml(currentJobData.owner_comment || '')}</textarea>
-        </div>
-      `;
-      break;
-
-    case "JB-CLOSEJOB":
-      title = "Close This Job";
-      icon = "fa-lock";
-      inputHtml = `
-        <div class="space-y-2">
-          <p class="text-xs text-rose-600 font-semibold flex items-center gap-1.5">
-            <i class="fa-solid fa-triangle-exclamation"></i>
-            <span>Warning: Closing this ticket will finalize all work and notify stakeholders.</span>
-          </p>
-          <label class="block text-xs font-semibold text-slate-700 mb-1">Closure Comments <span class="text-rose-500">*</span></label>
-          <textarea id="editModalInputValue" rows="4" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none resize-none" placeholder="Enter mandatory closure comments (e.g. Resolved and verified by lead engineer)"></textarea>
-        </div>
-      `;
-      break;
-
-    case "FULL-JOB":
-      title = "Edit Full Job";
-      icon = "fa-file-signature";
-      const fullArea = (currentJobData.areaName || "");
-      const fullPriority = (currentJobData.priority || "MEDIUM").toUpperCase();
-      const fullStatus = (currentJobData.jobStatus || "").toUpperCase();
-      const fullCcf = currentJobData.ccf || "";
-      const fullExpDate = extractInputDate(currentJobData.expectedCompletion);
-      const fullCreateDate = extractInputDate(currentJobData.jobCreatedOn);
-
-      inputHtml = `
-        <div class="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Area Dropdown <span class="text-rose-500">*</span></label>
-              <select id="fullEditArea" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalAreaDropdownChange(this)">
-                ${ALL_OPERATIONAL_AREAS_LIST.map(a => `
-                  <option value="${a}" ${fullArea.toLowerCase().includes(a.toLowerCase()) ? "selected" : ""}>${a}</option>
-                `).join("")}
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Villa Number</label>
-              <input type="text" id="fullEditVilla" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none" value="${escapeHtml(currentJobData.villaNumber !== '-' ? currentJobData.villaNumber : '')}" placeholder="e.g. V-101">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Priority Dropdown <span class="text-rose-500">*</span></label>
-              <select id="fullEditPriority" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="HIGH" ${fullPriority === "HIGH" ? "selected" : ""}>High</option>
-                <option value="MEDIUM" ${fullPriority === "MEDIUM" ? "selected" : ""}>Medium</option>
-                <option value="LOW" ${fullPriority === "LOW" ? "selected" : ""}>Low</option>
-                <option value="SAFETY" ${fullPriority === "SAFETY" ? "selected" : ""}>Safety</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Status Dropdown <span class="text-rose-500">*</span></label>
-              <select id="fullEditStatus" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="YET_TO_COMMENCE" ${fullStatus.includes("YET") ? "selected" : ""}>Yet to Commence</option>
-                <option value="IN_PROGRESS" ${fullStatus.includes("PROGRESS") ? "selected" : ""}>In Progress</option>
-                <option value="SPARES_ON_ORDER" ${fullStatus.includes("SPARES") ? "selected" : ""}>Spares on Order</option>
-                <option value="UNDER_DISCUSSION" ${fullStatus.includes("DISCUSSION") ? "selected" : ""}>Under Discussion</option>
-                <option value="FIXED" ${fullStatus.includes("FIXED") ? "selected" : ""}>Fixed</option>
-                <option value="COMPLETED" ${fullStatus.includes("COMPLET") ? "selected" : ""}>Completed</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Job Location <span class="text-rose-500">*</span></label>
-              <input type="text" id="fullEditLocation" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none" value="${escapeHtml(currentJobData.jobLocation || '')}">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Assigned To Dropdown <span class="text-rose-500">*</span></label>
-              <select id="fullEditAssigned" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none">
-                ${ALL_OPERATIONAL_TEAMS_LIST.map(t => `<option value="${t}">${t}</option>`).join("")}
-              </select>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Job Created Date</label>
-              <input type="date" id="fullEditCreateDate" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none" value="${fullCreateDate}">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Expected Completion Date</label>
-              <input type="date" id="fullEditExpDate" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none" value="${fullExpDate}">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Budget ($)</label>
-              <input type="number" id="fullEditBudget" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none" value="${currentJobData.budget || 0}">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Cost Center Dropdown</label>
-              <select id="fullEditCcf" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="POMEC" ${fullCcf === "POMEC" ? "selected" : ""}>POMEC</option>
-                <option value="CAPEX" ${fullCcf === "CAPEX" ? "selected" : ""}>CAPEX</option>
-                <option value="Department Operational Budget" ${fullCcf.includes("Department") ? "selected" : ""}>Department Operational Budget</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Reference No.</label>
-              <input type="text" id="fullEditRefNum" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none font-mono" value="${escapeHtml(currentJobData.refNum !== 'null' ? currentJobData.refNum : '')}">
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Job Details Description <span class="text-rose-500">*</span></label>
-            <textarea id="fullEditDetails" rows="3" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none resize-none">${escapeHtml(currentJobData.jobDetail || '')}</textarea>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Remarks</label>
-            <textarea id="fullEditRemarks" rows="2" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 focus:border-blue-500 focus:bg-white outline-none resize-none">${escapeHtml(currentJobData.remarks || '')}</textarea>
-          </div>
-        </div>
-      `;
-      break;
-
-    default:
-      inputHtml = `<p class="text-xs text-slate-400">Field not editable.</p>`;
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") {
+    closeImagePreview();
   }
+});
 
-  if (titleEl) titleEl.textContent = title;
-  if (iconEl) iconEl.className = `fa-solid ${icon}`;
-  bodyEl.innerHTML = inputHtml;
-
-  modal.classList.add("open");
-
-  // Focus input automatically
-  setTimeout(() => {
-    const input = document.getElementById("editModalInputValue");
-    if (input) input.focus();
-  }, 100);
+// ==========================================
+// Utilities
+// ==========================================
+function normalizeImageUrl(img) {
+  if (!img) return "";
+  if (typeof img === "string") {
+    if (img.startsWith("http") || img.startsWith("data:")) return img;
+    const base = typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getBaseUrl() : "";
+    return `${base.replace(/\/$/, "")}/${img.replace(/^\//, "")}`;
+  }
+  if (img.url) return normalizeImageUrl(img.url);
+  if (img.filepath) return normalizeImageUrl(img.filepath);
+  if (img.filePath) return normalizeImageUrl(img.filePath);
+  return "";
 }
 
-function handleModalAreaDropdownChange(select) {
-  const villaContainer = document.getElementById("modalVillaFieldContainer");
-  if (villaContainer) {
-    if ((select.value || "").toLowerCase().includes("villa")) {
-      villaContainer.classList.remove("hidden");
-    } else {
-      villaContainer.classList.add("hidden");
-    }
-  }
-}
-
-function handleModalCcfDropdownChange(select) {
-  const deptContainer = document.getElementById("modalCcfDeptContainer");
-  if (deptContainer) {
-    if (select.value === "Department Operational Budget") {
-      deptContainer.classList.remove("hidden");
-    } else {
-      deptContainer.classList.add("hidden");
-    }
-  }
-}
-
-function closeEditModal() {
-  const modal = document.getElementById("editFieldModal");
-  if (modal) modal.classList.remove("open");
-}
-
-async function saveFieldEdit() {
-  const saveBtn = document.getElementById("saveEditModalBtn");
-  if (!currentJobData) return;
-
-  if (saveBtn) {
-    saveBtn.disabled = true;
-    saveBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xs mr-1"></i> Saving...';
-  }
-
-  const propId = currentJobData.propId || WorkWizeAPI.getCurrentProperty();
-  const jobId = currentJobData.jobId || currentJobId;
-
-  // Handle Full Job Save
-  if (currentEditField === "FULL-JOB") {
-    const area = document.getElementById("fullEditArea")?.value || "";
-    const villa = document.getElementById("fullEditVilla")?.value || "";
-    const priority = document.getElementById("fullEditPriority")?.value || "MEDIUM";
-    const status = document.getElementById("fullEditStatus")?.value || "IN_PROGRESS";
-    const location = document.getElementById("fullEditLocation")?.value || "";
-    const assigned = document.getElementById("fullEditAssigned")?.value || "";
-    const createdDate = document.getElementById("fullEditCreateDate")?.value || "";
-    const expDate = document.getElementById("fullEditExpDate")?.value || "";
-    const budget = document.getElementById("fullEditBudget")?.value || "0";
-    const ccf = document.getElementById("fullEditCcf")?.value || "POMEC";
-    const refNum = document.getElementById("fullEditRefNum")?.value || "";
-    const details = document.getElementById("fullEditDetails")?.value || "";
-    const remarks = document.getElementById("fullEditRemarks")?.value || "";
-
-    if (!details.trim()) {
-      alert("Please provide Job Details.");
-      if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<span>Save Changes</span>'; }
-      return;
-    }
-
-    try {
-      const fullForm = new FormData();
-      fullForm.append("propID", propId);
-      fullForm.append("jobID", jobId);
-      fullForm.append("areaID", area);
-      fullForm.append("villaNumber", villa);
-      fullForm.append("priority", priority);
-      fullForm.append("jobLocation", location);
-      fullForm.append("jobStatus", status);
-      fullForm.append("jobDate", createdDate);
-      fullForm.append("refNum", refNum);
-      fullForm.append("jobDetail", details);
-      fullForm.append("budget", budget);
-      fullForm.append("ccf", ccf);
-      fullForm.append("remarks", remarks);
-      fullForm.append("assignedTo", assigned);
-
-      if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.updateJob) {
-        await WorkWizeAPI.updateJob(fullForm);
-      } else if (typeof WorkWizeAPI !== "undefined") {
-        await WorkWizeAPI.updateJobFields(fullForm);
-      }
-    } catch (e) {
-      console.warn("API updateJob error:", e);
-    }
-
-    // Update local DB
-    if (typeof WorkWizeDB !== "undefined" && currentJobId) {
-      WorkWizeDB.updateJob(currentJobId, {
-        area: area,
-        villaNumber: villa,
-        priority: normalizePriorityString(priority),
-        status: normalizeStatusString(status),
-        location: location,
-        assignedTo: assigned,
-        details: details,
-        remarks: remarks,
-        budget: Number(budget) || 0,
-        costCenter: ccf
-      });
-    }
-
-    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<span>Save Changes</span>'; }
-    closeEditModal();
-    showToast("Job edited successfully!", "success");
-    await loadJobDetails(currentJobId);
-    return;
-  }
-
-  // Handle Individual Field Save
-  const input = document.getElementById("editModalInputValue");
-  if (!input) return;
-
-  const newValue = input.value.trim();
-
-  // Validate closure comments
-  if (currentEditField === "JB-CLOSEJOB" && !newValue) {
-    alert("Please enter closure comments to continue closing this job.");
-    input.focus();
-    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<span>Save Changes</span>'; }
-    return;
-  }
-
-  if (typeof WorkWizeAPI !== "undefined") {
-    try {
-      const updateData = {
-        propID: propId,
-        jobID: jobId,
-        field: currentEditField,
-        data: newValue
-      };
-
-      if (currentEditField === "JB-AREA") {
-        const villaInput = document.getElementById("editModalVillaNumber");
-        if (villaInput && villaInput.value) {
-          updateData.villaNumber = villaInput.value.trim();
-        }
-      } else if (currentEditField === "JB-CCF") {
-        const deptInput = document.getElementById("editModalCcfDept");
-        if (deptInput && deptInput.value) {
-          updateData.ccf_dept = deptInput.value.trim();
-        }
-      }
-
-      await WorkWizeAPI.updateJobFields(updateData);
-    } catch (err) {
-      console.warn("API updateJobFields error:", err);
-    }
-  }
-
-  // Update local DB if available
-  if (typeof WorkWizeDB !== "undefined" && currentJobId) {
-    const updateObj = {};
-    if (currentEditField === "JB-LOCATION") updateObj.location = newValue;
-    else if (currentEditField === "JB-STATUS") updateObj.status = normalizeStatusString(newValue);
-    else if (currentEditField === "JB-PRIORITY") updateObj.priority = normalizePriorityString(newValue);
-    else if (currentEditField === "JB-DETAIL") updateObj.details = newValue;
-    else if (currentEditField === "JB-REMARK") updateObj.remarks = newValue;
-    else if (currentEditField === "JB-AREA") updateObj.area = newValue;
-    else if (currentEditField === "JB-CLOSEJOB") updateObj.status = "Closed";
-    else if (currentEditField === "JB-BUDGET") updateObj.budget = Number(newValue) || 0;
-    WorkWizeDB.updateJob(currentJobId, updateObj);
-  }
-
-  if (saveBtn) {
-    saveBtn.disabled = false;
-    saveBtn.innerHTML = '<span>Save Changes</span>';
-  }
-
-  closeEditModal();
-  showToast("Job updated successfully!", "success");
-
-  // Reload fresh job details from server
-  await loadJobDetails(currentJobId);
-}
-
-// ==========================================
-// Comment Submission Functionality
-// Mirrors taskmaster AddComment & addcomment API
-// ==========================================
-async function submitNewComment() {
-  const commentInput = document.getElementById("newCommentInput");
-  const fileInput = document.getElementById("commentFileInput");
-  const fileLabel = document.getElementById("commentFileLabel");
-  const submitBtn = document.getElementById("submitCommentBtn");
-
-  if (!commentInput || !currentJobData) return;
-
-  const text = commentInput.value.trim();
-  if (!text) {
-    showToast("Please enter a comment message before sending.", "error");
-    commentInput.focus();
-    return;
-  }
-
-  if (submitBtn) {
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-1"></i> Sending...';
-  }
-
-  if (typeof WorkWizeAPI !== "undefined" && currentJobId) {
-    try {
-      const form = new FormData();
-      form.append("jobId", currentJobData.jobId || currentJobId);
-      form.append("commentDetail", text);
-
-      if (fileInput && fileInput.files.length > 0) {
-        for (let i = 0; i < fileInput.files.length; i++) {
-          form.append("commentMedia", fileInput.files[i]);
-        }
-      }
-
-      await WorkWizeAPI.addComment(form);
-    } catch (err) {
-      console.warn("API addComment error:", err);
-    }
-  }
-
-  commentInput.value = "";
-  if (fileInput) fileInput.value = "";
-  if (fileLabel) fileLabel.textContent = "Attach Image";
-
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-1 text-[10px]"></i> Send Comment';
-  }
-
-  showToast("Comment added successfully!", "success");
-  await loadJobDetails(currentJobId);
-}
-
-// ==========================================
-// Modal backdrop & Escape key listeners
-// ==========================================
-function initModalListeners() {
-  const fileInput = document.getElementById("commentFileInput");
-  const fileLabel = document.getElementById("commentFileLabel");
-  if (fileInput && fileLabel) {
-    fileInput.addEventListener("change", function () {
-      if (this.files && this.files.length > 0) {
-        fileLabel.textContent = this.files[0].name.slice(0, 16) + "...";
-      } else {
-        fileLabel.textContent = "Attach Image";
-      }
-    });
-  }
-
-  // Click outside to close modals
-  document.addEventListener("click", function (e) {
-    const editModal = document.getElementById("editFieldModal");
-    const previewModal = document.getElementById("imagePreviewModal");
-
-    if (editModal && e.target === editModal) {
-      closeEditModal();
-    }
-    if (previewModal && e.target === previewModal) {
-      closeImagePreview();
-    }
-  });
-
-  // Escape key to close modals
-  document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") {
-      closeEditModal();
-      closeImagePreview();
-    }
-  });
-}
-
-// ==========================================
-// Helper functions
-// ==========================================
 function extractImageUrl(item) {
   if (!item) return "";
-  let raw = "";
-  if (typeof item === "string") {
-    raw = item;
-  } else if (typeof item === "object") {
-    raw = item.url || item.uploadUrl || item.path || item.filePath || item.fileUrl || item.image || item.mediaUrl || "";
+  if (typeof item === "string") return normalizeImageUrl(item);
+  if (typeof item === "object") {
+    return normalizeImageUrl(item.url || item.filepath || item.filePath || item.mediaPath || item.image);
   }
-  if (!raw) return "";
-  return normalizeImageUrl(raw);
-}
-
-function normalizeImageUrl(url) {
-  if (!url || typeof url !== "string") return "";
-  let cleanUrl = url.trim();
-  if (cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://") || cleanUrl.startsWith("data:") || cleanUrl.startsWith("blob:")) {
-    return cleanUrl;
-  }
-  const base = "https://api.workwize.in";
-  if (cleanUrl.startsWith("/")) {
-    return base + cleanUrl;
-  }
-  return base + "/" + cleanUrl;
-}
-
-function setLoadingState(isLoading) {
-  const orgIdEl = document.getElementById("dynJobOrgId");
-  if (isLoading && orgIdEl) {
-    orgIdEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-blue-600 text-lg mr-2"></i> Loading job details...';
-  }
+  return "";
 }
 
 function normalizeStatusString(st) {
@@ -1194,35 +556,19 @@ function normalizePriorityString(p) {
   return "Medium";
 }
 
-function formatDate(dateStr) {
-  if (!dateStr || dateStr.startsWith("0001") || dateStr === "null" || dateStr === "undefined") return "-";
+function formatDate(d) {
+  if (!d || d === "-" || d === "null") return "-";
   try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return d;
+    return dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
   } catch (e) {
-    return dateStr;
-  }
-}
-
-function extractInputDate(dateStr) {
-  if (!dateStr || dateStr.startsWith("0001") || dateStr === "null") {
-    return new Date().toISOString().split("T")[0];
-  }
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return new Date().toISOString().split("T")[0];
-    return d.toISOString().split("T")[0];
-  } catch (e) {
-    return new Date().toISOString().split("T")[0];
+    return d;
   }
 }
 
 function escapeHtml(str) {
-  if (!str) return "";
+  if (str === null || str === undefined) return "";
   return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -1231,25 +577,9 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
-function showToast(msg, type = "info") {
-  const toast = document.createElement("div");
-  const bg = type === "success" ? "bg-emerald-600" : (type === "error" ? "bg-rose-600" : "bg-slate-900");
-  toast.className = `fixed bottom-6 right-6 ${bg} text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center gap-2 animate-fade-in`;
-  toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : 'fa-circle-info'}"></i> <span>${msg}</span>`;
-  document.body.appendChild(toast);
-  setTimeout(() => {
-    toast.style.opacity = "0";
-    toast.style.transition = "opacity 0.3s";
-    setTimeout(() => toast.remove(), 300);
-  }, 2800);
+function setLoadingState(isLoading) {
+  const orgIdEl = document.getElementById("dynJobOrgId");
+  if (isLoading && orgIdEl) {
+    orgIdEl.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-blue-600 text-xl mr-2"></i> Loading Job...';
+  }
 }
-
-// Export for inline triggers
-window.openImagePreview = openImagePreview;
-window.closeImagePreview = closeImagePreview;
-window.openEditModal = openEditModal;
-window.closeEditModal = closeEditModal;
-window.saveFieldEdit = saveFieldEdit;
-window.submitNewComment = submitNewComment;
-window.handleModalAreaDropdownChange = handleModalAreaDropdownChange;
-window.handleModalCcfDropdownChange = handleModalCcfDropdownChange;

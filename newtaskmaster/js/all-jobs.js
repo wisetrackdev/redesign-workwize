@@ -494,13 +494,16 @@ function renderTableRows() {
           <button class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" onclick="toggleJobActionMenu(this)">
             <i class="fa-solid fa-ellipsis"></i>
           </button>
-          <div class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 text-xs text-slate-700 dropdown-menu">
-            <a href="job-details.html?id=${encodeURIComponent(job.rawId || job.id)}" target="_blank" class="block px-3 py-2 hover:bg-slate-50">
-              <i class="fa-regular fa-eye mr-2 text-blue-500"></i> View Details
+          <div class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-30 text-xs text-slate-700 dropdown-menu">
+            <a href="job-details.html?id=${encodeURIComponent(job.rawId || job.id)}" class="flex items-center px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium transition-colors">
+              <i class="fa-regular fa-eye mr-2.5 text-blue-600"></i> View Job
             </a>
-         
-            <button onclick="quickUpdateJobStatus('${job.rawId || job.id}', 'COMPLETED', 'Closed')" class="w-full text-left px-3 py-2 hover:bg-slate-50">
-              <i class="fa-solid fa-check mr-2 text-emerald-500"></i> Mark as Closed
+            <a href="job-update.html?id=${encodeURIComponent(job.rawId || job.id)}" class="flex items-center px-3 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-700 font-medium transition-colors">
+              <i class="fa-solid fa-pen-to-square mr-2.5 text-amber-600"></i> Update Job
+            </a>
+            <div class="border-t border-slate-100 my-1"></div>
+            <button onclick="quickUpdateJobStatus('${job.rawId || job.id}', 'COMPLETED', 'Closed')" class="w-full flex items-center px-3 py-2 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-medium transition-colors">
+              <i class="fa-solid fa-circle-check mr-2.5 text-emerald-600"></i> Mark Closed
             </button>
           </div>
         </div>
