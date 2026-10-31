@@ -1,10 +1,14 @@
 /**
  * WorkWize Jobs by Area Logic
- * Connected to live API: api/jobtracker/getjoboverview & api/jobtracker/getallproperty
+ * Connected to live API: api/jobtracker/getjoboverview & api/jobtracker/getpropertyjobs
  */
 
 let areaOverviewData = [];
 let allPropertiesMap = {};
+let propertyJobsCache = [];
+let currentAreaModalJobs = [];
+let currentAreaModalName = "";
+let currentAreaModalSortOrder = "desc";
 
 // Standard 8 operational areas matching taskmaster
 const ALL_OPERATIONAL_AREAS = [
@@ -24,9 +28,112 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Listen for property changes from header
   window.addEventListener("workwize:propertyChanged", function (e) {
+    propertyJobsCache = [];
     initJobsByArea();
   });
 });
+
+/**
+ * Universal job object normalizer to guarantee field availability
+ * regardless of whether API returns camelCase or PascalCase.
+ */
+function normalizeJobObject(raw) {
+  if (!raw) return {};
+
+  const rawId = raw.jobId || raw.JobId || raw.rawId || raw.id || raw.Id || "";
+  const orgId = raw.orgjobId || raw.OrgjobId || raw.orgJobId || raw.OrgJobId || raw.id || raw.Id || rawId || "JOB-001";
+  const detail = raw.jobDetail || raw.JobDetail || raw.jobDetails || raw.JobDetails || raw.details || raw.Details || raw.title || raw.Title || "";
+  const villa = raw.villaNumber || raw.VillaNumber || raw.villa || raw.Villa || "";
+  const createdOn = raw.jobCreatedOn || raw.JobCreatedOn || raw.createdOn || raw.CreatedOn || raw.openedOn || raw.OpenedOn || "";
+  const location = raw.jobLocation || raw.JobLocation || raw.location || raw.Location || "";
+  const priority = raw.priority || raw.Priority || "Medium";
+  const status = raw.jobStatus || raw.JobStatus || raw.status || raw.Status || "Yet to Commence";
+  const refNum = raw.refNum || raw.RefNum || raw.refNo || raw.RefNo || "";
+  const expectedCompletion = raw.expectedCompletion || raw.ExpectedCompletion || raw.expectedDate || raw.ExpectedDate || "";
+  const closeDate = raw.jobCloseOn || raw.JobCloseOn || raw.closeDate || raw.CloseDate || raw.closedOn || raw.ClosedOn || "";
+  const uploadCount = raw.uploadCount !== undefined ? raw.uploadCount : (raw.UploadCount !== undefined ? raw.UploadCount : (Array.isArray(raw.imageUploads) ? raw.imageUploads.length : 0));
+  const commentCount = raw.commentCount !== undefined ? raw.commentCount : (raw.CommentCount !== undefined ? raw.CommentCount : (Array.isArray(raw.comments) ? raw.comments.length : 0));
+  const firstname = raw.firstname || raw.Firstname || raw.firstName || raw.FirstName || "";
+  const lastname = raw.lastname || raw.Lastname || raw.lastName || raw.LastName || "";
+  const propName = raw.propName || raw.PropName || raw.propertyName || "";
+  const data1 = raw.data1 || raw.Data1 || [];
+  const assignedTo = raw.assignedTo || raw.AssignedTo || "";
+  const areaName = raw.areaName || raw.AreaName || raw.area || raw.Area || "";
+  const areaId = raw.areaId || raw.AreaId || raw.areaID || raw.AreaID || "";
+
+  return {
+    ...raw,
+    jobId: rawId,
+    orgjobId: orgId,
+    jobDetail: detail,
+    villaNumber: villa,
+    jobCreatedOn: createdOn,
+    jobLocation: location,
+    priority: priority,
+    jobStatus: status,
+    refNum: refNum,
+    expectedCompletion: expectedCompletion,
+    jobCloseOn: closeDate,
+    uploadCount: uploadCount,
+    commentCount: commentCount,
+    firstname: firstname,
+    lastname: lastname,
+    propName: propName,
+    data1: data1,
+    assignedTo: assignedTo,
+    areaName: areaName,
+    areaId: areaId
+  };
+}
+
+/**
+ * Loads and caches all jobs for current property
+ */
+async function loadPropertyJobsCache(propId) {
+  try {
+    const pId = propId || WorkWizeAPI.getCurrentProperty();
+    const res = await WorkWizeAPI.getPropertyJobs(pId);
+    let jobs = [];
+    if (res && Array.isArray(res.jobs)) jobs = res.jobs;
+    else if (res && Array.isArray(res.Jobs)) jobs = res.Jobs;
+    else if (res && Array.isArray(res.data)) jobs = res.data;
+    else if (res && Array.isArray(res.result)) jobs = res.result;
+    else if (Array.isArray(res)) jobs = res;
+
+    propertyJobsCache = (jobs || []).map(normalizeJobObject);
+    return propertyJobsCache;
+  } catch (err) {
+    console.warn("Could not load property jobs cache:", err.message);
+    return propertyJobsCache || [];
+  }
+}
+
+/**
+ * Area matching helper
+ */
+function jobMatchesArea(j, areaId, areaName) {
+  if (!j) return false;
+  const cleanAreaName = (areaName || "").toLowerCase().trim();
+  const cleanAreaId = (areaId || "").toLowerCase().trim();
+  const jAreaId = String(j.areaId || j.areaID || "").toLowerCase().trim();
+  const jAreaName = String(j.areaName || j.area || "").toLowerCase().trim();
+
+  if (cleanAreaId && jAreaId && cleanAreaId === jAreaId) return true;
+  if (cleanAreaName && jAreaName && cleanAreaName === jAreaName) return true;
+  if (cleanAreaName && jAreaName && (jAreaName.includes(cleanAreaName) || cleanAreaName.includes(jAreaName))) return true;
+
+  const normClean = cleanAreaName.replace(/[^a-z0-9]/g, "");
+  const normJ = jAreaName.replace(/[^a-z0-9]/g, "");
+  if (normClean && normJ && (normJ.includes(normClean) || normClean.includes(normJ))) return true;
+
+  return false;
+}
+
+function isClosedStatus(statusStr) {
+  if (!statusStr) return false;
+  const s = String(statusStr).toLowerCase();
+  return s.includes("close") || s.includes("complet");
+}
 
 async function initJobsByArea() {
   const tbody = document.getElementById("jobsByAreaTableBody");
@@ -50,7 +157,6 @@ async function initJobsByArea() {
           allPropertiesMap[p.propId] = p.propName;
         });
 
-        // Mirror taskmaster: if no property or default PROP-001 or invalid, select first valid property
         const storedProp = localStorage.getItem("workwize_current_property");
         if (!storedProp || storedProp === "PROP-001" || !props.some(p => p.propId === storedProp)) {
           WorkWizeAPI.setCurrentProperty(props[0].propId, props[0].propName);
@@ -67,6 +173,9 @@ async function initJobsByArea() {
     if (subtitleEl) {
       subtitleEl.textContent = `Property: ${currentPropName} - Track and manage jobs across areas`;
     }
+
+    // Prefetch property jobs cache in background
+    loadPropertyJobsCache(currentPropId);
 
     // 2. Fetch Job Overview by Area from API
     const response = await WorkWizeAPI.getJobOverview(currentPropId);
@@ -85,27 +194,28 @@ async function initJobsByArea() {
           ? Number(item.safety_jobs)
           : ((item.safety !== undefined && item.safety !== null && !isNaN(item.safety)) ? Number(item.safety) : 0);
 
-        // Safe extraction of date breakdown (within 30 days, 31 to 89 days, 90+ days ago)
-        // If data exists, display that number, otherwise strictly default to 0
-        const jobsObj = item.jobs || {};
+        const jobsObj = item.jobs || item.Jobs || {};
         const day30 = (jobsObj.day30 !== undefined && jobsObj.day30 !== null && !isNaN(jobsObj.day30)) ? Number(jobsObj.day30) : 0;
         const day60 = (jobsObj.day60 !== undefined && jobsObj.day60 !== null && !isNaN(jobsObj.day60)) ? Number(jobsObj.day60) : 0;
         const day90 = (jobsObj.day90 !== undefined && jobsObj.day90 !== null && !isNaN(jobsObj.day90)) ? Number(jobsObj.day90) : 0;
 
+        const rawAreaId = item.areaID || item.areaId || item.AreaID || item.AreaId || item.id || item.Id || '';
+        const aName = item.areaName || item.name || item.AreaName || item.Name || 'Operational Area';
+
         return {
-          id: item.areaID || item.id || (item.areaName ? item.areaName.toLowerCase().replace(/\s+/g, '-') : 'area'),
-          name: item.areaName || item.name || 'Operational Area',
+          id: rawAreaId || (aName ? aName.toLowerCase().replace(/\s+/g, '-') : 'area'),
+          name: aName,
           total: total,
           open: open,
           safety: safety,
           day30: day30,
           day60: day60,
           day90: day90,
-          icon: getAreaIcon(item.areaName || item.name)
+          icon: getAreaIcon(aName)
         };
       });
 
-      // Merge with standard areas so that all operational areas always show up in the table
+      // Merge with standard areas so all 8 operational areas are accounted for
       const mergedAreas = [...apiAreas];
       ALL_OPERATIONAL_AREAS.forEach(std => {
         const found = mergedAreas.some(a => 
@@ -134,7 +244,7 @@ async function initJobsByArea() {
       return;
     }
   } catch (error) {
-    console.warn("API Overview failed, falling back to local database:", error.message);
+    console.warn("API Overview failed, falling back to operational areas:", error.message);
   }
 
   // Fallback: render ALL operational areas with 0 counts (no static mock data)
@@ -194,7 +304,7 @@ function renderJobsByAreaTable(filterQuery = "") {
     tbody.innerHTML = `
       <tr>
         <td colspan="6" class="text-center py-8 text-slate-400 text-xs">
-          No operational areas matched "${filterQuery}".
+          No operational areas matched "${escapeHtml(filterQuery)}".
         </td>
       </tr>
     `;
@@ -207,7 +317,6 @@ function renderJobsByAreaTable(filterQuery = "") {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-blue-50/20 transition-colors";
 
-    // Progress bar calculations (proportional to maxJobsInList for visual comparison)
     const totalBarWidth = Math.max(6, Math.min(100, Math.round(((Number(area.total) || 0) / maxJobsInList) * 100)));
     const openBarWidth = area.open > 0 ? Math.max(6, Math.min(100, Math.round(((Number(area.open) || 0) / maxJobsInList) * 100))) : 0;
     const safetyBarWidth = area.safety > 0 ? Math.max(6, Math.min(100, Math.round(((Number(area.safety) || 0) / maxJobsInList) * 100))) : 0;
@@ -235,12 +344,16 @@ function renderJobsByAreaTable(filterQuery = "") {
         </a>
       </td>
       <td>
-        <!-- Open Count with Dropdown for Age Spans -->
+        <!-- Open Count with Interactive Split Button & Age Dropdown -->
         <div class="relative inline-block text-left dropdown-group">
-          <button type="button" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs border border-blue-200/80 transition-all cursor-pointer shadow-xs" onclick="toggleRowMenu(this)" title="Click to view open jobs breakdown by age">
-            <span>${area.open}</span>
-            <i class="fa-solid fa-chevron-down text-[9px] text-blue-500"></i>
-          </button>
+          <div class="inline-flex items-center rounded-lg bg-blue-50 border border-blue-200/80 shadow-xs">
+            <button type="button" class="px-2.5 py-1 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors cursor-pointer" onclick="showAreaOpenJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" title="Click to view all ${area.open} open jobs in ${area.name}">
+              <span>${area.open}</span>
+            </button>
+            <button type="button" class="px-1.5 py-1 hover:bg-blue-100 text-blue-500 transition-colors border-l border-blue-200/60 cursor-pointer" onclick="toggleRowMenu(this)" title="View open jobs breakdown by age">
+              <i class="fa-solid fa-chevron-down text-[9px]"></i>
+            </button>
+          </div>
 
           <!-- Dropdown Menu -->
           <div class="hidden absolute left-0 ${isLastRows ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} w-60 bg-white border border-slate-200 rounded-xl shadow-2xl py-2 z-40 text-xs text-slate-700 dropdown-menu animate-fade-in">
@@ -272,16 +385,16 @@ function renderJobsByAreaTable(filterQuery = "") {
 
             <div class="border-t border-slate-100 my-1"></div>
 
-            <a href="javascript:void(0);" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="block px-3.5 py-1.5 text-center text-blue-600 hover:bg-blue-50 font-semibold text-[11px]">
+            <a href="javascript:void(0);" onclick="showAreaOpenJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="block px-3.5 py-1.5 text-center text-blue-600 hover:bg-blue-50 font-semibold text-[11px]">
               View All Open Jobs (${area.open})
             </a>
           </div>
         </div>
       </td>
       <td>
-        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${area.safety > 0 ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'text-slate-400 bg-slate-50'}">
+        <a href="javascript:void(0);" onclick="${area.safety > 0 ? `showAreaSafetyJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')` : 'void(0)'}" class="px-2.5 py-0.5 rounded-full text-xs font-bold transition-all ${area.safety > 0 ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 cursor-pointer' : 'text-slate-400 bg-slate-50 cursor-default'}">
           ${area.safety}
-        </span>
+        </a>
       </td>
       <td style="min-width: 260px;">
         <!-- 3 Progress Graph Lines: Total Jobs, Open Jobs, Safety Issues -->
@@ -330,7 +443,6 @@ function openCreateJobForArea(areaName, areaId) {
     openModal();
     const areaSelect = document.getElementById("modalArea");
     if (areaSelect) {
-      // Find matching option
       for (let i = 0; i < areaSelect.options.length; i++) {
         if (areaSelect.options[i].text.toLowerCase() === areaName.toLowerCase() || areaSelect.options[i].value === areaId) {
           areaSelect.selectedIndex = i;
@@ -360,7 +472,7 @@ function getAreaIcon(name) {
 }
 
 function escapeHtml(str) {
-  return String(str).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+  return String(str || "").replace(/'/g, "\\'").replace(/"/g, "&quot;");
 }
 
 function initAreaSearch() {
@@ -373,7 +485,7 @@ function initAreaSearch() {
 }
 
 function toggleRowMenu(btn) {
-  const menu = btn.nextElementSibling;
+  const menu = btn.closest(".dropdown-group")?.querySelector(".dropdown-menu");
   document.querySelectorAll(".dropdown-menu").forEach(m => {
     if (m !== menu) m.classList.add("hidden");
   });
@@ -388,10 +500,15 @@ document.addEventListener("click", function (e) {
   }
 });
 
-// Area Jobs Pop-up Modal Management (Mirrors taskmaster JobDetailsform)
-let currentAreaModalJobs = [];
+// ============================================================
+// Area & Property Jobs Modal Management
+// ============================================================
 
+/**
+ * 1. Total Jobs for Specific Area (Clicked from table row)
+ */
 async function showAreaJobsModal(areaId, areaName) {
+  currentAreaModalName = areaName;
   const modal = document.getElementById("areaJobsModal");
   const titleArea = document.getElementById("areaModalAreaName");
   const titleProp = document.getElementById("areaModalPropName");
@@ -413,7 +530,7 @@ async function showAreaJobsModal(areaId, areaName) {
     <tr>
       <td colspan="15" class="py-12 text-center text-slate-400">
         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
-        <p class="text-xs">Loading jobs for ${areaName}...</p>
+        <p class="text-xs">Loading jobs for ${escapeHtml(areaName)}...</p>
       </td>
     </tr>
   `;
@@ -423,57 +540,63 @@ async function showAreaJobsModal(areaId, areaName) {
 
   let jobs = [];
 
+  // Step A: Attempt live getAreaJobs API
   if (typeof WorkWizeAPI !== "undefined") {
     try {
       const res = await WorkWizeAPI.getAreaJobs(areaId);
-      if (res && Array.isArray(res.jobs)) {
-        jobs = res.jobs;
-      } else if (Array.isArray(res)) {
-        jobs = res;
-      }
-
-      // Keep all 15 table headers visible and aligned 1-to-1 with table rows
-      const villaHeader = document.getElementById("areaModalVillaHeader");
-      if (villaHeader) {
-        villaHeader.classList.remove("hidden");
-      }
+      if (res && Array.isArray(res.jobs)) jobs = res.jobs;
+      else if (res && Array.isArray(res.Jobs)) jobs = res.Jobs;
+      else if (res && Array.isArray(res.data)) jobs = res.data;
+      else if (res && Array.isArray(res.result)) jobs = res.result;
+      else if (Array.isArray(res)) jobs = res;
     } catch (err) {
-      console.warn("API getAreaJobs error, falling back to local DB:", err);
+      console.warn("API getAreaJobs error:", err);
     }
   }
 
-  if (!jobs || !Array.isArray(jobs)) {
-    jobs = [];
+  // Step B: Fall back to propertyJobsCache if no jobs returned
+  if (!jobs || jobs.length === 0) {
+    if (!propertyJobsCache || propertyJobsCache.length === 0) {
+      await loadPropertyJobsCache(currentPropId);
+    }
+    jobs = propertyJobsCache.filter(j => jobMatchesArea(j, areaId, areaName));
   }
 
+  // Step C: Include any locally stored jobs from WorkWizeDB matching this area
+  if (typeof WorkWizeDB !== "undefined" && WorkWizeDB.getJobs) {
+    const localJobs = WorkWizeDB.getJobs();
+    if (Array.isArray(localJobs)) {
+      const localMatches = localJobs.filter(j => jobMatchesArea(j, areaId, areaName));
+      localMatches.forEach(lj => {
+        const norm = normalizeJobObject(lj);
+        if (!jobs.some(j => (j.jobId || j.orgjobId) === (norm.jobId || norm.orgjobId))) {
+          jobs.push(norm);
+        }
+      });
+    }
+  }
+
+  jobs = (jobs || []).map(normalizeJobObject);
   currentAreaModalJobs = jobs;
   renderAreaModalRows(jobs);
 
   if (countSpan) countSpan.textContent = jobs.length;
   if (footerCount) footerCount.textContent = `Total ${jobs.length} jobs in ${areaName}`;
 
-  // Search inside modal
-  if (searchInput) {
-    searchInput.oninput = function (e) {
-      const q = e.target.value.toLowerCase().trim();
-      const filtered = currentAreaModalJobs.filter(j => {
-        const id = (j.orgjobId || j.jobId || "").toLowerCase();
-        const detail = (j.jobDetail || j.title || "").toLowerCase();
-        const villa = (j.villaNumber || "").toLowerCase();
-        const loc = (j.jobLocation || "").toLowerCase();
-        const ref = (j.refNum || "").toLowerCase();
-        const stat = (j.jobStatus || "").toLowerCase();
-        return id.includes(q) || detail.includes(q) || villa.includes(q) || loc.includes(q) || ref.includes(q) || stat.includes(q);
-      });
-      renderAreaModalRows(filtered);
-    };
-  }
+  attachModalSearchListener();
 }
 
-async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
+/**
+ * 2. Open Jobs for Specific Area (Clicked from table row Open Jobs number or View All Open Jobs)
+ */
+async function showAreaOpenJobsModal(areaId, areaName) {
+  currentAreaModalName = `${areaName} Open`;
   const modal = document.getElementById("areaJobsModal");
   const titleArea = document.getElementById("areaModalAreaName");
   const titleProp = document.getElementById("areaModalPropName");
+  const countSpan = document.getElementById("areaModalJobCount");
+  const footerCount = document.getElementById("areaModalFooterCount");
+  const searchInput = document.getElementById("areaModalSearchInput");
   const tbody = document.getElementById("areaModalTableBody");
 
   if (!modal || !tbody) return;
@@ -481,18 +604,15 @@ async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
   const currentPropId = WorkWizeAPI.getCurrentProperty();
   const currentPropName = allPropertiesMap[currentPropId] || WorkWizeAPI.getCurrentPropertyName();
 
-  let dateLabel = "Within 30 Days";
-  if (dateSpan === "d60") dateLabel = "31 to 89 Days";
-  else if (dateSpan === "d90") dateLabel = "90+ Days Ago";
-
-  if (titleArea) titleArea.textContent = `${areaName} (${dateLabel})`;
+  if (titleArea) titleArea.textContent = `${areaName} (Open Jobs)`;
   if (titleProp) titleProp.textContent = `[${currentPropName}]`;
+  if (searchInput) searchInput.value = "";
 
   tbody.innerHTML = `
     <tr>
       <td colspan="15" class="py-12 text-center text-slate-400">
         <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
-        <p class="text-xs">Loading ${dateLabel} jobs for ${areaName}...</p>
+        <p class="text-xs">Loading open jobs for ${escapeHtml(areaName)}...</p>
       </td>
     </tr>
   `;
@@ -501,60 +621,415 @@ async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
   initAreaModalCloseListeners();
 
   let jobs = [];
+
+  // Step A: Attempt getAreaJobs API and filter open
+  if (typeof WorkWizeAPI !== "undefined") {
+    try {
+      const res = await WorkWizeAPI.getAreaJobs(areaId);
+      let allAreaJobs = [];
+      if (res && Array.isArray(res.jobs)) allAreaJobs = res.jobs;
+      else if (res && Array.isArray(res.Jobs)) allAreaJobs = res.Jobs;
+      else if (res && Array.isArray(res.data)) allAreaJobs = res.data;
+      else if (Array.isArray(res)) allAreaJobs = res;
+
+      jobs = allAreaJobs.filter(j => !isClosedStatus(j.jobStatus || j.JobStatus || j.status));
+    } catch (err) {
+      console.warn("API getAreaJobs error:", err);
+    }
+  }
+
+  // Step B: Fall back to propertyJobsCache
+  if (!jobs || jobs.length === 0) {
+    if (!propertyJobsCache || propertyJobsCache.length === 0) {
+      await loadPropertyJobsCache(currentPropId);
+    }
+    jobs = propertyJobsCache.filter(j => jobMatchesArea(j, areaId, areaName) && !isClosedStatus(j.jobStatus));
+  }
+
+  // Step C: Include local DB open jobs
+  if (typeof WorkWizeDB !== "undefined" && WorkWizeDB.getJobs) {
+    const localJobs = WorkWizeDB.getJobs();
+    if (Array.isArray(localJobs)) {
+      const localMatches = localJobs.filter(j => jobMatchesArea(j, areaId, areaName) && !isClosedStatus(j.status));
+      localMatches.forEach(lj => {
+        const norm = normalizeJobObject(lj);
+        if (!jobs.some(j => (j.jobId || j.orgjobId) === (norm.jobId || norm.orgjobId))) {
+          jobs.push(norm);
+        }
+      });
+    }
+  }
+
+  jobs = (jobs || []).map(normalizeJobObject);
+  currentAreaModalJobs = jobs;
+  renderAreaModalRows(jobs);
+
+  if (countSpan) countSpan.textContent = jobs.length;
+  if (footerCount) footerCount.textContent = `Total ${jobs.length} open jobs in ${areaName}`;
+
+  attachModalSearchListener();
+}
+
+/**
+ * 3. Area Jobs Filtered by Age Date Span (Within 30 Days, 31 to 89 Days, 90+ Days)
+ */
+async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
+  let dateLabel = "Within 30 Days";
+  if (dateSpan === "d60") dateLabel = "31 to 89 Days";
+  else if (dateSpan === "d90") dateLabel = "90+ Days Ago";
+
+  currentAreaModalName = `${areaName} (${dateLabel})`;
+  const modal = document.getElementById("areaJobsModal");
+  const titleArea = document.getElementById("areaModalAreaName");
+  const titleProp = document.getElementById("areaModalPropName");
+  const countSpan = document.getElementById("areaModalJobCount");
+  const footerCount = document.getElementById("areaModalFooterCount");
+  const searchInput = document.getElementById("areaModalSearchInput");
+  const tbody = document.getElementById("areaModalTableBody");
+
+  if (!modal || !tbody) return;
+
+  const currentPropId = WorkWizeAPI.getCurrentProperty();
+  const currentPropName = allPropertiesMap[currentPropId] || WorkWizeAPI.getCurrentPropertyName();
+
+  if (titleArea) titleArea.textContent = `${areaName} (${dateLabel})`;
+  if (titleProp) titleProp.textContent = `[${currentPropName}]`;
+  if (searchInput) searchInput.value = "";
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="15" class="py-12 text-center text-slate-400">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
+        <p class="text-xs">Loading ${dateLabel} jobs for ${escapeHtml(areaName)}...</p>
+      </td>
+    </tr>
+  `;
+
+  modal.classList.add("open");
+  initAreaModalCloseListeners();
+
+  let jobs = [];
+
+  // Step A: Attempt getAreaJobsByDate API
   try {
     const res = await WorkWizeAPI.getAreaJobsByDate(areaId, dateSpan);
-    if (res && Array.isArray(res.jobs)) {
-      jobs = res.jobs;
-    } else if (Array.isArray(res)) {
-      jobs = res;
-    }
-
-    // Keep all 15 table headers visible and aligned 1-to-1 with table rows
-    const villaHeader = document.getElementById("areaModalVillaHeader");
-    if (villaHeader) {
-      villaHeader.classList.remove("hidden");
-    }
+    if (res && Array.isArray(res.jobs)) jobs = res.jobs;
+    else if (res && Array.isArray(res.Jobs)) jobs = res.Jobs;
+    else if (res && Array.isArray(res.data)) jobs = res.data;
+    else if (Array.isArray(res)) jobs = res;
   } catch (e) {
     console.warn("API getAreaJobsByDate error:", e);
   }
 
-  if (!jobs || !Array.isArray(jobs)) {
-    jobs = [];
+  // Step B: Fall back to propertyJobsCache
+  if (!jobs || jobs.length === 0) {
+    if (!propertyJobsCache || propertyJobsCache.length === 0) {
+      await loadPropertyJobsCache(currentPropId);
+    }
+    const now = new Date().getTime();
+
+    jobs = propertyJobsCache.filter(j => {
+      if (!jobMatchesArea(j, areaId, areaName)) return false;
+      if (isClosedStatus(j.jobStatus)) return false;
+
+      const createdTime = (j.jobCreatedOn || j.openedOn) ? new Date(j.jobCreatedOn || j.openedOn).getTime() : 0;
+      if (!createdTime || isNaN(createdTime)) return dateSpan === "d30";
+
+      const diffDays = (now - createdTime) / (1000 * 60 * 60 * 24);
+      if (dateSpan === "d30") return diffDays <= 30;
+      if (dateSpan === "d60") return diffDays > 30 && diffDays < 90;
+      if (dateSpan === "d90") return diffDays >= 90;
+      return true;
+    });
   }
 
+  jobs = (jobs || []).map(normalizeJobObject);
   currentAreaModalJobs = jobs;
   renderAreaModalRows(jobs);
 
-  const countSpan = document.getElementById("areaModalJobCount");
-  const footerCount = document.getElementById("areaModalFooterCount");
   if (countSpan) countSpan.textContent = jobs.length;
   if (footerCount) footerCount.textContent = `Total ${jobs.length} jobs (${dateLabel})`;
 
-  // Attach search filter inside modal
+  attachModalSearchListener();
+}
+
+/**
+ * 4. Safety Issues for Area (Clicked from safety count badge)
+ */
+async function showAreaSafetyJobsModal(areaId, areaName) {
+  currentAreaModalName = `${areaName} Safety`;
+  const modal = document.getElementById("areaJobsModal");
+  const titleArea = document.getElementById("areaModalAreaName");
+  const titleProp = document.getElementById("areaModalPropName");
+  const countSpan = document.getElementById("areaModalJobCount");
+  const footerCount = document.getElementById("areaModalFooterCount");
   const searchInput = document.getElementById("areaModalSearchInput");
-  if (searchInput) {
-    searchInput.value = "";
-    searchInput.oninput = function (e) {
-      const q = e.target.value.toLowerCase().trim();
-      const filtered = currentAreaModalJobs.filter(j => {
-        const id = (j.orgjobId || j.jobId || "").toLowerCase();
-        const detail = (j.jobDetail || j.title || "").toLowerCase();
-        const villa = (j.villaNumber || "").toLowerCase();
-        const loc = (j.jobLocation || "").toLowerCase();
-        const ref = (j.refNum || "").toLowerCase();
-        const stat = (j.jobStatus || "").toLowerCase();
-        return id.includes(q) || detail.includes(q) || villa.includes(q) || loc.includes(q) || ref.includes(q) || stat.includes(q);
-      });
-      renderAreaModalRows(filtered);
-    };
+  const tbody = document.getElementById("areaModalTableBody");
+
+  if (!modal || !tbody) return;
+
+  const currentPropId = WorkWizeAPI.getCurrentProperty();
+  const currentPropName = allPropertiesMap[currentPropId] || WorkWizeAPI.getCurrentPropertyName();
+
+  if (titleArea) titleArea.textContent = `${areaName} (Safety Issues)`;
+  if (titleProp) titleProp.textContent = `[${currentPropName}]`;
+  if (searchInput) searchInput.value = "";
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="15" class="py-12 text-center text-slate-400">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
+        <p class="text-xs">Loading safety issues for ${escapeHtml(areaName)}...</p>
+      </td>
+    </tr>
+  `;
+
+  modal.classList.add("open");
+  initAreaModalCloseListeners();
+
+  if (!propertyJobsCache || propertyJobsCache.length === 0) {
+    await loadPropertyJobsCache(currentPropId);
   }
+
+  let jobs = propertyJobsCache.filter(j => {
+    return jobMatchesArea(j, areaId, areaName) && (j.priority || "").toLowerCase().includes("safety");
+  });
+
+  jobs = (jobs || []).map(normalizeJobObject);
+  currentAreaModalJobs = jobs;
+  renderAreaModalRows(jobs);
+
+  if (countSpan) countSpan.textContent = jobs.length;
+  if (footerCount) footerCount.textContent = `Total ${jobs.length} safety issue jobs in ${areaName}`;
+
+  attachModalSearchListener();
+}
+
+/**
+ * 5. Property-Wide Total Jobs (Clicked from top stat card #statTotalJobs)
+ */
+async function showPropertyAllJobsModal() {
+  currentAreaModalName = "All Areas";
+  const modal = document.getElementById("areaJobsModal");
+  const titleArea = document.getElementById("areaModalAreaName");
+  const titleProp = document.getElementById("areaModalPropName");
+  const countSpan = document.getElementById("areaModalJobCount");
+  const footerCount = document.getElementById("areaModalFooterCount");
+  const searchInput = document.getElementById("areaModalSearchInput");
+  const tbody = document.getElementById("areaModalTableBody");
+
+  if (!modal || !tbody) return;
+
+  const currentPropId = WorkWizeAPI.getCurrentProperty();
+  const currentPropName = allPropertiesMap[currentPropId] || WorkWizeAPI.getCurrentPropertyName();
+
+  if (titleArea) titleArea.textContent = "All Areas (Total Jobs)";
+  if (titleProp) titleProp.textContent = `[${currentPropName}]`;
+  if (searchInput) searchInput.value = "";
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="15" class="py-12 text-center text-slate-400">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
+        <p class="text-xs">Loading all registered jobs for ${escapeHtml(currentPropName)}...</p>
+      </td>
+    </tr>
+  `;
+
+  modal.classList.add("open");
+  initAreaModalCloseListeners();
+
+  let jobs = propertyJobsCache;
+  if (!jobs || jobs.length === 0) {
+    jobs = await loadPropertyJobsCache(currentPropId);
+  }
+
+  jobs = (jobs || []).map(normalizeJobObject);
+  currentAreaModalJobs = jobs;
+  renderAreaModalRows(jobs);
+
+  if (countSpan) countSpan.textContent = jobs.length;
+  if (footerCount) footerCount.textContent = `Total ${jobs.length} registered jobs across all operational areas`;
+
+  attachModalSearchListener();
+}
+
+/**
+ * 6. Property-Wide Open Jobs (Clicked from top stat card #statOpenJobs)
+ */
+async function showPropertyOpenJobsModal() {
+  currentAreaModalName = "All Areas Open";
+  const modal = document.getElementById("areaJobsModal");
+  const titleArea = document.getElementById("areaModalAreaName");
+  const titleProp = document.getElementById("areaModalPropName");
+  const countSpan = document.getElementById("areaModalJobCount");
+  const footerCount = document.getElementById("areaModalFooterCount");
+  const searchInput = document.getElementById("areaModalSearchInput");
+  const tbody = document.getElementById("areaModalTableBody");
+
+  if (!modal || !tbody) return;
+
+  const currentPropId = WorkWizeAPI.getCurrentProperty();
+  const currentPropName = allPropertiesMap[currentPropId] || WorkWizeAPI.getCurrentPropertyName();
+
+  if (titleArea) titleArea.textContent = "All Areas (Open Jobs)";
+  if (titleProp) titleProp.textContent = `[${currentPropName}]`;
+  if (searchInput) searchInput.value = "";
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="15" class="py-12 text-center text-slate-400">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
+        <p class="text-xs">Loading open jobs for ${escapeHtml(currentPropName)}...</p>
+      </td>
+    </tr>
+  `;
+
+  modal.classList.add("open");
+  initAreaModalCloseListeners();
+
+  let allJobs = propertyJobsCache;
+  if (!allJobs || allJobs.length === 0) {
+    allJobs = await loadPropertyJobsCache(currentPropId);
+  }
+
+  const openJobs = (allJobs || []).filter(j => !isClosedStatus(j.jobStatus)).map(normalizeJobObject);
+  currentAreaModalJobs = openJobs;
+  renderAreaModalRows(openJobs);
+
+  if (countSpan) countSpan.textContent = openJobs.length;
+  if (footerCount) footerCount.textContent = `Total ${openJobs.length} open jobs across all operational areas`;
+
+  attachModalSearchListener();
+}
+
+/**
+ * 7. Property-Wide Closed Jobs (Clicked from top stat card #statClosedJobs)
+ */
+async function showPropertyClosedJobsModal() {
+  currentAreaModalName = "All Areas Closed";
+  const modal = document.getElementById("areaJobsModal");
+  const titleArea = document.getElementById("areaModalAreaName");
+  const titleProp = document.getElementById("areaModalPropName");
+  const countSpan = document.getElementById("areaModalJobCount");
+  const footerCount = document.getElementById("areaModalFooterCount");
+  const searchInput = document.getElementById("areaModalSearchInput");
+  const tbody = document.getElementById("areaModalTableBody");
+
+  if (!modal || !tbody) return;
+
+  const currentPropId = WorkWizeAPI.getCurrentProperty();
+  const currentPropName = allPropertiesMap[currentPropId] || WorkWizeAPI.getCurrentPropertyName();
+
+  if (titleArea) titleArea.textContent = "All Areas (Closed Jobs)";
+  if (titleProp) titleProp.textContent = `[${currentPropName}]`;
+  if (searchInput) searchInput.value = "";
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="15" class="py-12 text-center text-slate-400">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
+        <p class="text-xs">Loading closed jobs for ${escapeHtml(currentPropName)}...</p>
+      </td>
+    </tr>
+  `;
+
+  modal.classList.add("open");
+  initAreaModalCloseListeners();
+
+  let allJobs = propertyJobsCache;
+  if (!allJobs || allJobs.length === 0) {
+    allJobs = await loadPropertyJobsCache(currentPropId);
+  }
+
+  const closedJobs = (allJobs || []).filter(j => isClosedStatus(j.jobStatus)).map(normalizeJobObject);
+  currentAreaModalJobs = closedJobs;
+  renderAreaModalRows(closedJobs);
+
+  if (countSpan) countSpan.textContent = closedJobs.length;
+  if (footerCount) footerCount.textContent = `Total ${closedJobs.length} closed jobs in ${currentPropName}`;
+
+  attachModalSearchListener();
+}
+
+/**
+ * 8. Property-Wide Safety Issues (Clicked from top stat card #statSafetyJobs)
+ */
+async function showPropertySafetyJobsModal() {
+  currentAreaModalName = "All Areas Safety";
+  const modal = document.getElementById("areaJobsModal");
+  const titleArea = document.getElementById("areaModalAreaName");
+  const titleProp = document.getElementById("areaModalPropName");
+  const countSpan = document.getElementById("areaModalJobCount");
+  const footerCount = document.getElementById("areaModalFooterCount");
+  const searchInput = document.getElementById("areaModalSearchInput");
+  const tbody = document.getElementById("areaModalTableBody");
+
+  if (!modal || !tbody) return;
+
+  const currentPropId = WorkWizeAPI.getCurrentProperty();
+  const currentPropName = allPropertiesMap[currentPropId] || WorkWizeAPI.getCurrentPropertyName();
+
+  if (titleArea) titleArea.textContent = "All Areas (Safety Issues)";
+  if (titleProp) titleProp.textContent = `[${currentPropName}]`;
+  if (searchInput) searchInput.value = "";
+
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="15" class="py-12 text-center text-slate-400">
+        <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
+        <p class="text-xs">Loading safety issues for ${escapeHtml(currentPropName)}...</p>
+      </td>
+    </tr>
+  `;
+
+  modal.classList.add("open");
+  initAreaModalCloseListeners();
+
+  let allJobs = propertyJobsCache;
+  if (!allJobs || allJobs.length === 0) {
+    allJobs = await loadPropertyJobsCache(currentPropId);
+  }
+
+  const safetyJobs = (allJobs || []).filter(j => (j.priority || "").toLowerCase().includes("safety")).map(normalizeJobObject);
+  currentAreaModalJobs = safetyJobs;
+  renderAreaModalRows(safetyJobs);
+
+  if (countSpan) countSpan.textContent = safetyJobs.length;
+  if (footerCount) footerCount.textContent = `Total ${safetyJobs.length} safety issue jobs in ${currentPropName}`;
+
+  attachModalSearchListener();
+}
+
+function attachModalSearchListener() {
+  const searchInput = document.getElementById("areaModalSearchInput");
+  if (!searchInput) return;
+
+  searchInput.oninput = function (e) {
+    const q = e.target.value.toLowerCase().trim();
+    if (!q) {
+      renderAreaModalRows(currentAreaModalJobs);
+      return;
+    }
+    const filtered = currentAreaModalJobs.filter(j => {
+      const id = String(j.orgjobId || j.jobId || "").toLowerCase();
+      const detail = String(j.jobDetail || j.title || "").toLowerCase();
+      const villa = String(j.villaNumber || "").toLowerCase();
+      const loc = String(j.jobLocation || "").toLowerCase();
+      const ref = String(j.refNum || "").toLowerCase();
+      const stat = String(j.jobStatus || "").toLowerCase();
+      const prio = String(j.priority || "").toLowerCase();
+      const assigned = String(j.assignedTo || "").toLowerCase();
+      return id.includes(q) || detail.includes(q) || villa.includes(q) || loc.includes(q) || ref.includes(q) || stat.includes(q) || prio.includes(q) || assigned.includes(q);
+    });
+    renderAreaModalRows(filtered);
+  };
 }
 
 function renderAreaModalRows(jobs) {
   const tbody = document.getElementById("areaModalTableBody");
   if (!tbody) return;
 
-  // Always keep all 15 columns visible and matching 1:1 with headers
   const villaHeader = document.getElementById("areaModalVillaHeader");
   if (villaHeader) {
     villaHeader.classList.remove("hidden");
@@ -563,15 +1038,15 @@ function renderAreaModalRows(jobs) {
   if (!jobs || jobs.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="15" class="py-10 text-center text-slate-400 text-xs">
-          No jobs found for this selection.
+        <td colspan="15" class="py-12 text-center text-slate-400 text-xs">
+          <i class="fa-regular fa-folder-open text-2xl text-slate-300 mb-2 block"></i>
+          <span>No jobs found for this selection.</span>
         </td>
       </tr>
     `;
     return;
   }
 
-  // Point 11: Sort area modal jobs by create date with asc/desc toggle
   const sortedJobs = [...jobs].sort((a, b) => {
     const timeA = (a.jobCreatedOn || a.openedOn) ? new Date(a.jobCreatedOn || a.openedOn).getTime() : 0;
     const timeB = (b.jobCreatedOn || b.openedOn) ? new Date(b.jobCreatedOn || b.openedOn).getTime() : 0;
@@ -581,11 +1056,11 @@ function renderAreaModalRows(jobs) {
     return currentAreaModalSortOrder === "asc" ? timeA - timeB : timeB - timeA;
   });
 
-  tbody.innerHTML = sortedJobs.map(j => {
+  tbody.innerHTML = sortedJobs.map(rawJob => {
+    const j = normalizeJobObject(rawJob);
     const displayId = j.orgjobId || j.jobId;
     const rawId = j.jobId || j.orgjobId;
 
-    // Badges
     const normStatus = normalizeStatusString(j.jobStatus || j.status);
     const normPriority = normalizePriorityString(j.priority);
 
@@ -600,7 +1075,6 @@ function renderAreaModalRows(jobs) {
     else if (normPriority.toLowerCase() === "low") priorityCls = "badge-priority-low";
     else if (normPriority.toLowerCase() === "safety") priorityCls = "badge-priority-safety";
 
-    // Assigned text
     let assignedText = "Unassigned";
     if (Array.isArray(j.data1) && j.data1.length > 0) {
       assignedText = j.data1.map(t => t.teamName || t.name || t).join(", ");
@@ -626,7 +1100,7 @@ function renderAreaModalRows(jobs) {
         <td class="font-semibold text-slate-800">
           ${(j.villaNumber && j.villaNumber !== '-' && j.villaNumber !== 'null') ? j.villaNumber : '<span class="text-slate-300">-</span>'}
         </td>
-        <!-- 3. DETAILS (Point 3: Interactive Hover Preview Card) -->
+        <!-- 3. DETAILS (Interactive Hover Preview Card) -->
         <td class="max-w-[260px] relative group text-slate-700 font-medium">
           <div class="truncate cursor-help flex items-center gap-1.5" title="${escapeHtml(detailText)}">
             <span class="truncate">${escapeHtml(detailText) || '<span class="text-slate-400">No details provided</span>'}</span>
@@ -731,24 +1205,17 @@ function formatDateStr(dateStr) {
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const month = months[d.getMonth()];
     const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    return `${day} ${month} ${year}`;
   } catch (e) {
     return dateStr;
   }
 }
 
-window.initJobsByArea = initJobsByArea;
-window.renderJobsByAreaTable = renderJobsByAreaTable;
-window.showAreaJobsModal = showAreaJobsModal;
-window.showAreaJobsByDateModal = showAreaJobsByDateModal;
-
-
-// ==========================================
 // Point 11: Toggle Date Sort in Area Modal
-// ==========================================
 function toggleAreaModalDateSort() {
   currentAreaModalSortOrder = currentAreaModalSortOrder === "asc" ? "desc" : "asc";
   const icon = document.getElementById("areaModalSortIcon");
@@ -767,9 +1234,7 @@ function toggleAreaModalDateSort() {
 }
 window.toggleAreaModalDateSort = toggleAreaModalDateSort;
 
-// ==========================================
 // Point 4: Export Area Jobs to CSV with Details
-// ==========================================
 function exportAreaJobsToCSV() {
   if (!currentAreaModalJobs || currentAreaModalJobs.length === 0) {
     if (typeof showToast === "function") showToast("No jobs to export.", "error");
@@ -795,7 +1260,8 @@ function exportAreaJobsToCSV() {
     "PROPERTY"
   ];
 
-  const rows = currentAreaModalJobs.map(j => {
+  const rows = currentAreaModalJobs.map(rawJob => {
+    const j = normalizeJobObject(rawJob);
     const displayId = j.orgjobId || j.jobId;
     const detailText = (j.jobDetail || j.details || "").replace(/"/g, '""').replace(/\r?\n/g, ' ');
     let assigned = "Unassigned";
@@ -836,7 +1302,21 @@ function exportAreaJobsToCSV() {
   document.body.removeChild(link);
 
   if (typeof showToast === "function") {
-    showToast(`Exported ${currentAreaModalJobs.length} area jobs to CSV.`, "success");
+    showToast(`Exported ${currentAreaModalJobs.length} jobs to CSV.`, "success");
   }
 }
 window.exportAreaJobsToCSV = exportAreaJobsToCSV;
+
+// Export all modal openers to window
+window.showAreaJobsModal = showAreaJobsModal;
+window.showAreaOpenJobsModal = showAreaOpenJobsModal;
+window.showAreaJobsByDateModal = showAreaJobsByDateModal;
+window.showAreaSafetyJobsModal = showAreaSafetyJobsModal;
+window.showPropertyAllJobsModal = showPropertyAllJobsModal;
+window.showPropertyOpenJobsModal = showPropertyOpenJobsModal;
+window.showPropertyClosedJobsModal = showPropertyClosedJobsModal;
+window.showPropertySafetyJobsModal = showPropertySafetyJobsModal;
+window.toggleRowMenu = toggleRowMenu;
+window.loadPropertyJobsCache = loadPropertyJobsCache;
+window.initJobsByArea = initJobsByArea;
+window.renderJobsByAreaTable = renderJobsByAreaTable;
