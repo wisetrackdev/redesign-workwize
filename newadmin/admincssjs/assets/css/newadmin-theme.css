@@ -1,0 +1,617 @@
+/* WorkWize Admin Console - Modern Executive Design System */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --admin-primary: #1a68ff;
+  --admin-primary-hover: #1455d9;
+  --admin-primary-light: #eff5ff;
+  --admin-bg: #F2F5FB;
+  --admin-card-bg: #ffffff;
+  --admin-border: #e2e8f0;
+  --admin-text-main: #0f172a;
+  --admin-text-muted: #64748b;
+  --admin-radius: 14px;
+}
+
+* {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+body {
+  background-color: var(--admin-bg) !important;
+  color: var(--admin-text-main) !important;
+  min-height: 100vh;
+}
+
+/* =========================================================
+   Top Header Bar
+   ========================================================= */
+.admin-top-header {
+  background-color: #F2F5FB !important;
+  border-bottom: 1px solid #e2e8f0;
+  height: 74px;
+  padding: 0 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(27, 37, 72, 0.08), 0 1px 3px rgba(27, 37, 72, 0.04);
+}
+
+.admin-brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.admin-brand-logo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.admin-brand-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Segmented Tabs Navigation in Header */
+.admin-seg {
+  display: inline-flex;
+  align-items: center;
+  background: #E8ECF8;
+  border: 1px solid rgba(64, 88, 166, 0.16);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+
+.admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 9px;
+  border: 0;
+  background: transparent;
+  color: #4058A6;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  white-space: nowrap;
+  user-select: none;
+  text-decoration: none;
+}
+
+.admin-tab:hover {
+  color: #1e3a8a;
+  background: rgba(64, 88, 166, 0.08);
+}
+
+.admin-tab.active,
+.admin-tab.show {
+  background: #1a68ff !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(26, 104, 255, 0.35);
+}
+
+.admin-tab.active i,
+.admin-tab.show i {
+  color: #ffffff !important;
+}
+
+/* User Profile Pill */
+.admin-user-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px 5px 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9999px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-user-pill:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.admin-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   Card & Container Styling
+   ========================================================= */
+.ww-admin-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03) !important;
+  overflow: hidden;
+  margin-bottom: 24px;
+  transition: all 0.2s ease;
+}
+
+.ww-admin-card:hover {
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05) !important;
+}
+
+.ww-admin-card-header {
+  padding: 18px 24px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ww-admin-card-body {
+  padding: 20px 24px !important;
+}
+
+/* Buttons */
+.btn-linkedin,
+.btn-primary {
+  background: #1a68ff !important;
+  border-color: #1a68ff !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 8px 18px !important;
+  border-radius: 10px !important;
+  box-shadow: 0 2px 8px rgba(26, 104, 255, 0.25) !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-linkedin:hover,
+.btn-primary:hover {
+  background: #1455d9 !important;
+  border-color: #1455d9 !important;
+  box-shadow: 0 4px 14px rgba(26, 104, 255, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+.btn-outline-linkedin,
+.btn-outline-primary {
+  background: #ffffff !important;
+  border: 1px solid #bfdbfe !important;
+  color: #1a68ff !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 7px 16px !important;
+  border-radius: 10px !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-outline-linkedin:hover,
+.btn-outline-primary:hover {
+  background: #eff6ff !important;
+  border-color: #1a68ff !important;
+}
+
+.btn-outline-secondary {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  padding: 7px 16px !important;
+  border-radius: 10px !important;
+}
+
+.btn-outline-secondary:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* =========================================================
+   Modern DataTables & Table Styling
+   ========================================================= */
+.card-datatable,
+.table-responsive {
+  border-radius: 12px;
+  overflow-x: auto;
+  border: 1px solid #f1f5f9;
+}
+
+table.dataTable,
+.table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+table.dataTable thead,
+.table thead {
+  background: #f8fafc !important;
+}
+
+table.dataTable thead th,
+.table thead th {
+  background-color: #f8fafc !important;
+  color: #334155 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 12px 14px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  border-top: none !important;
+  vertical-align: middle !important;
+  white-space: nowrap !important;
+}
+
+table.dataTable tbody td,
+.table tbody td {
+  padding: 12px 14px !important;
+  font-size: 12.5px !important;
+  color: #1e293b !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  border-top: none !important;
+  vertical-align: middle !important;
+}
+
+table.dataTable tbody tr:hover,
+.table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+.header-label {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: #64748b !important;
+  letter-spacing: 0.04em !important;
+  display: block !important;
+  margin-bottom: 4px !important;
+}
+
+table.dataTable thead th input.form-control,
+table.dataTable thead th input.form-control-sm {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  font-size: 11.5px !important;
+  padding: 4px 8px !important;
+  height: 28px !important;
+  box-shadow: none !important;
+  color: #0f172a !important;
+  min-width: 80px;
+}
+
+table.dataTable thead th input.form-control:focus,
+table.dataTable thead th input.form-control-sm:focus {
+  border-color: #1a68ff !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(26, 104, 255, 0.15) !important;
+}
+
+/* DataTables search & pagination */
+.dataTables_wrapper .dataTables_filter {
+  margin-bottom: 12px;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  padding: 5px 12px !important;
+  font-size: 12.5px !important;
+  background-color: #f8fafc !important;
+  outline: none !important;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+  background-color: #ffffff !important;
+  border-color: #1a68ff !important;
+}
+
+.dataTables_wrapper .dataTables_paginate {
+  padding-top: 14px;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  border-radius: 8px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  background: #1a68ff !important;
+  color: #ffffff !important;
+  border-color: #1a68ff !important;
+}
+
+/* =========================================================
+   Modals & Popups Overhaul
+   ========================================================= */
+.modal-content {
+  border-radius: 18px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16) !important;
+  overflow: hidden !important;
+}
+
+.modal-header,
+.modal-header.bgimg,
+.modal-header.bgimg2 {
+  background: linear-gradient(135deg, #f8fafc, #edf2f7) !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 16px 24px !important;
+}
+
+.modal-title {
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  color: #0f172a !important;
+}
+
+.modal-body {
+  padding: 22px 24px !important;
+  background-color: #ffffff !important;
+}
+
+.modal-footer {
+  background-color: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 14px 24px !important;
+}
+
+.form-label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+  margin-bottom: 6px !important;
+}
+
+.form-control,
+.form-select {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  background-color: #f8fafc !important;
+  transition: all 0.2s ease !important;
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: #ffffff !important;
+  border-color: #1a68ff !important;
+  box-shadow: 0 0 0 3px rgba(26, 104, 255, 0.15) !important;
+  outline: none !important;
+}
+
+/* Select2 Modernization */
+.select2-container--default .select2-selection--single,
+.select2-container--default .select2-selection--multiple {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  min-height: 38px !important;
+  background-color: #f8fafc !important;
+}
+
+.select2-dropdown {
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* User Profile Dropdown Menu */
+.dropdown-menu {
+  border-radius: 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08) !important;
+  padding: 8px !important;
+}
+
+.dropdown-item {
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  padding: 8px 14px !important;
+  font-weight: 500 !important;
+  color: #334155 !important;
+}
+
+.dropdown-item:hover {
+  background-color: #f1f5f9 !important;
+  color: #1a68ff !important;
+}
+
+/* jQuery UI Dialog Overhaul */
+.ui-dialog {
+  border-radius: 16px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+.ui-dialog .ui-dialog-titlebar {
+  background: #f8fafc !important;
+  border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  font-weight: 700 !important;
+  font-size: 14px !important;
+  padding: 14px 18px !important;
+}
+
+.ui-dialog .ui-dialog-content {
+  padding: 20px 22px !important;
+  font-size: 13px !important;
+  color: #1e293b !important;
+}
+
+.ui-dialog .ui-dialog-buttonpane {
+  background: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 10px 18px !important;
+}
+
+.ui-dialog .ui-dialog-buttonpane button {
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+
+/* =========================================================
+   Modern Status Badges
+   ========================================================= */
+.badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  border-radius: 9999px !important;
+  letter-spacing: 0.03em !important;
+}
+
+.badge.bg-label-success {
+  background-color: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+.badge.bg-label-danger {
+  background-color: #fff1f2 !important;
+  color: #be123c !important;
+  border: 1px solid #fecdd3 !important;
+}
+
+.badge.bg-label-dark {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border: 1px solid #e2e8f0 !important;
+  font-weight: 600 !important;
+}
+
+.badge.bg-label-primary {
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+}
+
+.badge.bg-label-secondary {
+  background-color: #f8fafc !important;
+  color: #64748b !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* =========================================================
+   Modern Action Buttons & Sizes
+   ========================================================= */
+.btn-xs {
+  padding: 4px 10px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  line-height: 1.4 !important;
+}
+
+.btn-sm {
+  padding: 6px 14px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  border-radius: 9px !important;
+}
+
+.rounded-1 {
+  border-radius: 8px !important;
+}
+
+.btn-outline-danger {
+  background-color: #ffffff !important;
+  border: 1px solid #fecdd3 !important;
+  color: #e11d48 !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-outline-danger:hover {
+  background-color: #fff1f2 !important;
+  border-color: #e11d48 !important;
+  color: #be123c !important;
+}
+
+.btn-outline-success {
+  background-color: #ffffff !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #059669 !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-outline-success:hover {
+  background-color: #ecfdf5 !important;
+  border-color: #059669 !important;
+  color: #047857 !important;
+}
+
+/* =========================================================
+   DataTable Export Action Buttons Toolbar
+   ========================================================= */
+.dt-buttons {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 14px !important;
+  flex-wrap: wrap !important;
+}
+
+.dt-buttons .dt-button {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  padding: 6px 13px !important;
+  border-radius: 9px !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.dt-buttons .dt-button:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}

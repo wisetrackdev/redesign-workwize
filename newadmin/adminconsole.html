@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+  <title>WorkWize | Admin Console</title>
+  <link rel="icon" type="image/x-icon" href="assets/logo.jpeg" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Font Awesome 6 Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/fonts/boxicons.css" />
+
+  <!-- Core Vendor CSS for Compatibility -->
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/css/rtl/core.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/select2/select2.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/flatpickr/flatpickr.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/sweetalert2/sweetalert2.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" />
+
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.dataTables.min.css" />
+  
+  <!-- jQuery UI CSS -->
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" />
+  <link rel="stylesheet" href="../commons/systemjscss/cs/jqueryui-custom.css" />
+
+  <!-- Modern WorkWize Admin Theme CSS -->
+  <link rel="stylesheet" href="admincssjs/assets/css/newadmin-theme.css" />
+
+  <!-- jQuery must be loaded in HEAD for early handlers -->
+  <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+</head>
+
+<body class="min-h-screen flex flex-col" style="background-color: #F2F5FB !important;">
+
+  <!-- Main Top Header -->
+  <header class="admin-top-header">
+    
+    <!-- Brand Logo on Left -->
+    <div class="admin-brand-wrap">
+      <a href="adminconsole.html" class="flex items-center gap-2.5">
+        <img src="assets/logo.png" alt="WorkWize Logo" class="admin-brand-logo" />
+      </a>
+      <span class="admin-brand-badge hidden sm:inline-flex items-center gap-1">
+        <i class="fa-solid fa-shield-halved text-[10px]"></i>
+        <span>Admin Console</span>
+      </span>
+    </div>
+
+    <!-- Segmented Navigation Pills in Center -->
+    <nav class="nav admin-seg" id="adminMainTabs" role="tablist">
+      <button 
+        type="button" 
+        class="nav-link admin-tab active" 
+        id="tabBtnProperty" 
+        data-bs-toggle="tab" 
+        data-bs-target="#property-list" 
+        role="tab" 
+        aria-controls="property-list" 
+        aria-selected="true"
+      >
+        <i class="fa-solid fa-hotel text-xs"></i>
+        <span>Properties</span>
+      </button>
+
+      <button 
+        type="button" 
+        class="nav-link admin-tab" 
+        id="tabBtnArea" 
+        data-bs-toggle="tab" 
+        data-bs-target="#area-list" 
+        role="tab" 
+        aria-controls="area-list" 
+        aria-selected="false"
+      >
+        <i class="fa-solid fa-layer-group text-xs"></i>
+        <span>Areas</span>
+      </button>
+
+      <button 
+        type="button" 
+        class="nav-link admin-tab" 
+        id="tabBtnEmployee" 
+        data-bs-toggle="tab" 
+        data-bs-target="#employee-list" 
+        role="tab" 
+        aria-controls="employee-list" 
+        aria-selected="false"
+      >
+        <i class="fa-solid fa-users text-xs"></i>
+        <span>Employees</span>
+      </button>
+
+      <button 
+        type="button" 
+        class="nav-link admin-tab" 
+        id="tabBtnTeam" 
+        data-bs-toggle="tab" 
+        data-bs-target="#team-list" 
+        role="tab" 
+        aria-controls="team-list" 
+        aria-selected="false"
+      >
+        <i class="fa-solid fa-users-gear text-xs"></i>
+        <span>Teams</span>
+      </button>
+    </nav>
+
+    <!-- User Profile Dropdown on Right -->
+    <div class="relative">
+      <button 
+        id="adminUserDropdownBtn" 
+        type="button" 
+        class="admin-user-pill dropdown-toggle" 
+        data-bs-toggle="dropdown" 
+        aria-expanded="false"
+      >
+        <div class="admin-user-avatar">
+          <i class="fa-regular fa-user"></i>
+        </div>
+        <div class="text-left leading-none hidden sm:block max-w-[150px]">
+          <span class="text-xs font-bold text-slate-800 block truncate" id="UserName_Name">Admin</span>
+          <small class="text-slate-400 text-[10px] font-medium block">Console <span id="is-manager"></span></small>
+        </div>
+        <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-1"></i>
+      </button>
+
+      <ul class="dropdown-menu dropdown-menu-end shadow-xl border border-slate-200 py-1.5 animate-fade-in text-xs">
+        <li class="px-4 py-2 border-b border-slate-100">
+          <p class="text-slate-800 font-bold mb-0">Administrator</p>
+          <p class="text-slate-400 text-[11px] mb-0">System Governance</p>
+        </li>
+        <li>
+          <a class="dropdown-item cursor-pointer flex items-center py-2 px-4 hover:bg-slate-50 text-slate-700" onclick="ResetPassword()">
+            <i class="fa-solid fa-key mr-2 text-slate-400"></i>
+            <span>Reset Password</span>
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item cursor-pointer flex items-center py-2 px-4 hover:bg-slate-50 text-slate-700" href="../newtaskmaster/dashboard.html">
+            <i class="fa-solid fa-table-cells-large mr-2 text-blue-500"></i>
+            <span>TaskMaster App</span>
+          </a>
+        </li>
+        <li><hr class="dropdown-divider my-1"></li>
+        <li>
+          <a class="dropdown-item cursor-pointer flex items-center py-2 px-4 hover:bg-rose-50 text-rose-600 font-semibold" onclick="LogoutUser()">
+            <i class="fa-solid fa-arrow-right-from-bracket mr-2"></i>
+            <span>Log Out</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+  </header>
+
+  <!-- Page Main Content Area -->
+  <main class="flex-1 p-6 sm:p-8 max-w-[100rem] w-full mx-auto space-y-6" id="section-block">
+
+    <!-- Confirmation Dialog (Required by adminconsole.js) -->
+    <div id="dialog-Confirm" title="Confirmation" style="display:none; z-index:10001">
+      <p id="confirmation_message" class="text-center p-3 text-slate-700 text-sm">
+        <span style="float:left; margin:12px 12px 20px 0;"></span>
+        Are you sure you want to continue?
+      </p>
+    </div>
+
+    <!-- Hidden dashboard inputs required by SetDashboardDates() -->
+    <input type="hidden" id="dash_start_date" />
+    <input type="hidden" id="dash_end_date" />
+
+    <!-- Page Header Banner -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">System Administration</h1>
+          <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 inline-flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Live System</span>
+          </span>
+        </div>
+        <p class="text-xs text-slate-500">
+          Manage multi-property configurations, operational zones, employee access permissions, and technical teams.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <button type="button" onclick="UpdateDashboard()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-2 transition-all">
+          <i class="fa-solid fa-arrows-rotate text-slate-400"></i>
+          <span>Refresh Data</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Tab Panes Content -->
+    <div class="tab-content">
+
+      <!-- ========================================================
+           TAB 1: PROPERTY LIST
+           ======================================================== -->
+      <div class="tab-pane fade show active" id="property-list" role="tabpanel">
+        <div class="ww-admin-card">
+          <!-- Card Header -->
+          <div class="ww-admin-card-header">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-base shadow-xs shrink-0">
+                <i class="fa-solid fa-hotel"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 text-base">Property Directory</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Registered resort properties, facilities, and contact details</p>
+              </div>
+            </div>
+
+            <button 
+              type="button" 
+              class="btn-linkedin" 
+              onclick="AddNewProperty()"
+            >
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>Add New Property</span>
+            </button>
+          </div>
+
+          <!-- Card Body with DataTable -->
+          <div class="ww-admin-card-body">
+            <div class="card-datatable table-responsive">
+              <table id="propertyDataTable" class="table table-hover" cellspacing="0">
+                <thead>
+                  <tr>
+                    <th scope="col">ID</th>
+                    <th scope="col">NAME</th>
+                    <th scope="col">STATE</th>
+                    <th scope="col">CITY</th>
+                    <th scope="col">COUNTRY</th>
+                    <th scope="col">TYPE</th>
+                    <th scope="col">CONTACT PERSON</th>
+                    <th scope="col">CONTACT NUMBER</th>
+                    <th scope="col">EMAIL</th>
+                    <th scope="col">WEBSITE</th>
+                    <th scope="col">STATUS</th>
+                    <th scope="col">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Populated dynamically via UpdatePropertyTable() -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================================
+           TAB 2: AREA LIST
+           ======================================================== -->
+      <div class="tab-pane fade" id="area-list" role="tabpanel">
+        <div class="ww-admin-card">
+          <!-- Card Header -->
+          <div class="ww-admin-card-header">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base shadow-xs shrink-0">
+                <i class="fa-solid fa-layer-group"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 text-base">Operational Areas</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Facility zones, departments, subareas, and checklists</p>
+              </div>
+            </div>
+
+            <button 
+              type="button" 
+              class="btn-linkedin !bg-emerald-600 hover:!bg-emerald-700 !border-emerald-600" 
+              onclick="AddNewArea()"
+            >
+              <i class="fa-solid fa-plus text-xs"></i>
+              <span>Add New Area</span>
+            </button>
+          </div>
+
+          <!-- Card Body with Table -->
+          <div class="ww-admin-card-body">
+            <div class="table-responsive text-nowrap">
+              <table class="table text-nowrap">
+                <thead>
+                  <tr>
+                    <th>SR NO</th>
+                    <th>AREA ID</th>
+                    <th>AREA NAME</th>
+                    <th>TOTAL COUNT</th>
+                    <th>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody id="area-table-body">
+                  <!-- Populated dynamically via GetAllAreas() -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================================
+           TAB 3: EMPLOYEE LIST
+           ======================================================== -->
+      <div class="tab-pane fade" id="employee-list" role="tabpanel">
+        <div class="ww-admin-card">
+          <!-- Card Header -->
+          <div class="ww-admin-card-header">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-base shadow-xs shrink-0">
+                <i class="fa-solid fa-users"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 text-base">Employee & Staff Directory</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Operational workforce, role assignments, and property access levels</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Body with DataTable -->
+          <div class="ww-admin-card-body">
+            <div class="card-datatable table-responsive">
+              <table id="employeeDataTable" class="table table-hover" cellspacing="0">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>FIRST NAME</th>
+                    <th>LAST NAME</th>
+                    <th>EMAIL</th>
+                    <th>MOBILE</th>
+                    <th>PROPERTY</th>
+                    <th>STATUS</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="area-table-bodyd">
+                  <!-- Populated dynamically via GetAllEmployee() -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================================
+           TAB 4: TEAM LIST
+           ======================================================== -->
+      <div class="tab-pane fade" id="team-list" role="tabpanel">
+        <div class="ww-admin-card">
+          <!-- Card Header -->
+          <div class="ww-admin-card-header">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-base shadow-xs shrink-0">
+                <i class="fa-solid fa-users-gear"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 text-base">Operational Teams</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Specialized technical teams, maintenance supervisors, and technician rosters</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card Body with DataTable -->
+          <div class="ww-admin-card-body">
+            <div class="card-datatable table-responsive">
+              <table id="teamDataTable" class="table table-hover" cellspacing="0">
+                <thead>
+                  <tr>
+                    <th>PROPERTY ID</th>
+                    <th>PROPERTY NAME</th>
+                    <th>TEAM ID</th>
+                    <th>TEAM NAME</th>
+                    <th>MANAGER</th>
+                    <th>TOTAL MEMBERS</th>
+                    <th>ACTION</th>
+                  </tr>
+                </thead>
+                <tbody id="team-table-body">
+                  <!-- Populated dynamically via GetAllTeams() -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================
+       MODAL CONTAINERS (Required by adminconsole.js)
+       ======================================================== -->
+  <!-- Dynamic Modal Injections -->
+  <div id="modelHolder"></div>
+
+  <!-- Add New Team Modal Structure -->
+  <div id="teams">
+    <div class="modal fade" id="addNewTeam" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">      
+          <div class="modal-header">
+            <h5 class="modal-title" id="exampleModalLabel2">
+              Add New Team <span id="team-prop-name" class="text-slate-400 font-normal"></span>
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body space-y-4">
+            <div>
+              <label class="form-label" for="newteam-fullname">Team Name <span class="text-rose-500">*</span></label>
+              <input type="text" class="form-control" id="newteam-fullname" placeholder="e.g. Electrical Maintenance">
+            </div>
+            <div>
+              <label class="form-label" for="collapsible-manager">Team Manager <span class="text-rose-500">*</span></label>
+              <select id="collapsible-manager" class="select2 form-select jbtclsdd">
+              </select>
+            </div>
+            <div>
+              <label class="form-label" for="collapsible-member">Team Members <span class="text-rose-500">*</span></label>
+              <select id="collapsible-member" class="select2 form-select jbtclsdd" multiple>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-outline-secondary" data-bs-dismiss="modal">
+              Close
+            </button>
+            <button type="button" class="btn-linkedin" onclick="CreateNewTeam()">
+              <i class="fa-solid fa-floppy-disk mr-1"></i> Save Team
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="teams2"></div>
+  <div id="divholder"></div>
+  <div id="permissin-divs"></div>
+
+  <!-- ========================================================
+       SCRIPTS & VENDOR LIBRARIES
+       ======================================================== -->
+  <!-- Bootstrap 5 Bundle -->
+  <script src="admincssjs/theme/assets/vendor/libs/popper/popper.js"></script>
+  <script src="admincssjs/theme/assets/vendor/js/bootstrap.js"></script>
+
+  <!-- jQuery UI -->
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+
+  <!-- Select2, Toastr, SweetAlert2, Flatpickr -->
+  <script src="admincssjs/theme/assets/vendor/libs/select2/select2.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/sweetalert2/sweetalert2.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/block-ui/block-ui.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/moment/moment.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/flatpickr/flatpickr.js"></script>
+
+  <!-- DataTables & Extensions -->
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+  <script src="../commons/systemjscss/js/datatables.js"></script>
+
+  <!-- JWT Decode -->
+  <script src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/cjs/index.min.js"></script>
+
+  <script>
+    // Robust Tab switching & DataTable recalculation listener
+    document.querySelectorAll('.admin-tab').forEach(tabBtn => {
+      tabBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        try {
+          const tab = new bootstrap.Tab(this);
+          tab.show();
+        } catch (err) {
+          // Fallback if bootstrap instance already created
+          $(this).tab('show');
+        }
+      });
+
+      tabBtn.addEventListener('shown.bs.tab', function () {
+        if ($.fn.dataTable) {
+          $($.fn.dataTable.tables(true)).DataTable().columns.adjust().draw();
+        }
+      });
+    });
+
+    // Sequential script loader to maintain exact execution order
+    const scriptsToLoad = [
+      '../webessential/domain.js',
+      'admincssjs/app_admin.js',
+      'admincssjs/adminconsole.js'
+    ];
+    loadScriptSequentially(scriptsToLoad);
+
+    function loadScriptSequentially(scripts, index = 0) {
+      if (index >= scripts.length) return;
+
+      const script = document.createElement('script');
+      script.src = scripts[index] + '?v=' + new Date().getTime();
+
+      script.onload = function() {
+        loadScriptSequentially(scripts, index + 1);
+      };
+
+      script.onerror = function() {
+        loadScriptSequentially(scripts, index + 1);
+      };
+
+      document.body.appendChild(script);
+    }
+  </script>
+
+</body>
+</html>
