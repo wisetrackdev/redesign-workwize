@@ -22,7 +22,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Font Awesome 6 Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" />
+  <!-- Font Awesome 6 Icons & BoxIcons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/fonts/fontawesome.css" />
   <link rel="stylesheet" href="admincssjs/theme/assets/vendor/fonts/boxicons.css" />
 
   <!-- Core Vendor CSS for Compatibility -->
@@ -189,29 +191,6 @@
     <!-- Hidden dashboard inputs required by SetDashboardDates() -->
     <input type="hidden" id="dash_start_date" />
     <input type="hidden" id="dash_end_date" />
-
-    <!-- Page Header Banner -->
-    <div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div class="space-y-1">
-        <div class="flex items-center gap-2.5 flex-wrap">
-          <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">System Administration</h1>
-          <span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 inline-flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>Live System</span>
-          </span>
-        </div>
-        <p class="text-xs text-slate-500">
-          Manage multi-property configurations, operational zones, employee access permissions, and technical teams.
-        </p>
-      </div>
-
-      <div class="flex items-center gap-2.5 flex-wrap">
-        <button type="button" onclick="UpdateDashboard()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-2 transition-all">
-          <i class="fa-solid fa-arrows-rotate text-slate-400"></i>
-          <span>Refresh Data</span>
-        </button>
-      </div>
-    </div>
 
     <!-- Main Tab Panes Content -->
     <div class="tab-content">
@@ -506,24 +485,37 @@
       }
     });
 
-    // Robust Tab switching & DataTable recalculation listener
-    document.querySelectorAll('.admin-tab').forEach(tabBtn => {
-      tabBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        try {
-          const tab = new bootstrap.Tab(this);
-          tab.show();
-        } catch (err) {
-          // Fallback if bootstrap instance already created
-          $(this).tab('show');
-        }
-      });
+    // Reliable Tab Switching & DataTable Adjustment
+    $('#adminMainTabs .admin-tab').on('click', function (e) {
+      e.preventDefault();
 
-      tabBtn.addEventListener('shown.bs.tab', function () {
+      // 1. Update active tab pill in header
+      $('#adminMainTabs .admin-tab').removeClass('active').attr('aria-selected', 'false');
+      $(this).addClass('active').attr('aria-selected', 'true');
+
+      // 2. Hide all tab panes
+      $('.tab-content > .tab-pane').removeClass('show active').css('display', 'none');
+
+      // 3. Show target tab pane
+      var target = $(this).attr('data-bs-target') || $(this).data('bs-target');
+      if (target && $(target).length) {
+        $(target).addClass('show active').css({
+          'display': 'block',
+          'visibility': 'visible',
+          'opacity': '1'
+        });
+      }
+
+      // 4. Adjust DataTables column widths for active pane
+      setTimeout(function () {
         if ($.fn.dataTable) {
-          $($.fn.dataTable.tables(true)).DataTable().columns.adjust().draw();
+          $('table.dataTable').each(function () {
+            if ($.fn.dataTable.isDataTable(this)) {
+              $(this).DataTable().columns.adjust().draw(false);
+            }
+          });
         }
-      });
+      }, 60);
     });
 
     // Sequential script loader to maintain exact execution order
