@@ -178,7 +178,7 @@
   </header>
 
   <!-- Page Main Content Area -->
-  <main class="flex-1 p-6 sm:p-8 max-w-[100rem] w-full mx-auto space-y-6" id="section-block">
+  <main class="flex-1 px-4 sm:px-6 py-4 max-w-[102rem] w-full mx-auto" id="section-block">
 
     <!-- Confirmation Dialog (Required by adminconsole.js) -->
     <div id="dialog-Confirm" title="Confirmation" style="display:none; z-index:10001">
@@ -359,6 +359,13 @@
                 <p class="text-xs text-slate-500 mt-0.5">Specialized technical teams, maintenance supervisors, and technician rosters</p>
               </div>
             </div>
+
+            <!-- Team status filter group -->
+            <div class="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl" id="teamStatusFilterGroup">
+              <button type="button" class="px-3 py-1 text-xs font-semibold rounded-lg transition-all active bg-white text-slate-800 shadow-xs" id="btnFilterAllTeams" onclick="FilterTeamsByStatus('ALL')">All</button>
+              <button type="button" class="px-3 py-1 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900" id="btnFilterActiveTeams" onclick="FilterTeamsByStatus('ACTIVE')">Active</button>
+              <button type="button" class="px-3 py-1 text-xs font-semibold rounded-lg transition-all text-slate-600 hover:text-slate-900" id="btnFilterInactiveTeams" onclick="FilterTeamsByStatus('INACTIVE')">Inactive</button>
+            </div>
           </div>
 
           <!-- Card Body with DataTable -->
@@ -373,6 +380,7 @@
                     <th>TEAM NAME</th>
                     <th>MANAGER</th>
                     <th>TOTAL MEMBERS</th>
+                    <th>STATUS</th>
                     <th>ACTION</th>
                   </tr>
                 </thead>

@@ -42,8 +42,8 @@ body {
 .admin-top-header {
   background-color: #F2F5FB !important;
   border-bottom: 1px solid #e2e8f0;
-  height: 74px;
-  padding: 0 32px;
+  height: 64px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -62,7 +62,7 @@ body {
 }
 
 .admin-brand-logo {
-  height: 44px;
+  height: 38px;
   width: auto;
   object-fit: contain;
   display: block;
@@ -1161,4 +1161,57 @@ table.dataTable thead th {
   display: block !important;
   visibility: visible !important;
   opacity: 1 !important;
+}
+
+
+/* =========================================================
+   Eliminate Dual Scrollbars & Compact Top Space
+   ========================================================= */
+html {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 100vh;
+}
+
+/* Ensure table container never creates a second vertical scrollbar */
+.card-datatable,
+.table-responsive {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  max-height: none !important;
+  height: auto !important;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+}
+
+.ww-admin-card {
+  margin-bottom: 16px !important;
+}
+
+.ww-admin-card-header {
+  padding: 14px 20px !important;
+}
+
+.ww-admin-card-body {
+  padding: 16px 20px !important;
+  overflow: visible !important;
+  height: auto !important;
+  max-height: none !important;
+}
+
+#teamStatusFilterGroup button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+#teamStatusFilterGroup button.active {
+  background-color: #ffffff !important;
+  color: #1a68ff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
 }
