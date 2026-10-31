@@ -12,6 +12,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
 
   <!-- Tailwind CSS CDN -->
+  <script>
+    tailwind = {
+      corePlugins: {
+        preflight: false
+      }
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Font Awesome 6 Icons -->
@@ -20,6 +27,10 @@
 
   <!-- Core Vendor CSS for Compatibility -->
   <link rel="stylesheet" href="admincssjs/theme/assets/vendor/css/rtl/core.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/css/rtl/theme-bordered.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/css/demo.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/animate-css/animate.css" />
+  <link rel="stylesheet" href="../commons/systemjscss/cs/opro.css" />
   <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/select2/select2.css" />
   <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/flatpickr/flatpickr.css" />
   <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/sweetalert2/sweetalert2.css" />
@@ -484,6 +495,17 @@
   <script src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/cjs/index.min.js"></script>
 
   <script>
+    // Robust Collapse & Tab Listeners
+    $(document).on('click', '[data-bs-toggle="collapse"]', function (e) {
+      const target = $(this).attr('data-bs-target') || $(this).attr('href');
+      if (target) {
+        const $target = $(target);
+        if ($target.length) {
+          $target.css('visibility', 'visible');
+        }
+      }
+    });
+
     // Robust Tab switching & DataTable recalculation listener
     document.querySelectorAll('.admin-tab').forEach(tabBtn => {
       tabBtn.addEventListener('click', function (e) {

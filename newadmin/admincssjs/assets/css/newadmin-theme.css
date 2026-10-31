@@ -615,3 +615,418 @@ table.dataTable thead th input.form-control-sm:focus {
   border-color: #cbd5e1 !important;
   color: #0f172a !important;
 }
+
+
+/* =========================================================
+   CRITICAL FIX: Bootstrap Collapse & Visibility
+   ========================================================= */
+.collapse {
+  visibility: visible !important;
+}
+
+.collapse:not(.show) {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+.collapse.show,
+.accordion-collapse.show {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  height: auto !important;
+}
+
+.collapsing {
+  position: relative !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  transition: height 0.35s ease !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* =========================================================
+   Table Action Column & "View Actions" Expand Popup
+   ========================================================= */
+td .d-grid {
+  display: grid !important;
+  position: relative !important;
+}
+
+/* "View Actions" button */
+td button.btn-linkedin.btn-xs {
+  background: #1a68ff !important;
+  border-color: #1a68ff !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 11.5px !important;
+  padding: 5px 12px !important;
+  border-radius: 8px !important;
+  box-shadow: 0 1px 4px rgba(26, 104, 255, 0.25) !important;
+  transition: all 0.2s ease !important;
+}
+
+td button.btn-linkedin.btn-xs:hover {
+  background: #1455d9 !important;
+  border-color: #1455d9 !important;
+}
+
+/* The expanded container in table cells */
+td div.collapse,
+td div.collapse.show {
+  margin-top: 8px !important;
+  min-width: 135px !important;
+  z-index: 30 !important;
+}
+
+td .list-group {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  padding: 8px !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+  margin: 0 !important;
+}
+
+td .list-group-item {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+td .list-group-item::before {
+  content: none !important;
+  display: none !important;
+}
+
+td .list-group-item .d-grid {
+  display: grid !important;
+  width: 100% !important;
+}
+
+td .list-group-item .btn,
+td .list-group-item .btn-outline-linkedin {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  padding: 6px 12px !important;
+  border-radius: 7px !important;
+  white-space: nowrap !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background: #eff6ff !important;
+  border: 1px solid #bfdbfe !important;
+  color: #1a68ff !important;
+  transition: all 0.15s ease !important;
+}
+
+td .list-group-item .btn-outline-linkedin:hover {
+  background: #1a68ff !important;
+  color: #ffffff !important;
+  border-color: #1a68ff !important;
+}
+
+/* =========================================================
+   Modern Modal Overhaul (Add Property, Area, Team, Employee)
+   ========================================================= */
+.modal {
+  z-index: 1055 !important;
+}
+
+.modal-backdrop {
+  z-index: 1050 !important;
+  background-color: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.modal-dialog {
+  margin: 1.75rem auto !important;
+  display: flex !important;
+  align-items: center !important;
+  min-height: calc(100% - 3.5rem) !important;
+}
+
+.modal-dialog.modal-sm {
+  max-width: 440px !important;
+  width: 90% !important;
+}
+
+.modal-dialog.modal-md {
+  max-width: 620px !important;
+  width: 90% !important;
+}
+
+.modal-dialog.modal-lg {
+  max-width: 860px !important;
+  width: 92% !important;
+}
+
+.modal-dialog.modal-xl {
+  max-width: 1140px !important;
+  width: 95% !important;
+}
+
+.modal-content {
+  border-radius: 20px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25) !important;
+  overflow: visible !important;
+  background-color: #ffffff !important;
+  width: 100% !important;
+}
+
+.modal-header,
+.modal-header.bgimg,
+.modal-header.bgimg2,
+.modal-header.bgimg3 {
+  background: #f8fafc !important;
+  background-image: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 16px 24px !important;
+  border-top-left-radius: 20px !important;
+  border-top-right-radius: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.modal-title,
+.modal-header .modal-title {
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  color: #0f172a !important;
+  margin-bottom: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.modal-header .btn-close {
+  background-color: #f1f5f9 !important;
+  border-radius: 50% !important;
+  padding: 8px !important;
+  opacity: 0.65 !important;
+  transition: all 0.2s ease !important;
+  margin: 0 !important;
+}
+
+.modal-header .btn-close:hover {
+  opacity: 1 !important;
+  background-color: #e2e8f0 !important;
+}
+
+.modal-body {
+  padding: 24px !important;
+  background-color: #ffffff !important;
+  max-height: calc(88vh - 140px) !important;
+  overflow-y: auto !important;
+}
+
+.modal-footer {
+  background-color: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  padding: 14px 24px !important;
+  border-bottom-left-radius: 20px !important;
+  border-bottom-right-radius: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+}
+
+/* Modal Form Controls & Grid */
+.modal-body .row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  margin-right: -0.75rem !important;
+  margin-left: -0.75rem !important;
+}
+
+.modal-body .row > * {
+  padding-right: 0.75rem !important;
+  padding-left: 0.75rem !important;
+}
+
+.modal-body .col-form-label {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 0 !important;
+}
+
+.modal-body .form-control,
+.modal-body .form-select {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 9px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  width: 100% !important;
+}
+
+.modal-body .form-control:focus,
+.modal-body .form-select:focus {
+  border-color: #1a68ff !important;
+  box-shadow: 0 0 0 3px rgba(26, 104, 255, 0.15) !important;
+  outline: none !important;
+}
+
+/* =========================================================
+   Modern Modal Accordion (Add Property & Edit Property)
+   ========================================================= */
+.modal-body .accordion {
+  border-radius: 14px !important;
+  border: 1px solid #e2e8f0 !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  padding: 4px !important;
+}
+
+.modal-body .accordion-item {
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  margin-bottom: 0 !important;
+}
+
+.modal-body .accordion-header {
+  margin: 0 !important;
+}
+
+.modal-body .accordion-button,
+.modal-body .accordion-button.bgimg2 {
+  background: #f8fafc !important;
+  background-image: none !important;
+  color: #1e293b !important;
+  font-weight: 700 !important;
+  font-size: 13.5px !important;
+  padding: 13px 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  box-shadow: none !important;
+  border: none !important;
+  text-decoration: none !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+  border-radius: 9px !important;
+}
+
+.modal-body .accordion-button:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.modal-body .accordion-button:not(.collapsed) {
+  background: #eff6ff !important;
+  color: #1a68ff !important;
+  border-bottom: 1px solid #dbeafe !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.modal-body .accordion-button::after {
+  content: "" !important;
+  width: 16px !important;
+  height: 16px !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%2364748b'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-size: 16px !important;
+  transition: transform 0.2s ease-in-out !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+  transform: rotate(0deg) !important;
+}
+
+.modal-body .accordion-button:not(.collapsed)::after {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%231a68ff'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e") !important;
+  transform: rotate(-180deg) !important;
+}
+
+.modal-body .accordion-body {
+  padding: 20px 22px !important;
+  background: #ffffff !important;
+}
+
+/* Area checklist switches inside property modal */
+.switch {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  cursor: pointer !important;
+  gap: 10px !important;
+  margin-right: 12px !important;
+}
+
+.switch .switch-input {
+  position: absolute !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.switch .switch-toggle-slider {
+  width: 36px !important;
+  height: 20px !important;
+  background-color: #cbd5e1 !important;
+  border-radius: 9999px !important;
+  position: relative !important;
+  transition: background-color 0.2s ease !important;
+  display: inline-block !important;
+}
+
+.switch .switch-toggle-slider::before {
+  content: "" !important;
+  position: absolute !important;
+  height: 14px !important;
+  width: 14px !important;
+  left: 3px !important;
+  bottom: 3px !important;
+  background-color: #ffffff !important;
+  border-radius: 50% !important;
+  transition: transform 0.2s ease !important;
+}
+
+.switch .switch-input:checked + .switch-toggle-slider {
+  background-color: #1a68ff !important;
+}
+
+.switch .switch-input:checked + .switch-toggle-slider::before {
+  transform: translateX(16px) !important;
+}
+
+#area-ul-holder.list-group {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+  gap: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 14px !important;
+  background: #f8fafc !important;
+}
+
+#area-ul-holder .list-group-item {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+}
