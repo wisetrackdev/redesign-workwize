@@ -322,8 +322,10 @@ function handleModalAreaChange() {
 
   if (selectedText.includes("GUEST VILLA") || selectedVal.includes("GUEST VILLA")) {
     villaInput.disabled = false;
+    villaInput.placeholder = "e.g. V-101 (Optional)";
     villaInput.classList.remove("disabled:opacity-60", "disabled:cursor-not-allowed");
-    if (villaRequired) villaRequired.classList.remove("hidden");
+    // Point 10: Villa number is optional for guest villa jobs
+    if (villaRequired) villaRequired.classList.add("hidden");
   } else {
     villaInput.disabled = true;
     villaInput.value = "";
@@ -487,10 +489,11 @@ function validateStep(step) {
     }
 
     const selectedText = (areaSelect.options[areaSelect.selectedIndex]?.text || "").toUpperCase().trim();
-    if (selectedText.includes("GUEST VILLA") && !villa) {
-      showToast("Villa number is required for Guest Villa area.", "error");
-      return false;
-    }
+    // Point 10: Villa number is optional for guest villa jobs (To be confirmed - set to optional)
+    // if (selectedText.includes("GUEST VILLA") && !villa) {
+    //   showToast("Villa number is required for Guest Villa area.", "error");
+    //   return false;
+    // }
 
     if (!priority) {
       showToast("Please select Priority", "error");
@@ -712,19 +715,14 @@ function initFileUpload() {
     if (!fileList) return;
     
     Array.from(files).forEach(f => {
-      // Validate file type & size (5MB)
-      const allowedExts = ["jpg", "jpeg", "png"];
-      const ext = f.name.split(".").pop().toLowerCase();
-      if (!allowedExts.includes(ext)) {
-        showToast(`"${f.name}" is not a valid image (Only JPG, PNG).`, "error");
+      // Point 6: Support All File Attachments (Images, PDFs, Word, Excel, ZIP, etc.) up to 25MB
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      if (f.size > 25 * 1024 * 1024) {
+        showToast(`"${f.name}" exceeds maximum size of 25MB.`, "error");
         return;
       }
-      if (f.size > 5 * 1024 * 1024) {
-        showToast(`"${f.name}" exceeds maximum size of 5MB.`, "error");
-        return;
-      }
-      if (modalUploadFiles.length >= 10) {
-        showToast("Maximum 10 images allowed.", "error");
+      if (modalUploadFiles.length >= 20) {
+        showToast("Maximum 20 attachments allowed.", "error");
         return;
       }
       modalUploadFiles.push(f);
@@ -737,13 +735,33 @@ function initFileUpload() {
     if (!fileList) return;
     fileList.innerHTML = "";
     modalUploadFiles.forEach((f, idx) => {
+      const ext = (f.name.split(".").pop() || "").toLowerCase();
+      let iconClass = "fa-file text-blue-500";
+      if (["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext)) {
+        iconClass = "fa-file-image text-emerald-500";
+      } else if (["pdf"].includes(ext)) {
+        iconClass = "fa-file-pdf text-rose-500";
+      } else if (["doc", "docx"].includes(ext)) {
+        iconClass = "fa-file-word text-blue-600";
+      } else if (["xls", "xlsx", "csv"].includes(ext)) {
+        iconClass = "fa-file-excel text-teal-600";
+      } else if (["zip", "rar", "7z"].includes(ext)) {
+        iconClass = "fa-file-zipper text-amber-500";
+      }
+
+      const sizeStr = (f.size / 1024 < 1024) 
+        ? `${(f.size / 1024).toFixed(1)} KB` 
+        : `${(f.size / (1024 * 1024)).toFixed(1)} MB`;
+
       const item = document.createElement("div");
-      item.className = "flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs mt-2";
+      item.className = "flex items-center justify-between p-2 bg-slate-50 border border-slate-200/80 rounded-lg text-xs mt-2";
       item.innerHTML = `
         <span class="flex items-center gap-2 font-medium text-slate-700 truncate">
-          <i class="fa-regular fa-file-image text-blue-600"></i> ${f.name} (${(f.size / 1024).toFixed(1)} KB)
+          <i class="fa-solid ${iconClass}"></i>
+          <span class="truncate">${escapeHtml(f.name)}</span>
+          <span class="text-[10px] text-slate-400 shrink-0">(${sizeStr})</span>
         </span>
-        <button type="button" class="text-slate-400 hover:text-rose-500 ml-2" data-idx="${idx}">
+        <button type="button" class="text-slate-400 hover:text-rose-500 ml-2 shrink-0" data-idx="${idx}">
           <i class="fa-solid fa-xmark"></i>
         </button>
       `;

@@ -571,14 +571,14 @@ function renderAreaModalRows(jobs) {
     return;
   }
 
-  // Sort jobs descending by create date (newest on top, older at bottom)
+  // Point 11: Sort area modal jobs by create date with asc/desc toggle
   const sortedJobs = [...jobs].sort((a, b) => {
     const timeA = (a.jobCreatedOn || a.openedOn) ? new Date(a.jobCreatedOn || a.openedOn).getTime() : 0;
     const timeB = (b.jobCreatedOn || b.openedOn) ? new Date(b.jobCreatedOn || b.openedOn).getTime() : 0;
     if (isNaN(timeA) && isNaN(timeB)) return 0;
     if (isNaN(timeA)) return 1;
     if (isNaN(timeB)) return -1;
-    return timeB - timeA;
+    return currentAreaModalSortOrder === "asc" ? timeA - timeB : timeB - timeA;
   });
 
   tbody.innerHTML = sortedJobs.map(j => {
@@ -626,9 +626,24 @@ function renderAreaModalRows(jobs) {
         <td class="font-semibold text-slate-800">
           ${(j.villaNumber && j.villaNumber !== '-' && j.villaNumber !== 'null') ? j.villaNumber : '<span class="text-slate-300">-</span>'}
         </td>
-        <!-- 3. DETAILS -->
-        <td class="max-w-[260px] truncate text-slate-700 font-medium" title="${escapeHtml(detailText)}">
-          ${detailText || '<span class="text-slate-400">No details provided</span>'}
+        <!-- 3. DETAILS (Point 3: Interactive Hover Preview Card) -->
+        <td class="max-w-[260px] relative group text-slate-700 font-medium">
+          <div class="truncate cursor-help flex items-center gap-1.5" title="${escapeHtml(detailText)}">
+            <span class="truncate">${escapeHtml(detailText) || '<span class="text-slate-400">No details provided</span>'}</span>
+            <i class="fa-solid fa-circle-info text-[10px] text-slate-400 group-hover:text-blue-500 shrink-0"></i>
+          </div>
+          <!-- Hover Details Card -->
+          <div class="hidden group-hover:block absolute left-4 top-full mt-1 w-80 max-w-sm p-3.5 bg-slate-900/95 backdrop-blur text-white text-xs rounded-xl shadow-2xl z-50 pointer-events-none transition-all duration-200 border border-slate-700">
+            <div class="flex items-center justify-between border-b border-slate-700/80 pb-1.5 mb-2">
+              <span class="font-bold text-blue-400 flex items-center gap-1.5 text-[11px]"><i class="fa-solid fa-file-lines"></i> Job Details Preview</span>
+              <span class="text-[10px] text-slate-400">${displayId}</span>
+            </div>
+            <p class="whitespace-pre-wrap leading-relaxed text-slate-200 text-xs">${escapeHtml(detailText)}</p>
+            <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+              <span>Location: <b class="text-slate-200">${escapeHtml(j.jobLocation || j.location || 'N/A')}</b></span>
+              <span>Villa: <b class="text-slate-200">${escapeHtml(j.villaNumber || 'N/A')}</b></span>
+            </div>
+          </div>
         </td>
         <!-- 4. CREATE DATE -->
         <td class="text-slate-500">${formatDateStr(j.jobCreatedOn || j.openedOn)}</td>
@@ -729,3 +744,99 @@ window.initJobsByArea = initJobsByArea;
 window.renderJobsByAreaTable = renderJobsByAreaTable;
 window.showAreaJobsModal = showAreaJobsModal;
 window.showAreaJobsByDateModal = showAreaJobsByDateModal;
+
+
+// ==========================================
+// Point 11: Toggle Date Sort in Area Modal
+// ==========================================
+function toggleAreaModalDateSort() {
+  currentAreaModalSortOrder = currentAreaModalSortOrder === "asc" ? "desc" : "asc";
+  const icon = document.getElementById("areaModalSortIcon");
+  if (icon) {
+    icon.className = currentAreaModalSortOrder === "asc" 
+      ? "fa-solid fa-arrow-up-short-wide ml-1 text-blue-600" 
+      : "fa-solid fa-arrow-down-short-wide ml-1 text-blue-600";
+  }
+  const searchInput = document.getElementById("areaModalSearchInput");
+  const q = (searchInput?.value || "").toLowerCase().trim();
+  const filtered = q ? currentAreaModalJobs.filter(j => {
+    const text = ((j.orgjobId || j.jobId || '') + ' ' + (j.jobDetail || j.details || '') + ' ' + (j.jobLocation || '') + ' ' + (j.villaNumber || '')).toLowerCase();
+    return text.includes(q);
+  }) : currentAreaModalJobs;
+  renderAreaModalRows(filtered);
+}
+window.toggleAreaModalDateSort = toggleAreaModalDateSort;
+
+// ==========================================
+// Point 4: Export Area Jobs to CSV with Details
+// ==========================================
+function exportAreaJobsToCSV() {
+  if (!currentAreaModalJobs || currentAreaModalJobs.length === 0) {
+    if (typeof showToast === "function") showToast("No jobs to export.", "error");
+    else alert("No jobs to export.");
+    return;
+  }
+
+  const headers = [
+    "ID",
+    "VILLA",
+    "DETAILS",
+    "CREATE DATE",
+    "LOCATION",
+    "PRIORITY",
+    "STATUS",
+    "REF NO",
+    "ASSIGNED TO",
+    "EXPECTED COMPLETION DATE",
+    "CLOSE DATE",
+    "ATTACHMENTS",
+    "COMMENTS",
+    "CREATED BY",
+    "PROPERTY"
+  ];
+
+  const rows = currentAreaModalJobs.map(j => {
+    const displayId = j.orgjobId || j.jobId;
+    const detailText = (j.jobDetail || j.details || "").replace(/"/g, '""').replace(/\r?\n/g, ' ');
+    let assigned = "Unassigned";
+    if (Array.isArray(j.data1) && j.data1.length > 0) {
+      assigned = j.data1.map(t => t.teamName || t.name || t).join(", ");
+    } else if (j.assignedTo) {
+      assigned = j.assignedTo;
+    }
+    const createdBy = `${j.firstname || ""} ${j.lastname || ""}`.trim() || "-";
+
+    return [
+      `"${displayId}"`,
+      `"${j.villaNumber || "-"}"`,
+      `"${detailText}"`,
+      `"${j.jobCreatedOn || j.openedOn || "-"}"`,
+      `"${(j.jobLocation || j.location || "-").replace(/"/g, '""')}"`,
+      `"${j.priority || "MEDIUM"}"`,
+      `"${j.jobStatus || j.status || "-"}"`,
+      `"${j.refNum || j.refNo || "-"}"`,
+      `"${assigned.replace(/"/g, '""')}"`,
+      `"${j.expectedCompletion || j.expectedDate || "-"}"`,
+      `"${j.jobCloseOn || j.closeDate || "-"}"`,
+      `"${j.uploadCount !== undefined ? j.uploadCount : (Array.isArray(j.imageUploads) ? j.imageUploads.length : 0)}"`,
+      `"${j.commentCount !== undefined ? j.commentCount : (Array.isArray(j.comments) ? j.comments.length : 0)}"`,
+      `"${createdBy.replace(/"/g, '""')}"`,
+      `"${(j.propName || WorkWizeAPI.getCurrentPropertyName() || "-").replace(/"/g, '""')}"`
+    ].join(",");
+  });
+
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  const fileName = (currentAreaModalName ? currentAreaModalName.replace(/\s+/g, '_') : 'Area') + `_Jobs_${new Date().toISOString().split("T")[0]}.csv`;
+  link.setAttribute("download", fileName);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  if (typeof showToast === "function") {
+    showToast(`Exported ${currentAreaModalJobs.length} area jobs to CSV.`, "success");
+  }
+}
+window.exportAreaJobsToCSV = exportAreaJobsToCSV;

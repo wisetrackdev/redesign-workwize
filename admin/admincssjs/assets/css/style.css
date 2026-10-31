@@ -1,0 +1,693 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+
+:root {
+    --green: #71C160;
+    --blue: #4058a7;
+    --white: #ffffff; 
+    --black: #000000;
+    --lightwhite:#F5F5F5;
+    --lightblack: #3F3F3F;
+    --lightgray: #B7B7B7;
+  }
+
+  *{
+    margin: 0;
+    padding: 0;
+  }
+  body{
+    margin: 0;
+    padding: 0;
+  }
+  h3,h4,h5,h5{
+    font-size: 30px;
+    font-weight: 500;
+    color: #000000;
+  }
+  span.borders {
+    border-bottom: 2px solid var(--blue);
+    height: 2px;
+    width: 80px;
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+}
+   /* Add this style for the select with a dropdown icon */
+   .select-container {
+    position: relative;
+  }
+
+  .select-icon {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+a {
+    text-decoration: none !important;
+    color: var(--green) !important;
+}
+
+/* header css  */
+a.loginBtn {
+    border: 1px solid var(--green);
+    padding: 5px 20px;
+    border-radius: 50px;
+    background: var(--green);
+    color: var(--white) !important;
+}
+a.regBtn{
+    border: 1px solid var(--blue);
+    padding: 5px 20px;
+    border-radius: 50px;
+    background: var(--blue);
+    color: var(--white) !important;
+}
+/* header css end */
+
+/* Banner Section css */
+.BannerSection{
+    background:url(assets/images/BannerSectionBg.png);
+}
+/* Banner Section css end */
+
+.RegBg {
+    background: url(../images/login/loginbg.png);
+    min-height: 100vh;
+    padding: 30px 0px;
+}
+
+.FormsBg {
+    background: url(../images/login/loginbg.png);
+    min-height: 100vh;
+}
+
+.FormsContainer::before {
+    content: "";
+    position: absolute;
+    background: url(../images/login/LoginTopLeft1.png);
+    height: 202px;
+    top: 0;
+    right: 0;
+    width: 186px;
+    background-repeat: no-repeat;
+}
+
+.FormsContainer::after {
+    content: "";
+    position: absolute;
+    background: url(../images/login/LoginBottomRight1.png);
+    bottom: 0;
+    width: 72px;
+    left: 0;
+    height: 61px;
+    background-repeat: no-repeat;
+}
+
+.FormsContainer {
+    position: relative;
+    max-width: 560px;
+    display: block;
+    margin: auto !important;
+    background: var(--white);
+    /* background: linear-gradient(0deg, rgb(255, 255, 255) 0%, rgb(244, 247, 251) 100%); */
+    padding: 50px 30px;
+    box-shadow: rgb(64 88 167 / 81%) 0px 30px 30px -20px;
+    margin: 20px;
+}
+
+.heading {
+    text-align: center;
+font-size: 36px;
+font-weight: 400;
+line-height: 49px;
+letter-spacing: 0em;
+color: var(--black);
+
+}
+
+.form {
+    margin-top: 20px;
+}
+
+.form .input {
+    display: block;
+    width: 100%;
+    background: var(--white);
+    /* border: none; */
+    padding: 15px 20px;
+    /* border-radius: 20px; */
+    margin-top: 30px;
+    /* box-shadow: #4058a76b 0px 10px 10px -5px; */
+    /* border-inline: 2px solid transparent; */
+    margin: auto;
+    margin-top: 32px;
+    border-radius: 5px;
+    border: 1px solid var(--lightgray);
+}
+
+.form .FormsField {
+    position: relative;
+}
+
+.form .FormsLabel {
+    position: absolute;
+    top: 0;
+    z-index: 9;
+    background: var(--white);
+    left: 10px;
+    top: -12px;
+    font-weight: 600;
+    padding: 0px 10px;
+    color: var(--black);
+}
+
+/* .form .input {
+    width: 100%;
+    background: white;
+    border: none;
+    padding: 15px 20px;
+    border-radius: 20px;
+    margin-top: 15px;
+    box-shadow: #cff0ff 0px 10px 10px -5px;
+    border-inline: 2px solid transparent;
+} */
+
+.form .input::-moz-placeholder {
+    color: rgb(170, 170, 170);
+}
+
+.form .input::placeholder {
+    color: rgb(170, 170, 170);
+}
+
+.form .input:focus {
+    outline: none;
+    border-inline: 2px solid var(--blue);
+}
+
+.form .forgot-password {
+    display: block;
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+.form .forgot-password a {
+    font-size: 15px;
+    color: var(--green) !important;
+    text-decoration: none; 
+    font-weight: 400;
+    text-align: left;
+}
+
+.form .FormsButton {
+    display: block;
+    width: 100%;
+    font-weight: normal;
+    /* background: linear-gradient(45deg, rgb(16, 137, 211) 0%, rgb(18, 177, 209) 100%); */
+    background-color: var(--blue);
+    color: var(--white);
+    padding-block: 12px;
+    margin: 20px auto;
+    border-radius: 50px;
+    /* box-shadow: rgba(133, 189, 215, 0.8784313725) 0px 20px 10px -15px; */
+    border: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.form .FormsButton:hover {
+    transform: scale(1.03);
+    box-shadow: rgb(64 88 167 / 81%) 0px 23px 10px -20px;
+}
+
+.form .FormsButton:active {
+    transform: scale(0.95);
+    box-shadow: rgb(64 88 167 / 81%) 0px 15px 10px -10px;
+}
+.checinfos{
+    font-weight: 400;
+    color: var(--lightblack);
+    ;
+}
+
+
+.agreement {
+    display: block;
+    text-align: center;
+    margin-top: 15px;
+    font-size: 15px;
+    color: var(--lightblack);
+    font-weight: 400;
+}
+.agreement i{
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--lightgray);
+}
+
+/* .agreement a {
+    text-decoration: none;
+    color: #0099ff;
+    font-size: 9px;
+} */
+
+.forgotContent {
+    font-size: 13px;
+}
+
+    table.email-link tbody tr td {
+        padding-bottom: 15px;
+        padding-left: 24px;
+        font-weight: 600;
+        font-size: 16px;
+        color: var(--black);
+    }
+
+/* ================================= Header Css Start ================================================================ */
+header{
+    padding: 15px 0px;
+}
+        .top-header .heads, .login-condions, .after-login, .created-accounts{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .top-header .heads .not-login a {
+            background-color: var(--blue);
+            padding: 12px 36px;
+            border-radius: 50px;
+            color: var(--white) !important;
+            border: 1px solid #4058A7;
+        }
+        .after-login .create-job a{
+            background-color: var(--green) !important;
+            padding: 12px 36px;
+            border-radius: 50px;
+            color: var(--white) !important;
+            border: 1px solid var(--green);
+
+        }
+.after-login img{
+    height: 50px;
+    width: 50px;
+    object-fit: contain;
+    overflow: hidden;
+    border-radius: 100px;
+}
+
+.created-accounts{
+    padding-left: 10px;
+}
+.created-content .dropdown .profile-btn{
+  
+    padding-left: 10px;
+}
+/* ================================= Header Css Start ================================================================ */
+
+
+/* ================================== Banner Section Css Start =========================================================== */
+.top-banner{
+    background-image: url(../images/banner/bghome.png);
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+}
+
+.top-banner .top-banner-content{
+padding: 100px;
+text-align: center;
+color: var(--white);
+}
+ .top-banner-content span{
+font-size: 24px;
+font-weight: 400;
+}
+.top-banner-content h1{
+    font-size: 56px;
+    font-weight: 600;
+    text-transform: capitalize;
+    line-height: 68px;
+    }
+.top-banner-content p{
+        font-size: 18px;
+        line-height: 34px;
+        font-weight: 400;
+    }
+.btn-green{
+    background-color: var(--green) !important;
+    padding: 15px 44px;
+    border-radius: 50px;
+    color: var(--white) !important;
+    border: 1px solid var(--green);
+    }
+/* ================================== Banner Section Css End =========================================================== */
+
+.all-headings{
+    font-size: 30px;
+    color: var(--black);
+}
+
+/* ======================================== All Jobs Seaker Css Start ============================================================= */
+.datatable-section{
+    margin-top: 50px;
+    position: relative;
+}
+
+.datatable-section .all-headings{
+    float: left;
+    position: absolute;
+    top: 15px;
+}
+.all-jobs-table table tr th:first-child, .all-jobs-table table tbody tr td:first-child{
+    border-left: 1px solid #D1D7E5;
+}
+.all-jobs-table table tr th{
+    white-space: nowrap !important;
+    border-right: 1px solid #D1D7E5;
+    color: #4058A7;
+}
+.all-jobs-table table tr th select{
+    white-space: nowrap !important;
+    color: #4058A7;
+    border: 1px solid var(--lightgray);
+    background: none;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 5px 9px 5px 8px;
+    text-transform: capitalize;
+}
+.all-jobs-table table tr th select:focus-visible{
+outline: none;
+box-shadow: none;
+}
+.all-jobs-table table tbody tr td:first-child, .all-jobs-table table tbody tr td:nth-child(2){
+    color: var(--green) !important;
+    font-weight: 500;
+}
+/* .all-jobs-table table tbody tr td:nth-child(2):after{
+border-bottom: 1px solid var(--green);
+} */
+.all-jobs-table table tbody tr td{
+    border-right: 1px solid #D1D7E5;
+    color: var(--lightblack);
+    font-size: 18px;
+    white-space: nowrap;
+    line-height: 50px;
+}
+.all-jobs-table .status-done{
+    color: var(--green) !important;
+}
+thead{
+    background-color: #E3E6EE;
+}
+.all-jobs-table table.dataTable.no-footer{
+    border-bottom: 1px solid #D1D7E5 !important;
+}
+.all-jobs-table table.dataTable>tbody>tr td.child{
+    padding: 0px !important;
+}
+.all-jobs-table table.dataTable>tbody>tr td.child ul{
+    border-right: 1px solid #D1D7E5;
+}
+.all-jobs-table table.dataTable>tbody>tr.child ul.dtr-details>li{
+    padding: 10px 24.5px;
+}
+div.dt-buttons {
+    float: right !important;
+    margin-bottom: 30px;
+}
+div.dt-buttons .buttons-excel {
+    background-color: var(--green) !important;
+    padding: 12px 44px;
+    border-radius: 50px;
+    color: var(--white) !important;
+    border: 1px solid var(--green) !important;
+    font-weight: bold;
+    font-size: 16px;
+}
+.buttons-collection{
+    border: 1px solid var(--blue) !important;
+    padding: 12px 44px !important;
+    border-radius: 50px !important;
+    color: var(--white) !important;
+    background: var(--blue) !important;
+    font-weight: bold;
+}
+.buttons-collection .dt-down-arrow{
+    color: var(--white) !important;
+}
+table.dataTable>tbody>tr.child span.dtr-title{
+    color: #4058A7;
+}
+table.dataTable>tbody>tr.child span.dtr-data{
+    color: var(--lightblack);
+    font-size: 18px;
+    white-space: nowrap;
+    text-align: center;
+    float: right;
+    padding-left: 191px;
+}
+.all-jobs-table table.dataTable>tbody>tr.child ul.dtr-details>li select{
+    white-space: nowrap !important;
+    color: var(--blue);
+    border: 1px solid var(--lightgray);
+    background: none;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 5px 9px 5px 8px;
+    text-transform: capitalize;
+}
+.all-jobs-table table.dataTable>tbody>tr.child ul.dtr-details>li select:focus-visible{
+    outline: none;
+    box-shadow: none;
+    }
+/* ======================================== All Jobs Seaker Css End ============================================================= */
+
+/* ======================================== AHR  Jobs Seaker Css End ============================================================= */
+.all-date-btn .col-md-4{
+    padding: 5px;
+}
+.job-tracker-datatable-heading .all-date-btn{
+width: 47%;
+}
+.visit-date{
+    margin-bottom: 18px;
+}
+.job-tracker-datatable-heading{
+    display: flex;
+    justify-content: space-between;
+}
+.visit-date span{
+    text-align: center;
+    background: var(--lightwhite);
+    padding: 10px;
+    color: var(--lightblack);
+    font-weight: 500;
+    border: 1px solid var(--lightgray);
+    border-radius: 5px;
+}
+.visit-date i{
+    color: #E9E9E9;
+    padding-left: 10px;
+}
+.all-jobs-btns a{
+    background-color: var(--green) !important;
+    padding: 10px 40px;
+    font-weight: 500;
+    border-radius: 50px;
+    color: var(--white) !important;
+    border: 1px solid var(--green);
+    margin: 20px 0px;
+    float: right;
+}
+
+/* ============================================== Create Jobs Css Start ============================================ */
+.both-btns {
+    display: flex;
+    width: 30%;
+    justify-content: space-between;
+}
+.both-btns .btn-greens, .both-btns .btn-blues{
+    padding: 10px 40px;
+    font-weight: 500;
+    border-radius: 50px;
+    color: var(--white) !important;
+}
+.both-btns .btn-greens{
+    background-color: var(--green) !important;
+    border: 1px solid var(--green);
+}
+.both-btns .btn-blues{
+    background-color: var(--blue) !important;
+    border: 1px solid var(--green);
+}
+.create-jobs-form form .form-group label{
+font-size: 16px;
+font-weight: 500;
+color: var(--black);
+margin-bottom: 10px;
+}
+.create-jobs-form form .form-group input, .create-jobs-form form .form-group select{
+    height: 48px;
+    border: 1px solid var(--lightgray);
+    border-radius: 5px;
+}
+.create-jobs-form form .form-group textarea{
+    height: 80px;
+    border: 1px solid var(--lightgray);
+    border-radius: 5px;
+
+}
+.create-jobs-form form .form-group .submitbtn{
+    background-color: var(--blue) !important;
+    padding: 10px 40px;
+    font-weight: 500;
+    border-radius: 50px;
+    color: var(--white) !important;
+    border: 1px solid var(--blue);
+}
+/* ================Job Details Css Start ====================== */
+.job-details-content{
+background-color: var(--white);
+border: 1px solid var(--lightgray);
+padding: 30px;
+border-radius: 10px;
+overflow: hidden;
+}
+.job-details-content h3{
+    margin-bottom: 45px;
+}
+.job-details-content p{
+line-height: 34px;
+font-size: 18px;
+color: var(--black);
+font-weight: 400;
+}
+.job-details-content .jobs-details-con img{
+    display: block;
+    margin: auto;
+    width: 100%;
+    }
+    .job-details-content ul{
+margin-top: 25px;
+}
+.job-details-content ul li{
+        font-size: 18px;
+        line-height: 34px;
+        font-weight:  400;
+        color: var(--black);
+}
+.job-details-content table tr th, .job-details-content table tr td{
+        border: 1px solid var(--lightgray);
+        white-space: nowrap;
+ }
+ .job-details-content table tr td img{
+    width: 36px;
+ }
+ .job-details-content table tr{
+    height: 52px !important;
+    line-height: 2.5;
+ }
+ .job-details-content table tr th{
+    color: var(--blue);
+    font-size: 15px;
+    font-weight: bold;
+    padding: 10px 30px 10px 30px;
+ }
+ .job-details-content table tr td{
+    color: var(--black);
+    font-size: 15px;
+    font-weight: 400;
+    padding: 10px 30px 10px 30px;
+ }
+ .job-details-content table tr td select.form-control{
+    border: 0px;
+ }
+ .send-menager-btn .greens-btn{
+    background-color: var(--green) !important;
+    padding: 10px 40px;
+    font-weight: 500;
+    border-radius: 50px;
+    color: var(--white) !important;
+    border: 1px solid var(--green);
+ }
+ .table-responsive{
+    margin: 39px 0px 5px 1px;
+ }
+ .job-details-content .all-comments-list ul li{
+    margin-bottom: 40px;
+ }
+.comments-content{
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--lightgray);
+}
+ .comments-content a{
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: var(--black) !important;
+    font-weight: 600;
+ }
+/* ================Job Details Css Start ====================== */
+
+/* =============== Audit Page Css Start==========================  */
+.audit-banner{
+    background-image: url(../images/banner/audit-bg.png);
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    padding: 35px 100px 100px 100px !important;
+    position: relative;
+}
+.audit-banner .top-banner-content{
+    color: var(--white);
+}
+.audit-banner .row{
+    margin: 0px !important;
+    padding: 0px !important;
+}
+
+.audit-search-section .audit-search-sec{
+    background-color: var(--white);
+    box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+    padding: 20px;
+    position: absolute;
+    width: 100%;
+    top: -55px;
+}
+.audit-search-section .audit-search-sec h3{
+    color: var(--blue);
+    text-align: center;
+}
+/* =============== Audit Page Css End==========================  */
+
+/* ========================== footer SECTION CSS Start ===================================================== */
+footer .footer-bg-black {
+    background-color: #000000;
+    margin-top: 100px;
+    text-align: center;
+    padding: 10px;
+}
+footer .footer-bg-black p{
+color: var(--white);
+margin-bottom: 0px;
+font-weight: 500;
+}
+footer .footer-bg-black p span{
+color: #559048;
+}
+footer .footer-bg {
+    background-color: #4058A7;
+}
+.footer-bg ul{
+    display: flex;
+    justify-content: center;
+}
+.footer-bg ul li{
+    padding: 10px 10px;
+}
+.footer-bg ul li a{
+color: #ffffff !important;
+}

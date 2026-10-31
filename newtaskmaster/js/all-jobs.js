@@ -9,9 +9,14 @@ let filteredJobs = [];
 let selectedJobIds = new Set();
 let currentPage = 1;
 let pageSize = 12;
+let currentSortField = "createdOn";
+let currentSortOrder = "desc";
 
 document.addEventListener("DOMContentLoaded", async function () {
-  // Parse query string for pre-filled filters
+  // Point 15: Restore filter and search state from sessionStorage
+  restoreAllJobsState();
+
+  // Parse query string for pre-filled filters (URL params take precedence)
   const urlParams = new URLSearchParams(window.location.search);
   const searchParam = urlParams.get("search");
   const areaParam = urlParams.get("area");
@@ -49,10 +54,13 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
-  ["filterProperty", "filterArea", "filterStatus", "filterPriority", "filterAssignedTo", "filterDateSpan"].forEach(id => {
+  ["filterProperty", "filterArea", "filterStatus", "filterPriority", "filterAssignedTo", "filterDateSpan", "filterSortOrder"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener("change", () => {
+        if (id === "filterSortOrder") {
+          currentSortOrder = el.value || "desc";
+        }
         currentPage = 1;
         filterAndRenderJobs();
       });
@@ -177,19 +185,62 @@ async function loadAllJobsFromAPI() {
 }
 
 /**
- * Sorts jobs descending by date: newest jobs at top, older jobs at bottom
+ * Point 11: Date Sorting across all sections (Created Date, Expected Date, Close Date)
  */
-function sortJobsDescending(jobs) {
+function sortJobsByField(jobs, field = currentSortField, order = currentSortOrder) {
   if (!Array.isArray(jobs)) return jobs;
   return jobs.sort((a, b) => {
-    const timeA = a.createdOn ? new Date(a.createdOn).getTime() : 0;
-    const timeB = b.createdOn ? new Date(b.createdOn).getTime() : 0;
+    let valA = a[field];
+    let valB = b[field];
+
+    const timeA = (valA && !String(valA).startsWith("0001")) ? new Date(valA).getTime() : 0;
+    const timeB = (valB && !String(valB).startsWith("0001")) ? new Date(valB).getTime() : 0;
+
     if (isNaN(timeA) && isNaN(timeB)) return 0;
     if (isNaN(timeA)) return 1;
     if (isNaN(timeB)) return -1;
-    return timeB - timeA;
+
+    return order === "asc" ? timeA - timeB : timeB - timeA;
   });
 }
+
+function sortJobsDescending(jobs) {
+  return sortJobsByField(jobs, "createdOn", "desc");
+}
+
+function toggleSort(field) {
+  if (currentSortField === field) {
+    currentSortOrder = currentSortOrder === "asc" ? "desc" : "asc";
+  } else {
+    currentSortField = field;
+    currentSortOrder = "desc";
+  }
+
+  // Update Sort dropdown if present
+  const sortSelect = document.getElementById("filterSortOrder");
+  if (sortSelect) sortSelect.value = currentSortOrder;
+
+  // Update header icons
+  ["createdOn", "expectedCompletion", "closeDate"].forEach(f => {
+    const icon = document.getElementById(`sortIcon_${f}`);
+    if (icon) {
+      if (f === currentSortField) {
+        icon.className = currentSortOrder === "asc" 
+          ? "fa-solid fa-arrow-up-short-wide ml-1 text-blue-600" 
+          : "fa-solid fa-arrow-down-short-wide ml-1 text-blue-600";
+      } else {
+        icon.className = "fa-solid fa-sort ml-1 text-slate-400";
+      }
+    }
+  });
+
+  saveAllJobsState();
+  sortJobsByField(filteredJobs, currentSortField, currentSortOrder);
+  renderTableRows();
+  renderPagination();
+  updateCounterText();
+}
+window.toggleSort = toggleSort;
 
 function mapApiJobToModel(job) {
   const statusStr = normalizeStatus(job.jobStatus);
@@ -370,6 +421,12 @@ function filterAndRenderJobs() {
     return matchSearch && matchProp && matchArea && matchStatus && matchPriority && matchAssigned && matchDateSpan;
   });
 
+  // Apply current sorting
+  sortJobsByField(filteredJobs, currentSortField, currentSortOrder);
+
+  // Point 15: Save search state to sessionStorage
+  saveAllJobsState();
+
   renderTableRows();
   renderPagination();
   updateCounterText();
@@ -455,8 +512,24 @@ function renderTableRows() {
       <td class="font-semibold text-slate-800">
         ${job.villaNumber && job.villaNumber !== '-' ? job.villaNumber : '<span class="text-slate-300">-</span>'}
       </td>
-      <td class="max-w-[240px] truncate text-slate-700 font-medium" title="${escapeHtml(job.details)}">
-        ${escapeHtml(job.details)}
+      <!-- Point 3: Interactive Job Details on Hover Preview Card -->
+      <td class="max-w-[240px] relative group text-slate-700 font-medium">
+        <div class="truncate cursor-help flex items-center gap-1.5" title="${escapeHtml(job.details)}">
+          <span class="truncate">${escapeHtml(job.details)}</span>
+          <i class="fa-solid fa-circle-info text-[10px] text-slate-400 group-hover:text-blue-500 shrink-0"></i>
+        </div>
+        <!-- Hover Details Card -->
+        <div class="hidden group-hover:block absolute left-4 top-full mt-1 w-80 max-w-sm p-3.5 bg-slate-900/95 backdrop-blur text-white text-xs rounded-xl shadow-2xl z-50 pointer-events-none transition-all duration-200 border border-slate-700">
+          <div class="flex items-center justify-between border-b border-slate-700/80 pb-1.5 mb-2">
+            <span class="font-bold text-blue-400 flex items-center gap-1.5 text-[11px]"><i class="fa-solid fa-file-lines"></i> Job Details Preview</span>
+            <span class="text-[10px] text-slate-400">${job.id}</span>
+          </div>
+          <p class="whitespace-pre-wrap leading-relaxed text-slate-200 text-xs">${escapeHtml(job.details)}</p>
+          <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+            <span>Area: <b class="text-slate-200">${escapeHtml(job.area)}</b></span>
+            <span>Location: <b class="text-slate-200">${escapeHtml(job.location || 'N/A')}</b></span>
+          </div>
+        </div>
       </td>
       <td class="text-slate-500">${formatDate(job.createdOn)}</td>
       <td class="text-slate-600">${job.location || '<span class="text-slate-300">-</span>'}</td>
@@ -494,14 +567,20 @@ function renderTableRows() {
           <button class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" onclick="toggleJobActionMenu(this)">
             <i class="fa-solid fa-ellipsis"></i>
           </button>
-          <div class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 text-xs text-slate-700 dropdown-menu">
+          <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-30 text-xs text-slate-700 dropdown-menu">
             <a href="job-details.html?id=${encodeURIComponent(job.rawId || job.id)}" target="_blank" class="block px-3 py-2 hover:bg-slate-50">
               <i class="fa-regular fa-eye mr-2 text-blue-500"></i> View Details
             </a>
-         
-            <button onclick="quickUpdateJobStatus('${job.rawId || job.id}', 'COMPLETED', 'Closed')" class="w-full text-left px-3 py-2 hover:bg-slate-50">
+            <!-- Point 7: Only allow status change if permitted -->
+            <button onclick="handleQuickClose('${job.rawId || job.id}')" class="w-full text-left px-3 py-2 hover:bg-slate-50 text-emerald-700">
               <i class="fa-solid fa-check mr-2 text-emerald-500"></i> Mark as Closed
             </button>
+            <!-- Point 14: Super Admin Job Deletion -->
+            ${isSuperAdminRole() ? `
+              <button onclick="superAdminDeleteJob('${job.rawId || job.id}', '${job.id}')" class="w-full text-left px-3 py-2 hover:bg-rose-50 text-rose-600 border-t border-slate-100 font-semibold">
+                <i class="fa-solid fa-trash-can mr-2 text-rose-500"></i> Delete Job
+              </button>
+            ` : ''}
           </div>
         </div>
       </td>
@@ -724,7 +803,7 @@ function exportJobsToCSV() {
   const rows = filteredJobs.map(j => [
     `"${j.id}"`,
     `"${j.villaNumber || "-"}"`,
-    `"${(j.details || "").replace(/"/g, '""')}"`,
+    `"${(j.details || "").replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`,
     `"${j.createdOn || "-"}"`,
     `"${(j.location || "-").replace(/"/g, '""')}"`,
     `"${j.priority}"`,
@@ -759,3 +838,105 @@ window.quickUpdateJobStatus = quickUpdateJobStatus;
 window.loadAllJobsFromAPI = loadAllJobsFromAPI;
 window.resetAllFilters = resetAllFilters;
 window.exportJobsToCSV = exportJobsToCSV;
+
+
+// ==========================================
+// Point 7: Job Status Permissions Helper
+// ==========================================
+function isSuperAdminRole() {
+  const role = (typeof UserSession !== "undefined" && UserSession.getUserRole) ? UserSession.getUserRole().toUpperCase() : "";
+  return role.includes("SUPERADMIN") || role.includes("SUPER ADMIN");
+}
+
+function canUserChangeStatus(job) {
+  if (!job) return true;
+  const role = (typeof UserSession !== "undefined" && UserSession.getUserRole) ? UserSession.getUserRole().toUpperCase() : "";
+  if (role.includes("SUPERADMIN") || role.includes("ADMIN") || role.includes("OPROADMIN")) return true;
+
+  const user = (typeof UserSession !== "undefined" && UserSession.getUser) ? UserSession.getUser() : null;
+  const userEmail = (user?.email || user?.userName || "").toLowerCase();
+  if (job.assignedTo && typeof job.assignedTo === "string" && job.assignedTo.toLowerCase().includes(userEmail)) return true;
+  return false;
+}
+
+function handleQuickClose(jobId) {
+  const job = allJobsStore.find(j => (j.rawId || j.id) === jobId);
+  if (job && !canUserChangeStatus(job)) {
+    showToast("Permission denied: Only the assigned team or Admin can change job status.", "warning");
+    return;
+  }
+  quickUpdateJobStatus(jobId, 'COMPLETED', 'Closed');
+}
+window.handleQuickClose = handleQuickClose;
+
+// ==========================================
+// Point 14: Super Admin Job Deletion
+// ==========================================
+async function superAdminDeleteJob(jobId, displayId) {
+  if (!confirm(`Are you sure you want to permanently delete Job ${displayId}? All records and attachments will be deleted.`)) return;
+
+  try {
+    const propId = WorkWizeAPI.getCurrentProperty();
+    await WorkWizeAPI.request("api/jobtracker/deletejob", {
+      method: "POST",
+      body: { jobId: jobId, propId: propId }
+    });
+
+    showToast(`Job ${displayId} deleted successfully.`, "success");
+    await loadAllJobsFromAPI();
+  } catch (err) {
+    showToast(err.message || "Failed to delete job", "error");
+  }
+}
+window.superAdminDeleteJob = superAdminDeleteJob;
+
+// ==========================================
+// Point 15: Retain Search and Filter Results in sessionStorage
+// ==========================================
+function saveAllJobsState() {
+  const state = {
+    search: document.getElementById("jobSearchInput")?.value || "",
+    prop: document.getElementById("filterProperty")?.value || "",
+    area: document.getElementById("filterArea")?.value || "",
+    status: document.getElementById("filterStatus")?.value || "",
+    priority: document.getElementById("filterPriority")?.value || "",
+    assignedTo: document.getElementById("filterAssignedTo")?.value || "",
+    dateSpan: document.getElementById("filterDateSpan")?.value || "",
+    sortField: currentSortField,
+    sortOrder: currentSortOrder,
+    page: currentPage
+  };
+  sessionStorage.setItem("taskmaster_all_jobs_state", JSON.stringify(state));
+}
+
+function restoreAllJobsState() {
+  try {
+    const saved = sessionStorage.getItem("taskmaster_all_jobs_state");
+    if (!saved) return;
+    const state = JSON.parse(saved);
+
+    const searchInput = document.getElementById("jobSearchInput");
+    const propSelect = document.getElementById("filterProperty");
+    const areaSelect = document.getElementById("filterArea");
+    const statusSelect = document.getElementById("filterStatus");
+    const prioritySelect = document.getElementById("filterPriority");
+    const assignedSelect = document.getElementById("filterAssignedTo");
+    const dateSpanSelect = document.getElementById("filterDateSpan");
+    const sortSelect = document.getElementById("filterSortOrder");
+
+    if (state.search && searchInput) searchInput.value = state.search;
+    if (state.prop && propSelect) propSelect.value = state.prop;
+    if (state.area && areaSelect) areaSelect.value = state.area;
+    if (state.status && statusSelect) statusSelect.value = state.status;
+    if (state.priority && prioritySelect) prioritySelect.value = state.priority;
+    if (state.assignedTo && assignedSelect) assignedSelect.value = state.assignedTo;
+    if (state.dateSpan && dateSpanSelect) dateSpanSelect.value = state.dateSpan;
+    if (state.sortOrder && sortSelect) sortSelect.value = state.sortOrder;
+
+    if (state.sortField) currentSortField = state.sortField;
+    if (state.sortOrder) currentSortOrder = state.sortOrder;
+    if (state.page) currentPage = state.page;
+  } catch (e) {
+    console.warn("Could not restore all jobs state:", e);
+  }
+}

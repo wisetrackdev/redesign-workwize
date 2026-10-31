@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+
+<html lang="en" class="light-style layout-navbar-fixed layout-menu-fixed layout-footer-fixed layout-menu-collapse"
+  dir="ltr" data-theme="theme-default" data-assets-path="admincssjs/theme/assets/"
+  data-template="horizontal-menu-template-no-customizer">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+
+  <title>WorkWize | Admin Console</title>
+
+  <meta name="description" content="" />
+  <link rel="icon" type="image/x-icon" href="admincssjs/theme/assets/img/AppImages/logo.jpeg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+    rel="stylesheet" />
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/fonts/boxicons.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/fonts/fontawesome.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/fonts/flag-icons.css" />
+
+  <!-- Core CSS -->
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/css/rtl/core.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/css/rtl/theme-bordered.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/css/demo.css" />
+
+  <!-- Vendors CSS -->
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/typeahead-js/typeahead.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/flatpickr/flatpickr.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/select2/select2.css" />
+
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/animate-css/animate.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/sweetalert2/sweetalert2.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/bs-stepper/bs-stepper.css" />
+  <!-- Data Table -->
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css" />
+  <link rel="stylesheet" href="admincssjs/theme/assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css" />
+  <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+  <link href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css" rel="stylesheet" />
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.7.0/css/select.dataTables.min.css">
+  <!-- Data Table -->
+
+
+  <!-- Page CSS -->
+
+  <!-- Helpers -->
+  <script src="admincssjs/theme/assets/vendor/js/helpers.js"></script>
+  <script src="admincssjs/theme/assets/js/config.js"></script>
+
+
+  <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+  <link rel="stylesheet" href="../commons/systemjscss/cs/jqueryui-custom.css">
+  <link rel="stylesheet" href="../commons/systemjscss/cs/opro.css">
+</head>
+
+<body>
+  <!-- Layout wrapper -->
+  <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
+    <div class="layout-container">
+      <!-- Menu -->
+      <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme bg-lighter"
+        id="layout-navbar">
+        <div class="container-xxl">
+          <div class="navbar-brand app-brand demo d-none d-xl-flex py-0 me-4">
+            <a href="javascript:void(0);" class="app-brand-link gap-2">
+              <span class="">
+                <img src="admincssjs/assets/images/logo.png" alt="Opro" title="Opro" style="height: 50px;" />
+              </span>
+
+            </a>
+
+            <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto d-xl-none">
+              <i class="bx bx-chevron-left bx-sm align-middle"></i>
+            </a>
+          </div>
+
+          <div class="layout-menu-toggle navbar-nav align-items-xl-center me-3 me-xl-0 d-xl-none">
+            <a class="nav-item nav-link px-0 me-xl-4" href="javascript:void(0)">
+              <i class="bx bx-menu bx-sm"></i>
+            </a>
+          </div>
+
+          <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+            <ul class="navbar-nav flex-row align-items-center ms-auto">
+
+              <!--/ Notification -->
+              <!-- User -->
+              <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+                  <div class="avatar avatar-online">
+                    <img src="admincssjs/theme/assets/img/avatars/21.png" alt class="w-px-40 h-auto rounded-circle" />
+                  </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                  <li>
+                    <a class="dropdown-item">
+                      <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                          <div class="avatar avatar-online">
+                            <img src="admincssjs/theme/assets/img/avatars/21.png" alt class="w-px-40 h-auto rounded-circle" />
+                          </div>
+                        </div>
+                        <div class="flex-grow-1">
+                          <span class="fw-semibold d-block" id="UserName_Name"></span>
+                          <small class="text-muted">Admin <span id="is-manager"></span></small>
+                        </div>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <div class="dropdown-divider"></div>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" onclick="ResetPassword()">
+                      <i class="bx bx-reset me-2"></i>
+                      <span class="align-middle">Reset Password</span>
+                    </a>
+                  </li>
+                  <li>
+                    <div class="dropdown-divider"></div>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" onclick="LogoutUser()">
+                      <i class="bx bx-power-off me-2"></i>
+                      <span class="align-middle">Log Out</span>
+                    </a>
+                  </li>
+                </ul>
+              </li>
+              <!--/ User -->
+            </ul>
+          </div>
+
+
+        </div>
+      </nav>
+
+      <!-- / Menu -->
+
+      <!-- Layout container -->
+      <div class="layout-page">
+        <div class="content-wrapper">
+         
+          <!-- Content -->
+          <div class="container-fluid flex-grow-1 container-p-y" id="section-block">
+
+
+            <div id="dialog-Confirm" title="Update Winner" style="display:none; z-index:10001">
+              <p id="confirmation_message" style="text-align: center;"><span
+                  style="float:left; margin:12px 12px 20px 0;"></span>Are you sure you want to continue?</p>
+            </div>
+
+            <div class="row">
+
+
+
+            </div>
+
+
+
+
+
+            <div class="card text-center">
+              <div class="bgimg2 card-header">
+                <ul class="nav nav-pills card-header-pills nav-sm" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link active" role="tab" data-bs-toggle="tab" data-bs-target="#property-list" aria-controls="property-list" aria-selected="true">
+                      Property List
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link" role="tab" data-bs-toggle="tab" data-bs-target="#area-list" aria-controls="area-list" aria-selected="false" tabindex="-1">
+                      Area List
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link" role="tab" data-bs-toggle="tab" data-bs-target="#employee-list" aria-controls="employee-list" aria-selected="false" tabindex="-1">
+                      Employee List
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button type="button" class="nav-link" role="tab" data-bs-toggle="tab" data-bs-target="#team-list" aria-controls="team-list" aria-selected="false" tabindex="-1">
+                      Team List
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <div class="card-body">
+                <div class="tab-content p-0">
+                  <div class="tab-pane fade active show" id="property-list" role="tabpanel">
+                    <div class="card my-3">
+                      <div class="bgimg card-header card-title p-3 px-3">
+                        <div class="d-flex justify-content-between">
+                          <h5 class="mb-0 py-1">Property List</h5>
+                          <button class="btn btn-linkedin btn-sm rounded-pill" onclick="AddNewProperty()">Add New Property</button>
+                        </div>
+                      </div>
+                      <div class="card-body py-2">
+                        <div class="card-datatable table-responsive">
+                          <table id="propertyDataTable" class="table table-sm table-hover "style="font-size: 12px; width:100%; text-align: initial;" cellspacing="0">
+                            <thead class="bgimg2">
+                              <tr class=" ">
+                                <th scope="col">ID</th>
+                                <th scope="col">NAME</th>
+                                <th scope="col">STATE</th>
+                                <th scope="col">CITY</th>
+                                <th scope="col">COUNTRY</th>
+                                <th scope="col">TYPE</th>
+                                <th scope="col">CONTACT PERSON</th>
+                                <th scope="col">CONTACT NUMBER</th>
+                                <th scope="col">EMAIL</th>
+                                <th scope="col">WEBSITE</th>
+                                <th scope="col">STATUS</th>
+                                <th scope="col">ACTION</th>
+                              </tr>
+                            </thead>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tab-pane fade " id="area-list" role="tabpanel">
+                    <div class="">
+                      <div class="card my-3">
+                        <div class="bgimg card-header card-title p-2 px-2">
+                          <div class="d-flex justify-content-between">
+                            <h5 class="mb-0 py-1">Area List</h5>
+                            <button class="btn btn-linkedin btn-sm rounded-pill" onclick="AddNewArea()">Add New Area</button>
+                          </div>
+                        </div>
+                        <div class="card-body py-2">
+                          <div class="table-responsive text-nowrap">
+                            <table class="table text-nowrap">
+                              <thead>
+                                <tr>
+                                  <th>SR NO</th>
+                                  <th>AREA ID</th>
+                                  <th>AREA NAME</th>
+                                  <th>TOTAL COUNT</th>
+                                  <th>Actions</th>
+                                  
+                                </tr>
+                              </thead>
+                              <tbody class="table-border-bottom-0" id="area-table-body">
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+      
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tab-pane fade " id="employee-list" role="tabpanel">
+                    <div class="">
+                      <div class="card my-3">
+                        <div class="bgimg card-header card-title p-2 px-2">
+                          <div class="d-flex justify-content-between">
+                            <h5 class="mb-0 py-1">Employee List</h5>
+                            
+                          </div>
+                        </div>
+                        <div class="card-body py-2">
+                          <div class="table-responsive text-nowrap">
+                            <table id="employeeDataTable" class="table table-sm table-hover "style="font-size: 12px; width:100%; text-align: initial;" cellspacing="0">
+                              <thead class="bgimg2">
+                                <tr>
+                                  <th>ID</th>
+                                  <th>FIRST NAME</th>
+                                  <th>LAST NAME</th>
+                                  <th>EMAIL</th>
+                                  <th>MOBILE</th>
+                                  <th>PROPERTY</th>
+                                  <th>STATUS</th>
+                                  <th>ACTION</th>
+                                </tr>
+                              </thead>
+                              <tbody class="table-border-bottom-0" id="area-table-bodyd">
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+      
+                      </div>
+                    </div>
+                  </div>
+                  <div class="tab-pane fade " id="team-list" role="tabpanel">
+                    <div class="">
+                      <div class="card my-3">
+                        <div class="bgimg card-header card-title p-2 px-2">
+                          <div class="d-flex justify-content-between">
+                            <h5 class="mb-0 py-1">Team List</h5>
+                            
+                          </div>
+                        </div>
+                        <div class="card-body py-2">
+                          <div class="table-responsive text-nowrap">
+                            <table id="teamDataTable" class="table table-sm table-hover "style="font-size: 12px; width:100%; text-align: initial;" cellspacing="0">
+                              <thead class="bgimg2">
+                                <tr>
+                                  <th>PROPERTY ID</th>
+                                  <th>PROPERTY NAME</th>
+                                  <th>TEAM ID</th>
+                                  <th>TEAM NAME</th>
+                                  <th>MANAGER</th>
+                                  <th>TOTAL MEMBERS</th>
+                                  <th>ACTION</th>
+                                </tr>
+                              </thead>
+                              <tbody class="table-border-bottom-0" id="area-table-bodyd">
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+      
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+
+
+          </div>
+        </div>
+        <!-- / Content -->
+
+        <!-- Footer -->
+        <footer class="content-footer footer bg-footer-theme">
+          <div class="container-xxl d-flex flex-wrap justify-content-between py-2 flex-md-row flex-column">
+            <div class="mb-2 mb-md-0">
+              ©
+              <script>
+                document.write(new Date().getFullYear());
+              </script>
+              Opro
+            </div>
+          </div>
+        </footer>
+        <!-- / Footer -->
+
+        <div class="content-backdrop fade"></div>
+      </div>
+      <!-- Content wrapper -->
+    </div>
+    <!-- / Layout page -->
+  </div>
+
+  <!-- Overlay -->
+  <div class="layout-overlay layout-menu-toggle"></div>
+
+  <!-- Drag Target Area To SlideIn Menu On Small Screens -->
+
+
+ 
+
+
+  <div id="modelHolder"></div>
+  
+  <div id="teams">
+    <div class="modal fade" id="addNewTeam" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">      
+          <div class="modal-header bgimg2">
+            <h5 class="modal-title" id="exampleModalLabel2">Add New Team <span id="team-prop-name" class="text-muted"></span></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div>
+              <div class="mb-3">
+                <label class="form-label" for="newteam-fullname">Team Name<span style="color: red;">*</span></label>
+                <input type="text" class="form-control" id="newteam-fullname" placeholder="Team Name">
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="collapsible-manager">Manager<span style="color: red;">*</span></label>
+                <select id="collapsible-manager" class="select2 form-select jbtclsdd">
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="collapsible-member">Team Members<span style="color: red;">*</span></label>
+                <select id="collapsible-member" class="select2 form-select jbtclsdd" multiple>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+              Close
+            </button>
+            <button type="button" class="btn btn-outline-linkedin btn-sm" onclick="CreateNewTeam()">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="teams2"></div>
+  <div id="divholder"></div>
+  <div id="permissin-divs"></div>
+
+
+  <!-- / Layout wrapper -->
+
+
+  <script src="admincssjs/theme/assets/vendor/libs/popper/popper.js"></script>
+  <script src="admincssjs/theme/assets/vendor/js/bootstrap.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/hammer/hammer.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/i18n/i18n.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/typeahead-js/typeahead.js"></script>
+  <script src="admincssjs/theme/assets/vendor/js/menu.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+
+  <script src="admincssjs/theme/assets/vendor/libs/block-ui/block-ui.js"></script>
+  <script src="admincssjs/theme/assets/js/extended-ui-blockui.js"></script>
+
+  <script src="admincssjs/theme/assets/vendor/libs/moment/moment.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/flatpickr/flatpickr.js"></script>
+  <script src="admincssjs/theme/assets/js/forms-pickers.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/select2/select2.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/sweetalert2/sweetalert2.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/bs-stepper/bs-stepper.js"></script>
+  <!-- Data Table -->
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.colVis.min.js"></script>
+  <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+  <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+  <script type="text/javascript" charset="utf8"
+    src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.colVis.min.js"></script>
+
+  <!-- Data Table -->
+
+
+  <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+  <script src="admincssjs/theme/assets/js/main.js"></script>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/cjs/index.min.js"></script>
+  <script src="../commons/systemjscss/js/datatables.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/chartjs/chartjs.js"></script>
+  <script src="admincssjs/theme/assets/vendor/libs/apex-charts/apexcharts.js"></script>
+<!--  <script src="../webessential/domain.js?v=1.0"></script>-->
+<!--  <script src="admincssjs/app_admin.js"></script>-->
+<!--  <script src="admincssjs/adminconsole.js"></script>-->
+
+
+    <script>
+      const scriptsToLoad = [
+        '../webessential/domain.js',
+        'admincssjs/app_admin.js',
+        'admincssjs/adminconsole.js',
+      ];
+      loadScriptSequentially(scriptsToLoad);
+
+
+      function loadScriptSequentially(scripts, index = 0) {
+        if (index >= scripts.length) {
+          //console.log('All scripts loaded successfully');
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = scripts[index] + '?v=' + new Date().getTime();
+
+        script.onload = function() {
+          //console.log(`Loaded: ${scripts[index]}`);
+          loadScriptSequentially(scripts, index + 1);
+        };
+
+        script.onerror = function() {
+          //console.error(`Failed to load: ${scripts[index]}`);
+          // Continue loading next script even if one fails
+          loadScriptSequentially(scripts, index + 1);
+        };
+
+        document.body.appendChild(script);
+      }
+    </script>
+
+
+</body>
+
+</html>

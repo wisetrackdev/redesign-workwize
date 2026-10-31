@@ -45,6 +45,10 @@
           <i class="fa-regular fa-circle-check text-xs"></i>
           <span>Closed Jobs</span>
         </a>
+        <a href="opro-dashboard.html" class="tab" id="headerNavOproDashboard" data-tab="opro-dashboard">
+          <i class="fa-solid fa-chart-pie text-xs text-indigo-500"></i>
+          <span>OPRO Dashboard</span>
+        </a>
       </nav>
 
       <!-- Right Header Actions (Property Selector & User Profile) -->
@@ -142,6 +146,10 @@
           <!-- Close This Job Button (Mirrors taskmaster CloseJob) -->
           <button id="detailCloseJobBtn" type="button" onclick="openEditModal('JB-CLOSEJOB')" class="btn-primary !bg-rose-600 hover:!bg-rose-700 text-xs !py-2 !px-4 shadow-sm shadow-rose-500/20 hidden">
             <i class="fa-solid fa-lock text-xs mr-1"></i> Close This Job
+          </button>
+          <!-- Super Admin Delete Job Button (Point 14) -->
+          <button id="detailDeleteJobBtn" type="button" onclick="deleteCurrentJob()" class="btn-outline !text-rose-600 !border-rose-200 hover:!bg-rose-50 text-xs !py-2 !px-3 font-semibold hidden" title="Super Admin Job Deletion">
+            <i class="fa-solid fa-trash-can mr-1.5 text-rose-500"></i> Delete Job
           </button>
           <button type="button" onclick="window.print()" class="btn-outline text-xs !py-2 !px-3" title="Print Job Sheet">
             <i class="fa-solid fa-print mr-1 text-slate-400"></i> Print
@@ -261,19 +269,26 @@
             </div>
           </div>
 
-          <!-- Owner's Comment Card (Mirrors taskmaster job-ownercomment-pane-div) -->
+          <!-- Owner's Comment Card & History Tracker (Point 1) -->
           <div class="ww-card space-y-3 hidden" id="ownerCommentCard">
-            <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <div class="flex items-center justify-between border-b border-purple-100 pb-2.5">
+              <div class="flex items-center gap-2">
                 <i class="fa-solid fa-crown text-purple-600"></i>
-                <span>Owner's Comment</span>
-              </h3>
-              <button id="editOwnerCommentBtn" type="button" onclick="openEditModal('JB-OWNERCOMMENT')" class="btn-outline text-[11px] !py-1 !px-2.5">
-                <i class="fa-solid fa-pen-to-square mr-1 text-purple-600"></i> Edit
+                <h3 class="font-bold text-slate-900 text-sm">Owner Comment History Tracker</h3>
+                <span id="dynOwnerCommentsCount" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">0</span>
+              </div>
+              <button id="editOwnerCommentBtn" type="button" onclick="openEditModal('JB-OWNERCOMMENT')" class="btn-outline text-[11px] !py-1 !px-2.5 border-purple-200 text-purple-700 hover:bg-purple-50">
+                <i class="fa-solid fa-plus mr-1 text-purple-600"></i> Add Comment
               </button>
             </div>
-            <div class="text-xs text-purple-900 bg-purple-50/60 p-3.5 rounded-xl border border-purple-100" id="dynJobOwnerComment">
+            <!-- Latest Owner Comment Box -->
+            <div class="text-xs text-purple-900 bg-purple-50/70 p-3.5 rounded-xl border border-purple-200" id="dynJobOwnerComment">
               -
+            </div>
+            <!-- Chronological History List -->
+            <div id="dynOwnerCommentHistoryContainer" class="space-y-2 pt-2 border-t border-purple-100 hidden">
+              <span class="text-[10px] font-bold text-purple-800 tracking-wider block uppercase">Previous Comments by Job Owner</span>
+              <div id="dynOwnerCommentHistoryList" class="space-y-2"></div>
             </div>
           </div>
 
@@ -320,7 +335,7 @@
                     <label class="cursor-pointer text-slate-500 hover:text-blue-600 text-xs flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-blue-300 transition-colors bg-white">
                       <i class="fa-solid fa-paperclip text-slate-400"></i>
                       <span class="text-[11px] font-medium" id="commentFileLabel">Attach Image</span>
-                      <input type="file" id="commentFileInput" accept="image/*" class="hidden">
+                      <input type="file" id="commentFileInput" accept="*/*" class="hidden">
                     </label>
                     <button id="submitCommentBtn" type="button" onclick="submitNewComment()" class="btn-primary text-xs !py-1.5 !px-4">
                       <i class="fa-solid fa-paper-plane mr-1 text-[10px]"></i> Send Comment

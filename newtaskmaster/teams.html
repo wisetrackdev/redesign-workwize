@@ -283,12 +283,12 @@
         <div id="stepContent3" class="space-y-4 hidden">
           <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attachments</h4>
           <div id="fileDropZone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-slate-50 transition-all">
-            <input type="file" id="fileUploadInput" multiple accept=".jpg,.jpeg,.png,.pdf" class="hidden">
+            <input type="file" id="fileUploadInput" multiple accept="*/*" class="hidden">
             <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto mb-3">
               <i class="fa-regular fa-file-image"></i>
             </div>
             <p class="text-sm font-semibold text-slate-700">Drag & drop files here or <span class="text-blue-600 underline">click to upload</span></p>
-            <p class="text-[11px] text-slate-400 mt-1">Only JPG, JPEG, and PNG files are allowed with maximum size limit of 5MB</p>
+            <p class="text-[11px] text-slate-400 mt-1">All file types supported (Images, PDFs, Word, Excel, ZIP) up to 25MB</p>
           </div>
           <div id="uploadedFileList" class="space-y-2"></div>
         </div>
