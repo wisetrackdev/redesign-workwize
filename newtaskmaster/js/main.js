@@ -414,8 +414,7 @@ function handleModalCcfChange() {
 async function populateModalDropdowns() {
   const areaSelect = document.getElementById("modalArea");
   const assignedSelect = document.getElementById("modalAssignedTo");
-  const createdBySelect = document.getElementById("modalCreatedBy");
-  if (!areaSelect && !assignedSelect && !createdBySelect) return;
+  if (!areaSelect && !assignedSelect) return;
 
   if (typeof WorkWizeAPI !== "undefined") {
     const propId = WorkWizeAPI.getCurrentProperty();
@@ -453,30 +452,6 @@ async function populateModalDropdowns() {
           });
           if (currentAssigned) assignedSelect.value = currentAssigned;
         }
-
-        // Populate Created By
-        if (createdBySelect) {
-          const currentCreator = createdBySelect.value || "IT [App admin]";
-          const creatorOpts = [
-            '<option value="">Select Created By</option>',
-            '<option value="IT [App admin]">IT [App admin]</option>'
-          ];
-          if (Array.isArray(data.propEmp) && data.propEmp.length > 0) {
-            data.propEmp.forEach(emp => {
-              let label = emp.teamName;
-              if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
-                const desg = (emp.manager.desg || "").trim();
-                const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
-                label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
-              }
-              if (label && label !== "IT [App admin]" && !creatorOpts.some(o => o.includes(`"${label}"`))) {
-                creatorOpts.push(`<option value="${label}">${label}</option>`);
-              }
-            });
-          }
-          createdBySelect.innerHTML = creatorOpts.join("");
-          createdBySelect.value = currentCreator;
-        }
       }
     } catch (err) {
       console.warn("Could not load dynamic property info for modal:", err);
@@ -488,6 +463,23 @@ function openModal() {
   const modal = document.getElementById("addJobModal");
   if (!modal) return;
   modal.classList.add("open");
+
+  // Pre-fill Created By from logged-in session user
+  const createdByInput = document.getElementById("modalCreatedBy");
+  if (createdByInput) {
+    let userName = "IT";
+    let userRole = "App admin";
+    if (typeof UserSession !== "undefined") {
+      userName = UserSession.getUserName() || userName;
+      userRole = UserSession.getUserRole() || userRole;
+    } else if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.getStoredUserData()) {
+      const u = WorkWizeAPI.getStoredUserData();
+      userName = u.name || (u.email ? u.email.split("@")[0] : userName);
+      userRole = u.desg || (Array.isArray(u.role) ? u.role[0] : u.role) || userRole;
+    }
+    const displayTitle = (userName === "IT" && userRole === "App admin") ? "IT [App admin]" : `${userName} [${userRole}]`;
+    createdByInput.value = displayTitle;
+  }
 
   // Ensure all 3 sections are visible in unified single view
   for (let i = 1; i <= 3; i++) {
@@ -571,8 +563,8 @@ function validateJobForm() {
   }
 
   if (!createdBy) {
-    showToast("Please select Created By", "error");
-    return false;
+    const createdByEl = document.getElementById("modalCreatedBy");
+    if (createdByEl) createdByEl.value = "IT [App admin]";
   }
 
   if (!assignedTo) {
@@ -602,7 +594,7 @@ async function submitJobForm() {
   const originalBtnHtml = submitBtn ? submitBtn.innerHTML : "";
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Creating Job...';
+    submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Submitting...';
   }
 
   const areaSelect = document.getElementById("modalArea");
