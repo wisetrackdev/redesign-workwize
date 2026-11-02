@@ -12,6 +12,18 @@ document.addEventListener("DOMContentLoaded", function () {
   initHeaderNavAndBadges();
 });
 
+// Safe HTML escaping helper
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+window.escapeHtml = escapeHtml;
+
 // Highlight active sidebar item according to URL & on click set active blue
 function initActiveSidebarLink() {
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
@@ -340,9 +352,21 @@ function initAddJobModal() {
     }
   });
 
+  // Prevent default form submit on Enter and route through validation
+  const addJobForm = document.getElementById("addJobForm");
+  if (addJobForm) {
+    addJobForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (validateJobForm()) {
+        submitJobForm();
+      }
+    });
+  }
+
   // Submit Job when Create Job button clicked (Unified Single View)
   if (nextBtn) {
-    nextBtn.addEventListener("click", function () {
+    nextBtn.addEventListener("click", function (e) {
+      e.preventDefault();
       if (validateJobForm()) {
         submitJobForm();
       }
@@ -354,6 +378,9 @@ function initAddJobModal() {
       // Step backwards not needed in unified view
     });
   }
+
+  // Initialize rich editors
+  initRichEditors();
 
   // File upload drag & drop preview
   initFileUpload();
@@ -608,12 +635,12 @@ function validateJobForm() {
   const areaSelect = document.getElementById("modalArea");
   const priority = document.getElementById("modalPriority")?.value;
   const status = document.getElementById("modalStatus")?.value;
-  const location = document.getElementById("modalLocation")?.value.trim();
+  const location = document.getElementById("modalLocation")?.value?.trim() || "";
   const creationDate = document.getElementById("modalJobCreationDate")?.value;
-  const createdBy = document.getElementById("modalCreatedBy")?.value;
+  let createdBy = document.getElementById("modalCreatedBy")?.value?.trim();
   const selectedAssignees = getSelectedModalAssignees();
   const costCenter = document.getElementById("modalCostCenter")?.value;
-  const ccfDept = document.getElementById("modalCcfDept")?.value.trim();
+  const ccfDept = document.getElementById("modalCcfDept")?.value?.trim();
   const details = getRichEditorValue("modalJobDetails");
 
   if (!areaSelect || !areaSelect.value) {
@@ -625,7 +652,7 @@ function validateJobForm() {
   const selectedAreaText = (areaSelect.options[areaSelect.selectedIndex]?.text || "").toUpperCase().trim();
   const selectedAreaVal = (areaSelect.value || "").toUpperCase().trim();
   const isVillaArea = selectedAreaText.includes("GUEST VILLA") || selectedAreaVal.includes("GUEST VILLA") || selectedAreaText.includes("VILLA");
-  const villa = document.getElementById("modalVillaNumber")?.value.trim() || "";
+  const villa = document.getElementById("modalVillaNumber")?.value?.trim() || "";
 
   if (isVillaArea && !villa) {
     showToast("Please enter Villa Number for Villa Area", "error");
@@ -654,7 +681,16 @@ function validateJobForm() {
 
   if (!createdBy) {
     const createdByEl = document.getElementById("modalCreatedBy");
-    if (createdByEl) createdByEl.value = "IT [App admin]";
+    if (createdByEl) {
+      let userName = "IT";
+      let userRole = "App admin";
+      if (typeof UserSession !== "undefined") {
+        userName = UserSession.getUserName() || userName;
+        userRole = UserSession.getUserRole() || userRole;
+      }
+      createdByEl.value = (userName === "IT" && userRole === "App admin") ? "IT [App admin]" : `${userName} [${userRole}]`;
+      createdBy = createdByEl.value;
+    }
   }
 
   if (selectedAssignees.length === 0) {
@@ -687,141 +723,168 @@ async function submitJobForm() {
     submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Submitting...';
   }
 
-  const areaSelect = document.getElementById("modalArea");
-  const areaId = areaSelect?.value || "";
-  const areaName = areaSelect?.options[areaSelect.selectedIndex]?.text || "General";
-  const villa = document.getElementById("modalVillaNumber")?.value.trim() || "";
-  const priority = document.getElementById("modalPriority")?.value || "MEDIUM";
-  const status = document.getElementById("modalStatus")?.value || "YET_TO_COMMENCE";
-  const location = document.getElementById("modalLocation")?.value.trim() || "";
-  const creationDate = document.getElementById("modalJobCreationDate")?.value || new Date().toISOString().split("T")[0];
-  const completionDate = document.getElementById("modalExpectedDate")?.value || "";
-  const refNo = document.getElementById("modalReferenceNo")?.value.trim() || `REF-${Math.floor(10000 + Math.random() * 90000)}`;
+  try {
+    const areaSelect = document.getElementById("modalArea");
+    const areaId = areaSelect?.value || "";
+    const areaName = areaSelect?.options[areaSelect.selectedIndex]?.text || "General";
+    const villa = document.getElementById("modalVillaNumber")?.value?.trim() || "";
+    const priority = document.getElementById("modalPriority")?.value || "MEDIUM";
+    const status = document.getElementById("modalStatus")?.value || "YET_TO_COMMENCE";
+    const location = document.getElementById("modalLocation")?.value?.trim() || "";
+    const creationDate = document.getElementById("modalJobCreationDate")?.value || new Date().toISOString().split("T")[0];
+    const completionDate = document.getElementById("modalExpectedDate")?.value || "";
+    const refNo = document.getElementById("modalReferenceNo")?.value?.trim() || `REF-${Math.floor(10000 + Math.random() * 90000)}`;
 
-  const selectedAssignees = getSelectedModalAssignees();
-  const assignedText = selectedAssignees.length > 0 ? selectedAssignees.map(a => a.name).join(", ") : "Assigned Team";
+    const createdBy = document.getElementById("modalCreatedBy")?.value?.trim() ||
+      (typeof UserSession !== "undefined" && UserSession.getUserName ? UserSession.getUserName() : "") ||
+      (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.getStoredUserData() ? (WorkWizeAPI.getStoredUserData().name || WorkWizeAPI.getStoredUserData().email) : "") ||
+      "IT [App admin]";
 
-  const budget = parseFloat(document.getElementById("modalBudget")?.value) || 0;
-  const costCenter = document.getElementById("modalCostCenter")?.value || "";
-  const ccfDept = document.getElementById("modalCcfDept")?.value.trim() || "";
-  const details = document.getElementById("modalJobDetails")?.value.trim() || "";
-  const remarks = document.getElementById("modalRemarks")?.value.trim() || "";
+    const selectedAssignees = getSelectedModalAssignees();
+    const assignedText = selectedAssignees.length > 0 ? selectedAssignees.map(a => a.name).join(", ") : "Assigned Team";
 
-  const propId = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentProperty() : "PROP001";
+    const budget = parseFloat(document.getElementById("modalBudget")?.value) || 0;
+    const costCenter = document.getElementById("modalCostCenter")?.value || "";
+    const ccfDept = document.getElementById("modalCcfDept")?.value?.trim() || "";
+    const details = getRichEditorValue("modalJobDetails");
+    const remarks = getRichEditorValue("modalRemarks");
 
-  // Build FormData matching backend JobTrackerController.AddNewJob
-  const formData = new FormData();
-  formData.append("propId", propId);
-  formData.append("areaID", areaId);
-  formData.append("villaNumber", villa);
-  formData.append("priority", priority);
-  formData.append("jobLocation", location);
-  formData.append("jobStatus", status);
-  formData.append("jobDate", creationDate);
-  formData.append("completeDate", completionDate);
-  formData.append("refNum", refNo);
-  formData.append("jobDetail", details);
-  formData.append("budget", budget.toString());
-  formData.append("ccf", costCenter);
-  formData.append("ccfdept", ccfDept);
-  formData.append("jobremark", remarks);
-  formData.append("createdBy", createdBy);
-  formData.append("userId", createdBy);
-  selectedAssignees.forEach(a => {
-    formData.append("assignedTo", a.id);
-  });
+    const propId = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentProperty() : "PROP001";
 
-  // Append uploaded files
-  if (modalUploadFiles && modalUploadFiles.length > 0) {
-    modalUploadFiles.forEach(file => {
-      formData.append("propImages", file);
+    // Build FormData matching backend JobTrackerController.AddNewJob
+    const formData = new FormData();
+    formData.append("propId", propId);
+    formData.append("areaID", areaId);
+    formData.append("villaNumber", villa);
+    formData.append("priority", priority);
+    formData.append("jobLocation", location);
+    formData.append("jobStatus", status);
+    formData.append("jobDate", creationDate);
+    formData.append("completeDate", completionDate);
+    formData.append("refNum", refNo);
+    formData.append("jobDetail", details);
+    formData.append("budget", budget.toString());
+    formData.append("ccf", costCenter);
+    formData.append("ccfdept", ccfDept);
+    formData.append("jobremark", remarks);
+    formData.append("createdBy", createdBy);
+    formData.append("userId", createdBy);
+    selectedAssignees.forEach(a => {
+      formData.append("assignedTo", a.id);
     });
-  }
 
-  let createdId = null;
-
-  if (typeof WorkWizeAPI !== "undefined") {
-    try {
-      const res = await WorkWizeAPI.addNewJob(formData);
-      if (res && res.success) {
-        createdId = res.jobid;
-      }
-    } catch (err) {
-      console.warn("API addNewJob error, falling back to local store:", err);
+    // Append uploaded files
+    if (modalUploadFiles && modalUploadFiles.length > 0) {
+      modalUploadFiles.forEach(file => {
+        formData.append("propImages", file);
+      });
     }
-  }
 
-  // Fallback ID if offline
-  if (!createdId) {
-    const now = new Date();
-    const dayStr = String(now.getDate()).padStart(2, '0') + String(now.getMonth() + 1).padStart(2, '0') + String(now.getFullYear()).slice(-2);
-    const randFive = Math.floor(10000 + Math.random() * 90000);
-    createdId = `Tes-${dayStr}-${randFive}`;
-  }
+    let createdId = null;
 
-  // Sync to WorkWizeDB for immediate UI reactivity
-  if (typeof WorkWizeDB !== "undefined") {
-    let normStatus = "Yet to Commence";
-    if (status === "IN_PROGRESS") normStatus = "In Progress";
-    else if (status === "UNDER_DISCUSSION") normStatus = "Under Discussion";
-    else if (status === "FIXED" || status === "COMPLETED") normStatus = "Closed";
+    if (typeof WorkWizeAPI !== "undefined") {
+      try {
+        const res = await WorkWizeAPI.addNewJob(formData);
+        if (res && res.success) {
+          createdId = res.jobid;
+        } else if (res && (res.jobId || res.jobid)) {
+          createdId = res.jobId || res.jobid;
+        }
+      } catch (err) {
+        console.warn("API addNewJob error, falling back to local store:", err);
+      }
+    }
 
-    let normPriority = "Medium";
-    if (priority === "HIGH") normPriority = "High";
-    else if (priority === "LOW") normPriority = "Low";
-    else if (priority === "SAFETY") normPriority = "Safety";
+    // Fallback ID if offline
+    if (!createdId) {
+      const now = new Date();
+      const dayStr = String(now.getDate()).padStart(2, '0') + String(now.getMonth() + 1).padStart(2, '0') + String(now.getFullYear()).slice(-2);
+      const randFive = Math.floor(10000 + Math.random() * 90000);
+      createdId = `Tes-${dayStr}-${randFive}`;
+    }
 
-    const newJobObj = {
-      id: createdId,
-      title: `${areaName} - ${details.slice(0, 30)}...`,
-      area: areaName,
-      subArea: areaName.split("/")[0] || areaName,
-      status: normStatus,
-      priority: normPriority,
-      assignedTo: assignedText,
-      openedOn: creationDate,
-      expectedDate: completionDate || "TBD",
-      villaNumber: villa || "N/A",
-      location: location,
-      budget: budget,
-      costCenter: costCenter || "CC-01",
-      safetyIssues: priority === "SAFETY" ? 1 : 0,
-      details: details,
-      remarks: remarks
-    };
-    WorkWizeDB.addJob(newJobObj);
-  }
+    // Sync to WorkWizeDB for immediate UI reactivity
+    if (typeof WorkWizeDB !== "undefined") {
+      let normStatus = "Yet to Commence";
+      if (status === "IN_PROGRESS") normStatus = "In Progress";
+      else if (status === "UNDER_DISCUSSION") normStatus = "Under Discussion";
+      else if (status === "FIXED" || status === "COMPLETED") normStatus = "Closed";
 
-  closeModal();
-  showToast(`New Job ${createdId} created successfully!`, "success");
+      let normPriority = "Medium";
+      if (priority === "HIGH") normPriority = "High";
+      else if (priority === "LOW") normPriority = "Low";
+      else if (priority === "SAFETY") normPriority = "Safety";
 
-  // Reset form & uploads
-  const form = document.getElementById("addJobForm");
-  if (form) form.reset();
-  modalUploadFiles = [];
-  const fileList = document.getElementById("uploadedFileList");
-  if (fileList) fileList.innerHTML = "";
+      const plainDetails = details.replace(/<[^>]*>/g, "").trim() || "New Job";
 
-  if (submitBtn) {
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = originalBtnHtml;
-  }
+      const newJobObj = {
+        id: createdId,
+        rawId: createdId,
+        orgjobId: createdId,
+        jobId: createdId,
+        title: `${areaName} - ${plainDetails.slice(0, 30)}...`,
+        area: areaName,
+        subArea: areaName.split("/")[0] || areaName,
+        status: normStatus,
+        priority: normPriority,
+        assignedTo: assignedText,
+        openedOn: creationDate,
+        createdOn: creationDate,
+        jobCreatedOn: creationDate,
+        expectedDate: completionDate || "TBD",
+        expectedCompletion: completionDate || "TBD",
+        villaNumber: villa || "N/A",
+        location: location,
+        jobLocation: location,
+        refNum: refNo,
+        budget: budget,
+        costCenter: costCenter || "CC-01",
+        safetyIssues: priority === "SAFETY" ? 1 : 0,
+        details: details,
+        jobDetail: details,
+        remarks: remarks,
+        jobremark: remarks
+      };
+      WorkWizeDB.addJob(newJobObj);
+    }
 
-  // Refresh view
-  if (typeof loadAllJobsFromAPI === "function") {
-    loadAllJobsFromAPI();
-  } else if (typeof renderAllJobsTable === "function") {
-    renderAllJobsTable();
-  } else if (typeof initJobsByArea === "function") {
-    initJobsByArea();
-  } else if (typeof renderJobsByAreaTable === "function") {
-    renderJobsByAreaTable();
-  } else if (typeof updateDashboardStats === "function") {
-    updateDashboardStats();
-  } else {
-    setTimeout(() => {
-      window.location.reload();
-    }, 800);
+    closeModal();
+    showToast(`New Job ${createdId} created successfully!`, "success");
+
+    // Reset form & uploads & rich editors
+    const form = document.getElementById("addJobForm");
+    if (form && typeof form.reset === "function") form.reset();
+    setRichEditorValue("modalJobDetails", "");
+    setRichEditorValue("modalRemarks", "");
+    clearModalAssignees();
+    modalUploadFiles = [];
+    const fileList = document.getElementById("uploadedFileList");
+    if (fileList) fileList.innerHTML = "";
+
+    // Refresh view
+    if (typeof loadAllJobsFromAPI === "function") {
+      loadAllJobsFromAPI();
+    } else if (typeof renderAllJobsTable === "function") {
+      renderAllJobsTable();
+    } else if (typeof initJobsByArea === "function") {
+      initJobsByArea();
+    } else if (typeof renderJobsByAreaTable === "function") {
+      renderJobsByAreaTable();
+    } else if (typeof updateDashboardStats === "function") {
+      updateDashboardStats();
+    } else {
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
+    }
+  } catch (err) {
+    console.error("Error in submitJobForm:", err);
+    showToast(err.message || "Failed to submit job", "error");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalBtnHtml;
+    }
   }
 }
 

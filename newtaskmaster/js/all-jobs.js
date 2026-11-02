@@ -208,6 +208,19 @@ async function loadAllJobsFromAPI() {
     console.warn("API loadAllJobsFromAPI failed:", error.message);
   }
 
+  // If no jobs returned from API or API failed, check WorkWizeDB if available
+  const localJobs = (typeof WorkWizeDB !== "undefined" && WorkWizeDB.getJobs) ? WorkWizeDB.getJobs() : [];
+  if (localJobs.length > 0) {
+    allJobsStore = localJobs.map(j => mapApiJobToModel(j));
+    sortJobsDescending(allJobsStore);
+    populateFilterDropdowns();
+    const openCount = allJobsStore.filter(j => j.status !== "Closed").length;
+    const closedCount = allJobsStore.filter(j => j.status === "Closed").length;
+    if (typeof updateHeaderBadges === "function") updateHeaderBadges(openCount, closedCount);
+    filterAndRenderJobs();
+    return;
+  }
+
   // If no jobs returned from API or API failed, strictly clear store (no static mock data)
   allJobsStore = [];
   populateFilterDropdowns();
