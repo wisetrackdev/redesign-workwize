@@ -74,6 +74,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   // Set navigation links
   setupNavigationLinks(currentJobId);
 
+  // Initialize Assign To options immediately (exact match to new job modal)
+  await populateEditAssignees(null);
+
   // Load existing job details into form
   await loadJobForEditing(currentJobId);
 
@@ -216,12 +219,9 @@ async function populateEditAssignees(data) {
     data.assignedTo.split(",").forEach(s => currentlyAssignedSet.add(s.trim().toUpperCase()));
   }
 
+  // Load exact same assignee list as New Job Create (from WorkWizeAPI.getPropertyInfo -> propEmp)
   let empList = [];
-  if (Array.isArray(data?.allTeams) && data.allTeams.length > 0) {
-    empList = data.allTeams;
-  } else if (Array.isArray(data?.propEmp) && data.propEmp.length > 0) {
-    empList = data.propEmp;
-  } else if (typeof WorkWizeAPI !== "undefined") {
+  if (typeof WorkWizeAPI !== "undefined") {
     try {
       const propId = data?.propId || WorkWizeAPI.getCurrentProperty();
       const propInfo = await WorkWizeAPI.getPropertyInfo(propId);
@@ -231,6 +231,10 @@ async function populateEditAssignees(data) {
     } catch (e) {
       console.warn("Could not load dynamic property info for edit:", e);
     }
+  }
+
+  if (empList.length === 0 && Array.isArray(data?.propEmp) && data.propEmp.length > 0) {
+    empList = data.propEmp;
   }
 
   if (empList.length > 0) {
@@ -253,14 +257,14 @@ async function populateEditAssignees(data) {
       ) ? "checked" : "";
 
       return `
-        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none transition-colors">
+        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
           <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
-          <span class="truncate font-medium">${escapeHtml(label)}</span>
+          <span class="truncate">${escapeHtml(label)}</span>
         </label>
       `;
     }).join("");
   } else {
-    // Exact same fallback as create new job popup & job details
+    // Exact same fallback options as create new job modal
     const defaultList = [
       { val: "Facilities Team", label: "Facilities Team" },
       { val: "Engineering Team", label: "Engineering Team" },
@@ -270,9 +274,9 @@ async function populateEditAssignees(data) {
     listEl.innerHTML = defaultList.map(item => {
       const isChecked = (currentlyAssignedSet.has(item.val.toUpperCase()) || currentlyAssignedSet.has(item.label.toUpperCase())) ? "checked" : "";
       return `
-        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none transition-colors">
+        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
           <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
-          <span class="truncate font-medium">${escapeHtml(item.label)}</span>
+          <span class="truncate">${escapeHtml(item.label)}</span>
         </label>
       `;
     }).join("");

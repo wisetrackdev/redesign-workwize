@@ -200,7 +200,22 @@
                   <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-2 shrink-0"></i>
                 </button>
                 <div id="editAssignedToMenu" class="hidden absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 max-h-60 overflow-y-auto space-y-1">
-                  <!-- Dynamically populated checkboxes from allTeams / propEmp -->
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+                    <input type="checkbox" value="Facilities Team" data-name="Facilities Team" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" onchange="updateEditAssigneeButtonText()">
+                    <span class="truncate">Facilities Team</span>
+                  </label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+                    <input type="checkbox" value="Engineering Team" data-name="Engineering Team" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" onchange="updateEditAssigneeButtonText()">
+                    <span class="truncate">Engineering Team</span>
+                  </label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+                    <input type="checkbox" value="IT Admin" data-name="Testing - IT Admin" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" onchange="updateEditAssigneeButtonText()">
+                    <span class="truncate">Testing - IT Admin</span>
+                  </label>
+                  <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+                    <input type="checkbox" value="Safety Team" data-name="Safety Team" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" onchange="updateEditAssigneeButtonText()">
+                    <span class="truncate">Safety Team</span>
+                  </label>
                 </div>
               </div>
             </div>
