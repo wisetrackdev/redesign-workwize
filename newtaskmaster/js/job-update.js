@@ -1,33 +1,22 @@
 
-function openEditAssigneeModal() {
-  const modal = document.getElementById("editAssigneeModal");
-  if (!modal) return;
-  modal.classList.add("open");
-  updateEditAssigneeButtonText();
+function toggleAssigneeDropdown(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  menu.classList.toggle("hidden");
 }
 
-function closeEditAssigneeModal() {
-  const modal = document.getElementById("editAssigneeModal");
-  if (modal) modal.classList.remove("open");
-}
-
-function confirmEditAssignees() {
-  updateEditAssigneeButtonText();
-  closeEditAssigneeModal();
-}
-
-function onEditAssigneeModalChange() {
-  updateEditAssigneeButtonText();
-}
+// Close dropdown on outside click
+document.addEventListener("click", function(e) {
+  const dropdown = document.getElementById("editAssignedToDropdown");
+  const menu = document.getElementById("editAssignedToMenu");
+  if (dropdown && menu && !dropdown.contains(e.target)) {
+    menu.classList.add("hidden");
+  }
+});
 
 function updateEditAssigneeButtonText() {
   const textEl = document.getElementById("editAssignedToText");
-  const countEl = document.getElementById("editAssigneeCountText");
-  const cbs = document.querySelectorAll("#editAssigneeModalList .edit-assignee-cb:checked");
-
-  if (countEl) {
-    countEl.textContent = `${cbs.length} selected`;
-  }
+  const cbs = document.querySelectorAll("#editAssignedToMenu .edit-assignee-cb:checked");
 
   if (!textEl) return;
   if (cbs.length === 0) {
@@ -44,7 +33,7 @@ function updateEditAssigneeButtonText() {
 }
 
 function getSelectedEditAssignees() {
-  const cbs = document.querySelectorAll("#editAssigneeModalList .edit-assignee-cb:checked");
+  const cbs = document.querySelectorAll("#editAssignedToMenu .edit-assignee-cb:checked");
   return Array.from(cbs).map(cb => ({
     id: cb.value,
     name: cb.dataset.name || cb.value
@@ -208,7 +197,7 @@ async function loadJobForEditing(jobId) {
 }
 
 async function populateEditAssignees(data) {
-  const listEl = document.getElementById("editAssigneeModalList");
+  const listEl = document.getElementById("editAssignedToMenu");
   if (!listEl) return;
 
   const currentlyAssignedSet = new Set();
@@ -264,9 +253,9 @@ async function populateEditAssignees(data) {
       ) ? "checked" : "";
 
       return `
-        <label class="flex items-center gap-2.5 p-2.5 hover:bg-slate-50 rounded-xl cursor-pointer border border-slate-100 select-none transition-colors">
-          <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="onEditAssigneeModalChange()">
-          <span class="text-xs font-semibold text-slate-800">${escapeHtml(label)}</span>
+        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none transition-colors">
+          <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
+          <span class="truncate font-medium">${escapeHtml(label)}</span>
         </label>
       `;
     }).join("");
@@ -281,9 +270,9 @@ async function populateEditAssignees(data) {
     listEl.innerHTML = defaultList.map(item => {
       const isChecked = (currentlyAssignedSet.has(item.val.toUpperCase()) || currentlyAssignedSet.has(item.label.toUpperCase())) ? "checked" : "";
       return `
-        <label class="flex items-center gap-2.5 p-2.5 hover:bg-slate-50 rounded-xl cursor-pointer border border-slate-100 select-none transition-colors">
-          <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="onEditAssigneeModalChange()">
-          <span class="text-xs font-semibold text-slate-800">${escapeHtml(item.label)}</span>
+        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none transition-colors">
+          <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
+          <span class="truncate font-medium">${escapeHtml(item.label)}</span>
         </label>
       `;
     }).join("");
