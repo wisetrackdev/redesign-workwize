@@ -1168,22 +1168,22 @@ function renderAreaModalRows(jobs) {
         <td class="text-slate-600 font-mono text-[10px]">${(j.refNum && j.refNum !== 'null') ? j.refNum : (j.refNo || '<span class="text-slate-300">-</span>')}</td>
         <!-- 9. ASSIGNED TO -->
         <td class="text-slate-700">${assignedText}</td>
-        <!-- 10. EXPECTED COMPLETION DATE -->
-        <td class="text-slate-500">${formatDateStr(j.expectedCompletion || j.expectedDate)}</td>
-        <!-- 11. CLOSE DATE -->
+        <!-- 10. CLOSED DATE -->
         <td class="text-slate-500">${formatDateStr(j.jobCloseOn || j.closedOn)}</td>
-        <!-- 12. ATTACHMENTS -->
+        <!-- 11. ATTACHMENTS -->
         <td class="text-center font-semibold text-slate-600">
           <span class="inline-flex items-center gap-1"><i class="fa-regular fa-image text-blue-500"></i> ${attachmentsCount}</span>
         </td>
-        <!-- 13. COMMENTS -->
+        <!-- 12. COMMENTS -->
         <td class="text-center font-semibold text-slate-600">
           <span class="inline-flex items-center gap-1"><i class="fa-regular fa-comment text-slate-400"></i> ${commentsCount}</span>
         </td>
-        <!-- 14. CREATED BY -->
+        <!-- 13. CREATED BY -->
         <td class="text-slate-600">${createdByText}</td>
-        <!-- 15. PROPERTY -->
+        <!-- 14. PROPERTY -->
         <td class="text-slate-500">${propDisplay}</td>
+        <!-- 15. EXPECTED COMPLETION DATE -->
+        <td class="text-slate-500">${formatDateStr(j.expectedCompletion || j.expectedDate)}</td>
       </tr>
     `;
   }).join("");
@@ -1276,21 +1276,21 @@ function exportAreaJobsToCSV() {
   }
 
   const headers = [
-    "ID",
-    "VILLA",
-    "DETAILS",
-    "CREATE DATE",
-    "LOCATION",
-    "PRIORITY",
-    "STATUS",
-    "REF NO",
-    "ASSIGNED TO",
-    "EXPECTED COMPLETION DATE",
-    "CLOSE DATE",
-    "ATTACHMENTS",
-    "COMMENTS",
-    "CREATED BY",
-    "PROPERTY"
+    "Job ID",
+    "Villa",
+    "Details",
+    "Create Date",
+    "Location",
+    "Priority",
+    "Status",
+    "Ref No",
+    "Assigned To",
+    "Closed Date",
+    "Attachments",
+    "Comments",
+    "Created By",
+    "Property",
+    "Expected Completion Date"
   ];
 
   const rows = currentAreaModalJobs.map(rawJob => {
@@ -1315,12 +1315,12 @@ function exportAreaJobsToCSV() {
       `"${j.jobStatus || j.status || "-"}"`,
       `"${j.refNum || j.refNo || "-"}"`,
       `"${assigned.replace(/"/g, '""')}"`,
-      `"${j.expectedCompletion || j.expectedDate || "-"}"`,
       `"${j.jobCloseOn || j.closeDate || "-"}"`,
       `"${j.uploadCount !== undefined ? j.uploadCount : (Array.isArray(j.imageUploads) ? j.imageUploads.length : 0)}"`,
       `"${j.commentCount !== undefined ? j.commentCount : (Array.isArray(j.comments) ? j.comments.length : 0)}"`,
       `"${createdBy.replace(/"/g, '""')}"`,
-      `"${(j.propName || WorkWizeAPI.getCurrentPropertyName() || "-").replace(/"/g, '""')}"`
+      `"${(j.propName || WorkWizeAPI.getCurrentPropertyName() || "-").replace(/"/g, '""')}"`,
+      `"${j.expectedCompletion || j.expectedDate || "-"}"`
     ].join(",");
   });
 

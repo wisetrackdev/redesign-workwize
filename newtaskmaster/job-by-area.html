@@ -185,8 +185,9 @@
             <input type="text" id="areaModalSearchInput" placeholder="Filter area jobs..." class="w-full text-xs bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 outline-none focus:border-blue-500">
           </div>
           <!-- Point 4: Export Area Jobs to CSV button -->
-          <button id="exportAreaJobsBtn" onclick="exportAreaJobsToCSV()" class="btn-outline text-xs !py-1.5 !px-3 inline-flex items-center gap-1.5 font-semibold text-slate-700 hover:text-emerald-700" title="Export this area's jobs to CSV">
-            <i class="fa-solid fa-file-csv text-emerald-600 text-sm"></i> Export CSV
+          <button id="exportAreaJobsBtn" onclick="exportAreaJobsToCSV()" class="btn-outline text-xs !py-1.5 !px-3 inline-flex items-center gap-1.5 font-semibold text-slate-700 hover:text-emerald-700" title="Export jobs">
+            <i class="fa-solid fa-arrow-up-from-bracket text-xs text-slate-500"></i>
+            <span>Export</span>
           </button>
           <button id="closeAreaModalBtn" class="w-8 h-8 rounded-full hover:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" title="Close Modal">
             <i class="fa-solid fa-xmark text-lg"></i>
@@ -204,19 +205,19 @@
                 <th style="min-width: 90px;" id="areaModalVillaHeader">Villa</th>
                 <th style="min-width: 240px;">Details</th>
                 <th style="min-width: 135px;" class="cursor-pointer hover:text-blue-600 select-none" onclick="toggleAreaModalDateSort()" title="Click to toggle Newest / Oldest first">
-  Create Date <i id="areaModalSortIcon" class="fa-solid fa-arrow-down-short-wide ml-1 text-blue-500"></i>
-</th>
+                  Create Date <i id="areaModalSortIcon" class="fa-solid fa-arrow-down-short-wide ml-1 text-blue-500"></i>
+                </th>
                 <th style="min-width: 140px;">Location</th>
                 <th style="min-width: 100px;">Priority</th>
                 <th style="min-width: 120px;">Status</th>
                 <th style="min-width: 110px;">Ref No</th>
                 <th style="min-width: 150px;">Assigned To</th>
-                <th style="min-width: 160px;">Expected Completion Date</th>
-                <th style="min-width: 130px;">Close Date</th>
+                <th style="min-width: 130px;">Closed Date</th>
                 <th style="min-width: 110px;" class="text-center">Attachments</th>
                 <th style="min-width: 100px;" class="text-center">Comments</th>
                 <th style="min-width: 140px;">Created By</th>
                 <th style="min-width: 130px;">Property</th>
+                <th style="min-width: 160px;">Expected Completion Date</th>
               </tr>
             </thead>
             <tbody id="areaModalTableBody">

@@ -601,7 +601,6 @@ function renderTableRows() {
           <span>${job.assignedTo}</span>
         </div>
       </td>
-      <td class="text-slate-500 whitespace-nowrap">${formatDate(job.expectedCompletion)}</td>
       <td class="text-slate-500 whitespace-nowrap">${formatDate(job.closeDate)}</td>
       <td class="text-center font-semibold text-slate-600">
         <span class="inline-flex items-center gap-1"><i class="fa-regular fa-image text-blue-500"></i> ${job.uploadCount}</span>
@@ -611,6 +610,7 @@ function renderTableRows() {
       </td>
       <td class="text-slate-600 whitespace-nowrap">${job.createdBy}</td>
       <td class="text-slate-500 whitespace-nowrap">${job.propName}</td>
+      <td class="text-slate-500 whitespace-nowrap">${formatDate(job.expectedCompletion)}</td>
       <td class="text-right">
         <div class="relative inline-block text-left dropdown-group">
           <button class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" onclick="toggleJobActionMenu(this)">
@@ -835,21 +835,21 @@ function exportJobsToCSV() {
   }
 
   const headers = [
-    "ID",
-    "VILLA",
-    "DETAILS",
-    "CREATE DATE",
-    "LOCATION",
-    "PRIORITY",
-    "STATUS",
-    "REF NO",
-    "ASSIGNED TO",
-    "EXPECTED COMPLETION DATE",
-    "CLOSE DATE",
-    "ATTACHMENTS",
-    "COMMENTS",
-    "CREATED BY",
-    "PROPERTY"
+    "Job ID",
+    "Villa",
+    "Details",
+    "Create Date",
+    "Location",
+    "Priority",
+    "Status",
+    "Ref No",
+    "Assigned To",
+    "Closed Date",
+    "Attachments",
+    "Comments",
+    "Created By",
+    "Property",
+    "Expected Completion Date"
   ];
 
   const rows = filteredJobs.map(j => [
@@ -862,12 +862,12 @@ function exportJobsToCSV() {
     `"${j.status}"`,
     `"${j.refNum || "-"}"`,
     `"${(j.assignedTo || "-").replace(/"/g, '""')}"`,
-    `"${j.expectedCompletion || "-"}"`,
     `"${j.closeDate || "-"}"`,
     `"${j.uploadCount}"`,
     `"${j.commentCount}"`,
     `"${(j.createdBy || "-").replace(/"/g, '""')}"`,
-    `"${(j.propName || "-").replace(/"/g, '""')}"`
+    `"${(j.propName || "-").replace(/"/g, '""')}"`,
+    `"${j.expectedCompletion || "-"}"`
   ]);
 
   const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
