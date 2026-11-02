@@ -274,15 +274,10 @@ function initAddJobModal() {
     }
   });
 
-  // Step Navigation
+  // Submit Job when Create Job button clicked (Unified Single View)
   if (nextBtn) {
     nextBtn.addEventListener("click", function () {
-      if (currentStep < 3) {
-        if (validateStep(currentStep)) {
-          setStep(currentStep + 1);
-        }
-      } else {
-        // Submit Job
+      if (validateJobForm()) {
         submitJobForm();
       }
     });
@@ -290,9 +285,7 @@ function initAddJobModal() {
 
   if (prevBtn) {
     prevBtn.addEventListener("click", function () {
-      if (currentStep > 1) {
-        setStep(currentStep - 1);
-      }
+      // Step backwards not needed in unified view
     });
   }
 
@@ -317,20 +310,10 @@ function handleModalAreaChange() {
   const villaRequired = document.getElementById("villaRequiredMark");
   if (!areaSelect || !villaInput) return;
 
-  const selectedText = (areaSelect.options[areaSelect.selectedIndex]?.text || "").toUpperCase().trim();
-  const selectedVal = (areaSelect.value || "").toUpperCase().trim();
-
-  if (selectedText.includes("GUEST VILLA") || selectedVal.includes("GUEST VILLA")) {
-    villaInput.disabled = false;
-    villaInput.placeholder = "e.g. V-101 (Optional)";
-    villaInput.classList.remove("disabled:opacity-60", "disabled:cursor-not-allowed");
-    // Point 10: Villa number is optional for guest villa jobs
-    if (villaRequired) villaRequired.classList.add("hidden");
-  } else {
-    villaInput.disabled = true;
-    villaInput.value = "";
-    if (villaRequired) villaRequired.classList.add("hidden");
-  }
+  villaInput.placeholder = "e.g. V-104";
+  villaInput.disabled = false;
+  villaInput.classList.remove("disabled:opacity-60", "disabled:cursor-not-allowed");
+  if (villaRequired) villaRequired.classList.add("hidden");
 }
 
 // Handle CCF Department condition
@@ -362,7 +345,7 @@ async function populateModalDropdowns() {
         // Populate Area
         if (areaSelect && Array.isArray(data.propArea) && data.propArea.length > 0) {
           const currentVal = areaSelect.value;
-          areaSelect.innerHTML = `<option value="">Select Area...</option>`;
+          areaSelect.innerHTML = `<option value="">Select Area</option>`;
           data.propArea.forEach(item => {
             const opt = document.createElement("option");
             opt.value = item.areaid || item.areaId || item.areaName;
@@ -375,7 +358,7 @@ async function populateModalDropdowns() {
         // Populate Assignee
         if (assignedSelect && Array.isArray(data.propEmp) && data.propEmp.length > 0) {
           const currentAssigned = assignedSelect.value;
-          assignedSelect.innerHTML = `<option value="">Select Team/Assignee...</option>`;
+          assignedSelect.innerHTML = `<option value="">Select Assignee</option>`;
           data.propEmp.forEach(emp => {
             const opt = document.createElement("option");
             opt.value = emp.teamId || emp.teamName;
@@ -401,7 +384,12 @@ function openModal() {
   const modal = document.getElementById("addJobModal");
   if (!modal) return;
   modal.classList.add("open");
-  setStep(1);
+
+  // Ensure all 3 sections are visible in unified single view
+  for (let i = 1; i <= 3; i++) {
+    const content = document.getElementById(`stepContent${i}`);
+    if (content) content.classList.remove("hidden");
+  }
 
   // Auto set today's date
   const today = new Date().toISOString().split("T")[0];
@@ -423,114 +411,69 @@ function closeModal() {
 }
 
 function setStep(stepNum) {
-  currentStep = stepNum;
-
-  // Update step indicators
+  currentStep = stepNum || 1;
   for (let i = 1; i <= 3; i++) {
-    const circle = document.getElementById(`stepCircle${i}`);
     const content = document.getElementById(`stepContent${i}`);
-    const textLabel = document.getElementById(`stepLabel${i}`);
-
-    if (circle && content) {
-      if (i === currentStep) {
-        circle.className = "stepper-circle active";
-        content.classList.remove("hidden");
-        if (textLabel) textLabel.className = "text-sm font-semibold text-blue-600";
-      } else if (i < currentStep) {
-        circle.className = "stepper-circle completed";
-        circle.innerHTML = '<i class="fa-solid fa-check text-xs"></i>';
-        content.classList.add("hidden");
-        if (textLabel) textLabel.className = "text-sm font-medium text-slate-700";
-      } else {
-        circle.className = "stepper-circle inactive";
-        circle.textContent = i;
-        content.classList.add("hidden");
-        if (textLabel) textLabel.className = "text-sm font-medium text-slate-400";
-      }
-    }
-  }
-
-  // Buttons update
-  const prevBtn = document.getElementById("prevJobModalBtn");
-  const nextBtn = document.getElementById("nextJobModalBtn");
-
-  if (prevBtn) {
-    if (currentStep === 1) {
-      prevBtn.classList.add("hidden");
-    } else {
-      prevBtn.classList.remove("hidden");
-    }
-  }
-
-  if (nextBtn) {
-    if (currentStep === 3) {
-      nextBtn.innerHTML = '<i class="fa-solid fa-check mr-1.5"></i> Create Job';
-      nextBtn.classList.remove("btn-primary");
-      nextBtn.classList.add("bg-emerald-600", "hover:bg-emerald-700", "text-white");
-    } else {
-      nextBtn.innerHTML = 'Next <i class="fa-solid fa-arrow-right ml-1.5 text-xs"></i>';
-      nextBtn.classList.add("btn-primary");
-      nextBtn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
-    }
+    if (content) content.classList.remove("hidden");
   }
 }
 
-function validateStep(step) {
-  if (step === 1) {
-    const areaSelect = document.getElementById("modalArea");
-    const villa = document.getElementById("modalVillaNumber")?.value.trim();
-    const priority = document.getElementById("modalPriority")?.value;
-    const location = document.getElementById("modalLocation")?.value.trim();
-    const creationDate = document.getElementById("modalJobCreationDate")?.value;
+function validateJobForm() {
+  const areaSelect = document.getElementById("modalArea");
+  const priority = document.getElementById("modalPriority")?.value;
+  const status = document.getElementById("modalStatus")?.value;
+  const location = document.getElementById("modalLocation")?.value.trim();
+  const creationDate = document.getElementById("modalJobCreationDate")?.value;
+  const assignedTo = document.getElementById("modalAssignedTo")?.value;
+  const costCenter = document.getElementById("modalCostCenter")?.value;
+  const ccfDept = document.getElementById("modalCcfDept")?.value.trim();
+  const details = document.getElementById("modalJobDetails")?.value.trim();
 
-    if (!areaSelect || !areaSelect.value) {
-      showToast("Please select an Area", "error");
-      return false;
-    }
-
-    const selectedText = (areaSelect.options[areaSelect.selectedIndex]?.text || "").toUpperCase().trim();
-    // Point 10: Villa number is optional for guest villa jobs (To be confirmed - set to optional)
-    // if (selectedText.includes("GUEST VILLA") && !villa) {
-    //   showToast("Villa number is required for Guest Villa area.", "error");
-    //   return false;
-    // }
-
-    if (!priority) {
-      showToast("Please select Priority", "error");
-      return false;
-    }
-
-    if (!location) {
-      showToast("Please enter Job Location", "error");
-      return false;
-    }
-
-    if (!creationDate) {
-      showToast("Please select Job Creation Date", "error");
-      return false;
-    }
-  } else if (step === 2) {
-    const assignedTo = document.getElementById("modalAssignedTo")?.value;
-    const costCenter = document.getElementById("modalCostCenter")?.value;
-    const ccfDept = document.getElementById("modalCcfDept")?.value.trim();
-    const details = document.getElementById("modalJobDetails")?.value.trim();
-
-    if (!assignedTo) {
-      showToast("Please assign the job to a team or technician", "error");
-      return false;
-    }
-
-    if (costCenter === "Department Operational Budget" && !ccfDept) {
-      showToast("Department name is required for Department Operational Budget.", "error");
-      return false;
-    }
-
-    if (!details) {
-      showToast("Please enter Job Details description", "error");
-      return false;
-    }
+  if (!areaSelect || !areaSelect.value) {
+    showToast("Please select Area", "error");
+    return false;
   }
+
+  if (!priority) {
+    showToast("Please select Priority", "error");
+    return false;
+  }
+
+  if (!status) {
+    showToast("Please select Status", "error");
+    return false;
+  }
+
+  if (!location) {
+    showToast("Please enter Job Location", "error");
+    return false;
+  }
+
+  if (!creationDate) {
+    showToast("Please select Job Creation Date", "error");
+    return false;
+  }
+
+  if (!assignedTo) {
+    showToast("Please select Assignee", "error");
+    return false;
+  }
+
+  if (costCenter === "Department Operational Budget" && !ccfDept) {
+    showToast("Department name is required for Department Operational Budget", "error");
+    return false;
+  }
+
+  if (!details) {
+    showToast("Please enter Job Details description", "error");
+    return false;
+  }
+
   return true;
+}
+
+function validateStep(step) {
+  return validateJobForm();
 }
 
 async function submitJobForm() {

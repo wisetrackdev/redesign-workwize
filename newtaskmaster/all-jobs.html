@@ -337,6 +337,7 @@
   </aside>
 
   <!-- Add New Job 3-Step Modal -->
+  <!-- Add New Job Modal -->
   <div id="addJobModal" class="modal-backdrop">
     <div class="modal-container">
       <div class="flex items-center justify-between p-6 border-b border-slate-100">
@@ -350,36 +351,24 @@
           </div>
         </div>
 
-        <div class="hidden md:flex items-center gap-6">
-          <div class="flex items-center gap-2.5">
-            <div id="stepCircle1" class="stepper-circle active">1</div>
-            <span id="stepLabel1" class="text-xs font-bold text-blue-600">Basic Information</span>
-          </div>
-          <div class="w-8 h-0.5 bg-slate-200"></div>
-          <div class="flex items-center gap-2.5">
-            <div id="stepCircle2" class="stepper-circle inactive">2</div>
-            <span id="stepLabel2" class="text-xs font-medium text-slate-400">Assignment</span>
-          </div>
-          <div class="w-8 h-0.5 bg-slate-200"></div>
-          <div class="flex items-center gap-2.5">
-            <div id="stepCircle3" class="stepper-circle inactive">3</div>
-            <span id="stepLabel3" class="text-xs font-medium text-slate-400">Additional Details</span>
-          </div>
-        </div>
-
         <button id="closeJobModalBtn" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
       </div>
 
-      <form id="addJobForm" onsubmit="return false;" class="p-6">
+      <form id="addJobForm" onsubmit="return false;" class="p-6 space-y-6">
+        <!-- 1. Basic Information -->
         <div id="stepContent1" class="space-y-4">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Job Information</h4>
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">1</span>
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Basic Information</h4>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Area <span class="text-rose-500">*</span></label>
               <select id="modalArea" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalAreaChange()">
-                <option value="">Select Area...</option>
+                <option value="">Select Area</option>
                 <option value="Statutory Compliance">Statutory Compliance</option>
                 <option value="Development/Project">Development/Project</option>
                 <option value="Fire Safety">Fire Safety</option>
@@ -393,14 +382,15 @@
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Villa Number <span id="villaRequiredMark" class="text-rose-500 hidden">*</span></label>
-              <input type="text" id="modalVillaNumber" placeholder="e.g. V-104" disabled class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+              <label class="block text-xs font-semibold text-slate-700 mb-1.5">Villa Number</label>
+              <input type="text" id="modalVillaNumber" placeholder="e.g. V-104" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Priority <span class="text-rose-500">*</span></label>
               <select id="modalPriority" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+                <option value="">Select Priority</option>
                 <option value="HIGH">High</option>
-                <option value="MEDIUM" selected>Medium</option>
+                <option value="MEDIUM">Medium</option>
                 <option value="LOW">Low</option>
                 <option value="SAFETY">Safety</option>
               </select>
@@ -408,7 +398,8 @@
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Status <span class="text-rose-500">*</span></label>
               <select id="modalStatus" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="YET_TO_COMMENCE" selected>Yet to Commence</option>
+                <option value="">Select Status</option>
+                <option value="YET_TO_COMMENCE">Yet to Commence</option>
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="SPARES_ON_ORDER">Spares on Order</option>
                 <option value="UNDER_DISCUSSION">Under Discussion</option>
@@ -418,7 +409,7 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
             <div class="sm:col-span-2">
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Location <span class="text-rose-500">*</span></label>
               <input type="text" id="modalLocation" placeholder="e.g. Main Building Floor 3" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
@@ -439,14 +430,19 @@
           </div>
         </div>
 
-        <div id="stepContent2" class="space-y-4 hidden">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Details & Assignment</h4>
+        <!-- 2. Assignment & Details -->
+        <div id="stepContent2" class="space-y-4 pt-2">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">2</span>
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Assignment & Details</h4>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Assigned To <span class="text-rose-500">*</span></label>
               <select id="modalAssignedTo" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-                <option value="">Select Team/Assignee...</option>
-                <option value="IT Admin" selected>Testing - IT Admin</option>
+                <option value="">Select Assignee</option>
+                <option value="IT Admin">Testing - IT Admin</option>
                 <option value="Facilities Team">Facilities Team</option>
                 <option value="Engineering Team">Engineering Team</option>
                 <option value="Safety Team">Safety Team</option>
@@ -459,7 +455,7 @@
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1.5">Cost Center</label>
               <select id="modalCostCenter" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none" onchange="handleModalCcfChange()">
-                <option value="">Select Cost Center...</option>
+                <option value="">Select Cost Center</option>
                 <option value="POMEC">POMEC</option>
                 <option value="CAPEX">CAPEX</option>
                 <option value="Department Operational Budget">Department Operational Budget</option>
@@ -483,30 +479,33 @@
           </div>
         </div>
 
-        <div id="stepContent3" class="space-y-4 hidden">
-          <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Attachments</h4>
-          <div id="fileDropZone" class="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-slate-50 transition-all">
+        <!-- 3. Additional Details & Attachments -->
+        <div id="stepContent3" class="space-y-4 pt-2">
+          <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <span class="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold">3</span>
+            <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Additional Details & Attachments</h4>
+          </div>
+
+          <div id="fileDropZone" class="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-slate-50 transition-all">
             <input type="file" id="fileUploadInput" multiple accept="*/*" class="hidden">
-            <div class="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl mx-auto mb-3">
+            <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl mx-auto mb-2">
               <i class="fa-regular fa-file-image"></i>
             </div>
-            <p class="text-sm font-semibold text-slate-700">Drag & drop files here or <span class="text-blue-600 underline">click to upload</span></p>
-            <p class="text-[11px] text-slate-400 mt-1">All file types supported (Images, PDFs, Word, Excel, ZIP) up to 25MB</p>
+            <p class="text-xs font-semibold text-slate-700">Drag & drop files here or <span class="text-blue-600 underline">click to upload</span></p>
+            <p class="text-[10px] text-slate-400 mt-1">All file types supported (Images, PDFs, Word, Excel, ZIP) up to 25MB</p>
           </div>
+
+          <!-- Uploaded files list preview -->
           <div id="uploadedFileList" class="space-y-2"></div>
         </div>
       </form>
 
-      <div class="flex items-center justify-between p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
         <button id="cancelJobModalBtn" class="btn-outline text-xs">Cancel</button>
-        <div class="flex items-center gap-2">
-          <button id="prevJobModalBtn" class="btn-outline text-xs hidden">
-            <i class="fa-solid fa-arrow-left mr-1 text-[10px]"></i> Previous
-          </button>
-          <button id="nextJobModalBtn" class="btn-primary text-xs">
-            Next <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
-          </button>
-        </div>
+        <button id="nextJobModalBtn" class="btn-primary text-xs">
+          <i class="fa-solid fa-plus text-xs mr-1.5"></i> Create Job
+        </button>
       </div>
     </div>
   </div>
