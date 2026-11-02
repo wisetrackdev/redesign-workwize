@@ -1,6 +1,10 @@
 
-function toggleAssigneeDropdown(menuId) {
-  const menu = document.getElementById(menuId);
+function toggleAssigneeDropdown(event, menuId) {
+  if (event && event.stopPropagation) {
+    event.stopPropagation();
+  }
+  const id = (typeof event === "string" && !menuId) ? event : (menuId || "editAssignedToMenu");
+  const menu = document.getElementById(id);
   if (!menu) return;
   menu.classList.toggle("hidden");
 }
@@ -11,6 +15,16 @@ document.addEventListener("click", function(e) {
   const menu = document.getElementById("editAssignedToMenu");
   if (dropdown && menu && !dropdown.contains(e.target)) {
     menu.classList.add("hidden");
+  }
+});
+
+// Prevent dropdown clicks from bubbling and closing unexpectedly
+document.addEventListener("DOMContentLoaded", function() {
+  const menu = document.getElementById("editAssignedToMenu");
+  if (menu) {
+    menu.addEventListener("click", function(e) {
+      e.stopPropagation();
+    });
   }
 });
 
@@ -59,26 +73,32 @@ document.addEventListener("DOMContentLoaded", async function () {
     return;
   }
 
+  // Immediately read cached job data from details page or previous session
+  let cachedJob = null;
+  try {
+    const rawCache = sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data");
+    if (rawCache) {
+      cachedJob = JSON.parse(rawCache);
+    }
+  } catch (e) {}
+
   if (!currentJobId) {
-    currentJobId = localStorage.getItem("workwize_last_job_id") || "";
-  } else {
+    currentJobId = (cachedJob && (cachedJob.orgjobId || cachedJob.jobId || cachedJob.id)) || localStorage.getItem("workwize_last_job_id") || "";
+  }
+  if (currentJobId) {
     localStorage.setItem("workwize_last_job_id", currentJobId);
   }
 
-  if (!currentJobId) {
-    alert("No Job ID specified to edit.");
-    window.location.href = "all-jobs.html";
-    return;
+  // Set navigation links immediately
+  if (currentJobId) {
+    setupNavigationLinks(currentJobId);
   }
 
-  // Set navigation links
-  setupNavigationLinks(currentJobId);
-
-  // Initialize Assign To options immediately (exact match to new job modal)
-  await populateEditAssignees(null);
-
-  // Load existing job details into form
-  await loadJobForEditing(currentJobId);
+  // If we have cached job data from details page, PRE-POPULATE IMMEDIATELY (no loading wait!)
+  if (cachedJob) {
+    currentJobData = cachedJob;
+    populateEditForm(cachedJob);
+  }
 
   // Attach submit listener
   const form = document.getElementById("jobUpdateForm");
@@ -93,6 +113,9 @@ document.addEventListener("DOMContentLoaded", async function () {
       toggleVillaField(this.value);
     });
   }
+
+  // Load / refresh existing job details into form in background
+  await loadJobForEditing(currentJobId);
 });
 
 function setupNavigationLinks(jobId) {
@@ -122,7 +145,7 @@ function toggleVillaField(areaVal) {
 }
 
 async function loadJobForEditing(jobId) {
-  let loaded = false;
+  let loaded = !!currentJobData;
 
   // 1. Fetch from live API
   if (typeof WorkWizeAPI !== "undefined" && jobId) {
@@ -130,7 +153,7 @@ async function loadJobForEditing(jobId) {
       const res = await WorkWizeAPI.getJobById(jobId);
       if (res && res.success && res.jobdata) {
         currentJobData = res.jobdata;
-        await populateEditForm(res.jobdata);
+        populateEditForm(res.jobdata);
         loaded = true;
       }
     } catch (err) {
@@ -144,12 +167,12 @@ async function loadJobForEditing(jobId) {
         const propJobsRes = await WorkWizeAPI.getPropertyJobs(propId);
         if (propJobsRes && Array.isArray(propJobsRes.jobs)) {
           const matched = propJobsRes.jobs.find(j => 
-            (j.jobId && j.jobId.toLowerCase() === jobId.toLowerCase()) || 
-            (j.orgjobId && j.orgjobId.toLowerCase() === jobId.toLowerCase())
+            (j.jobId && j.jobId.toLowerCase() === (jobId || "").toLowerCase()) || 
+            (j.orgjobId && j.orgjobId.toLowerCase() === (jobId || "").toLowerCase())
           );
           if (matched) {
             currentJobData = matched;
-            await populateEditForm(matched);
+            populateEditForm(matched);
             loaded = true;
           }
         }
@@ -163,9 +186,9 @@ async function loadJobForEditing(jobId) {
   if (!loaded && typeof WorkWizeDB !== "undefined") {
     const allLocal = WorkWizeDB.getJobs();
     const localJob = allLocal.find(j => 
-      (j.id && j.id.toLowerCase() === jobId.toLowerCase()) || 
-      (j.refNo && j.refNo.toLowerCase() === jobId.toLowerCase())
-    );
+      (j.id && j.id.toLowerCase() === (jobId || "").toLowerCase()) || 
+      (j.refNo && j.refNo.toLowerCase() === (jobId || "").toLowerCase())
+    ) || (allLocal.length > 0 ? allLocal[0] : null);
 
     if (localJob) {
       currentJobData = {
@@ -187,53 +210,54 @@ async function loadJobForEditing(jobId) {
         remarks: localJob.remarks || "",
         teams: localJob.assignedTo ? [localJob.assignedTo] : ["Facilities Team"]
       };
-      await populateEditForm(currentJobData);
+      populateEditForm(currentJobData);
       loaded = true;
     }
   }
 
-  if (!loaded) {
+  if (!loaded && !currentJobData) {
     const displayId = document.getElementById("updateJobDisplayId");
     if (displayId) displayId.textContent = "Job Not Found";
     showToast("Could not retrieve job data to edit.", "error");
   }
 }
 
-async function populateEditAssignees(data) {
+function populateEditAssignees(data) {
   const listEl = document.getElementById("editAssignedToMenu");
   if (!listEl) return;
 
   const currentlyAssignedSet = new Set();
   if (Array.isArray(data?.teams) && data.teams.length > 0) {
     data.teams.forEach(t => {
-      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
-      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
-      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase());
+      const name = (typeof t === "object" ? (t.teamName || t.name || "") : t).toString().toUpperCase().trim();
+      if (name) currentlyAssignedSet.add(name);
+      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase().trim());
+      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase().trim());
+      if (t.id) currentlyAssignedSet.add(t.id.toString().toUpperCase().trim());
     });
   } else if (Array.isArray(data?.data1) && data.data1.length > 0) {
     data.data1.forEach(t => {
-      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
-      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
+      const name = (typeof t === "object" ? (t.teamName || t.name || "") : t).toString().toUpperCase().trim();
+      if (name) currentlyAssignedSet.add(name);
+      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase().trim());
     });
   } else if (data?.assignedTo) {
-    data.assignedTo.split(",").forEach(s => currentlyAssignedSet.add(s.trim().toUpperCase()));
+    data.assignedTo.split(",").forEach(s => {
+      const trimmed = s.trim().toUpperCase();
+      if (trimmed) currentlyAssignedSet.add(trimmed);
+    });
   }
 
-  // Load exact same assignee list as New Job Create (from WorkWizeAPI.getPropertyInfo -> propEmp)
+  // Exact same options as create new job popup
+  const defaultList = [
+    { val: "Facilities Team", label: "Facilities Team" },
+    { val: "Engineering Team", label: "Engineering Team" },
+    { val: "IT Admin", label: "Testing - IT Admin" },
+    { val: "Safety Team", label: "Safety Team" }
+  ];
+
   let empList = [];
-  if (typeof WorkWizeAPI !== "undefined") {
-    try {
-      const propId = data?.propId || WorkWizeAPI.getCurrentProperty();
-      const propInfo = await WorkWizeAPI.getPropertyInfo(propId);
-      if (propInfo && Array.isArray(propInfo.propEmp) && propInfo.propEmp.length > 0) {
-        empList = propInfo.propEmp;
-      }
-    } catch (e) {
-      console.warn("Could not load dynamic property info for edit:", e);
-    }
-  }
-
-  if (empList.length === 0 && Array.isArray(data?.propEmp) && data.propEmp.length > 0) {
+  if (Array.isArray(data?.propEmp) && data.propEmp.length > 0) {
     empList = data.propEmp;
   }
 
@@ -250,6 +274,8 @@ async function populateEditAssignees(data) {
         currentlyAssignedSet.has(val.toString().toUpperCase()) || 
         currentlyAssignedSet.has(label.toString().toUpperCase()) || 
         currentlyAssignedSet.has((emp.teamName || "").toString().toUpperCase()) ||
+        (val === "IT Admin" && currentlyAssignedSet.has("TESTING - IT ADMIN")) ||
+        (label === "Testing - IT Admin" && currentlyAssignedSet.has("IT ADMIN")) ||
         (emp.manager && (
           currentlyAssignedSet.has((emp.manager.firstName || "").toUpperCase()) ||
           currentlyAssignedSet.has(`${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim().toUpperCase())
@@ -257,24 +283,23 @@ async function populateEditAssignees(data) {
       ) ? "checked" : "";
 
       return `
-        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-xs text-slate-700 select-none">
           <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
           <span class="truncate">${escapeHtml(label)}</span>
         </label>
       `;
     }).join("");
   } else {
-    // Exact same fallback options as create new job modal
-    const defaultList = [
-      { val: "Facilities Team", label: "Facilities Team" },
-      { val: "Engineering Team", label: "Engineering Team" },
-      { val: "IT Admin", label: "Testing - IT Admin" },
-      { val: "Safety Team", label: "Safety Team" }
-    ];
     listEl.innerHTML = defaultList.map(item => {
-      const isChecked = (currentlyAssignedSet.has(item.val.toUpperCase()) || currentlyAssignedSet.has(item.label.toUpperCase())) ? "checked" : "";
+      const isChecked = (
+        currentlyAssignedSet.has(item.val.toUpperCase()) || 
+        currentlyAssignedSet.has(item.label.toUpperCase()) ||
+        (item.val === "IT Admin" && currentlyAssignedSet.has("TESTING - IT ADMIN")) ||
+        (item.label === "Testing - IT Admin" && currentlyAssignedSet.has("IT ADMIN"))
+      ) ? "checked" : "";
+
       return `
-        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-xs text-slate-700 select-none">
           <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
           <span class="truncate">${escapeHtml(item.label)}</span>
         </label>
@@ -285,8 +310,10 @@ async function populateEditAssignees(data) {
   updateEditAssigneeButtonText();
 }
 
-async function populateEditForm(data) {
-  const displayId = data.orgjobId || data.jobId || currentJobId;
+function populateEditForm(data) {
+  if (!data) return;
+
+  const displayId = data.orgjobId || data.jobId || data.id || currentJobId;
 
   // Header reference fields
   const displayIdEl = document.getElementById("updateJobDisplayId");
@@ -296,21 +323,34 @@ async function populateEditForm(data) {
   const priorityBadge = document.getElementById("updateCurrentPriorityBadge");
 
   if (displayIdEl) displayIdEl.textContent = displayId;
-  if (propNameEl) propNameEl.textContent = data.propName || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentPropertyName() : "Facility");
-  if (createdDateEl) createdDateEl.textContent = `Created ${formatDate(data.jobCreatedOn || data.createdOn)}`;
+  if (propNameEl) propNameEl.textContent = data.propName || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentPropertyName() : "Main Facility");
+  if (createdDateEl) {
+    const rawDate = data.jobCreatedOn || data.createdOn || data.openedOn || data.jobDate;
+    createdDateEl.textContent = rawDate ? `Created ${formatDate(rawDate)}` : "Created Recently";
+  }
 
   // Header badges
-  const normStatus = normalizeStatusString(data.jobStatus || data.status);
-  const normPriority = normalizePriorityString(data.priority);
-  if (statusBadge) statusBadge.textContent = normStatus;
-  if (priorityBadge) priorityBadge.textContent = normPriority;
+  const normStatus = normalizeStatusString(data.jobStatus || data.status || "IN_PROGRESS");
+  const normPriority = normalizePriorityString(data.priority || "MEDIUM");
+  if (statusBadge) {
+    statusBadge.textContent = normStatus;
+    statusBadge.className = `badge-status badge-${normStatus.toLowerCase().replace(/\s+/g, '-')} text-xs font-bold px-3 py-0.5 rounded-full`;
+  }
+  if (priorityBadge) {
+    priorityBadge.textContent = normPriority;
+    priorityBadge.className = `badge-priority badge-priority-${normPriority.toLowerCase().replace(/\s+/g, '-')} text-xs font-bold px-3 py-0.5 rounded-full`;
+  }
 
   // Form Fields
   setSelectValue("editJobStatus", mapToStatusValue(data.jobStatus || data.status));
   setSelectValue("editJobPriority", mapToPriorityValue(data.priority));
 
-  // Populate Assign To dropdown identically to create new job popup
-  await populateEditAssignees(data);
+  // Populate Assign To dropdown immediately
+  try {
+    populateEditAssignees(data);
+  } catch (err) {
+    console.warn("Assignee populate error:", err);
+  }
 
   // Populate dynamic areas if available
   const areaSelect = document.getElementById("editAreaName");

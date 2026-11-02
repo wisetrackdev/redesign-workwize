@@ -130,12 +130,28 @@ function renderJobDetails(data) {
   if (breadcrumbEl) breadcrumbEl.textContent = displayId;
   if (orgIdEl) orgIdEl.textContent = displayId;
 
-  // 2. Set Up "Update Job" buttons
+  // 2. Set Up "Update Job" buttons and store job data for instant edit
   const updateUrl = `job-update.html?id=${encodeURIComponent(rawJobId)}`;
   const heroUpdateBtn = document.getElementById("heroUpdateJobBtn");
   const bottomUpdateBtn = document.getElementById("bottomUpdateJobBtn");
   if (heroUpdateBtn) heroUpdateBtn.href = updateUrl;
   if (bottomUpdateBtn) bottomUpdateBtn.href = updateUrl;
+
+  try {
+    sessionStorage.setItem("workwize_current_job_data", JSON.stringify(data));
+    localStorage.setItem("workwize_last_job_data", JSON.stringify(data));
+    localStorage.setItem("workwize_last_job_id", rawJobId);
+  } catch (e) {}
+
+  const onUpdateClick = () => {
+    try {
+      sessionStorage.setItem("workwize_current_job_data", JSON.stringify(currentJobData || data));
+      localStorage.setItem("workwize_last_job_data", JSON.stringify(currentJobData || data));
+      localStorage.setItem("workwize_last_job_id", rawJobId);
+    } catch (e) {}
+  };
+  if (heroUpdateBtn) heroUpdateBtn.onclick = onUpdateClick;
+  if (bottomUpdateBtn) bottomUpdateBtn.onclick = onUpdateClick;
 
   // 3. Active / Closed Badge
   const activeBadge = document.getElementById("dynJobActiveBadge");
