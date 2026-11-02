@@ -222,34 +222,44 @@ async function loadJobForEditing(jobId) {
   }
 }
 
+function extractJobAssignees(data) {
+  const result = [];
+  if (Array.isArray(data?._detailAssignees) && data._detailAssignees.length > 0) {
+    data._detailAssignees.forEach(a => { if (a) result.push(String(a).trim()); });
+  }
+  if (Array.isArray(data?.teams) && data.teams.length > 0) {
+    data.teams.forEach(t => {
+      const name = (typeof t === "object" ? (t.teamName || t.name || "") : t).toString().trim();
+      if (name && !result.includes(name)) result.push(name);
+      if (t.teamID && !result.includes(t.teamID)) result.push(t.teamID);
+      if (t.teamId && !result.includes(t.teamId)) result.push(t.teamId);
+    });
+  }
+  if (Array.isArray(data?.data1) && data.data1.length > 0) {
+    data.data1.forEach(t => {
+      const name = (typeof t === "object" ? (t.teamName || t.name || "") : t).toString().trim();
+      if (name && !result.includes(name)) result.push(name);
+      if (t.teamID && !result.includes(t.teamID)) result.push(t.teamID);
+    });
+  }
+  if (data?.assignedTo) {
+    data.assignedTo.split(",").forEach(s => {
+      const trimmed = s.trim();
+      if (trimmed && !result.includes(trimmed)) result.push(trimmed);
+    });
+  }
+  return result;
+}
+
 function populateEditAssignees(data) {
   const listEl = document.getElementById("editAssignedToMenu");
   if (!listEl) return;
 
-  const currentlyAssignedSet = new Set();
-  if (Array.isArray(data?.teams) && data.teams.length > 0) {
-    data.teams.forEach(t => {
-      const name = (typeof t === "object" ? (t.teamName || t.name || "") : t).toString().toUpperCase().trim();
-      if (name) currentlyAssignedSet.add(name);
-      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase().trim());
-      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase().trim());
-      if (t.id) currentlyAssignedSet.add(t.id.toString().toUpperCase().trim());
-    });
-  } else if (Array.isArray(data?.data1) && data.data1.length > 0) {
-    data.data1.forEach(t => {
-      const name = (typeof t === "object" ? (t.teamName || t.name || "") : t).toString().toUpperCase().trim();
-      if (name) currentlyAssignedSet.add(name);
-      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase().trim());
-    });
-  } else if (data?.assignedTo) {
-    data.assignedTo.split(",").forEach(s => {
-      const trimmed = s.trim().toUpperCase();
-      if (trimmed) currentlyAssignedSet.add(trimmed);
-    });
-  }
+  const assignedNames = extractJobAssignees(data);
+  const currentlyAssignedSet = new Set(assignedNames.map(a => a.toUpperCase()));
 
-  // Exact same options as create new job popup
-  const defaultList = [
+  // Base options (EXACT SAME AS ADD NEW JOB POPUP)
+  const baseOptions = [
     { val: "Facilities Team", label: "Facilities Team" },
     { val: "Engineering Team", label: "Engineering Team" },
     { val: "IT Admin", label: "Testing - IT Admin" },
@@ -261,8 +271,9 @@ function populateEditAssignees(data) {
     empList = data.propEmp;
   }
 
+  let finalOptions = [];
   if (empList.length > 0) {
-    listEl.innerHTML = empList.map(emp => {
+    finalOptions = empList.map(emp => {
       const val = emp.teamId || emp.teamName;
       let label = emp.teamName;
       if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
@@ -270,43 +281,46 @@ function populateEditAssignees(data) {
         const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
         label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
       }
-      const isChecked = (
-        currentlyAssignedSet.has(val.toString().toUpperCase()) || 
-        currentlyAssignedSet.has(label.toString().toUpperCase()) || 
-        currentlyAssignedSet.has((emp.teamName || "").toString().toUpperCase()) ||
-        (val === "IT Admin" && currentlyAssignedSet.has("TESTING - IT ADMIN")) ||
-        (label === "Testing - IT Admin" && currentlyAssignedSet.has("IT ADMIN")) ||
-        (emp.manager && (
-          currentlyAssignedSet.has((emp.manager.firstName || "").toUpperCase()) ||
-          currentlyAssignedSet.has(`${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim().toUpperCase())
-        ))
-      ) ? "checked" : "";
-
-      return `
-        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-xs text-slate-700 select-none">
-          <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
-          <span class="truncate">${escapeHtml(label)}</span>
-        </label>
-      `;
-    }).join("");
+      return { val, label };
+    });
   } else {
-    listEl.innerHTML = defaultList.map(item => {
-      const isChecked = (
-        currentlyAssignedSet.has(item.val.toUpperCase()) || 
-        currentlyAssignedSet.has(item.label.toUpperCase()) ||
-        (item.val === "IT Admin" && currentlyAssignedSet.has("TESTING - IT ADMIN")) ||
-        (item.label === "Testing - IT Admin" && currentlyAssignedSet.has("IT ADMIN"))
-      ) ? "checked" : "";
-
-      return `
-        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-xs text-slate-700 select-none">
-          <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
-          <span class="truncate">${escapeHtml(item.label)}</span>
-        </label>
-      `;
-    }).join("");
+    finalOptions = [...baseOptions];
   }
 
+  // Ensure any assignee showing in job-detail is present in the options list!
+  assignedNames.forEach(rawName => {
+    const norm = rawName.toUpperCase();
+    const alreadyExists = finalOptions.some(opt => 
+      opt.val.toUpperCase() === norm || 
+      opt.label.toUpperCase() === norm ||
+      (opt.val === "IT Admin" && norm === "TESTING - IT ADMIN") ||
+      (opt.label === "Testing - IT Admin" && norm === "IT ADMIN")
+    );
+    if (!alreadyExists) {
+      finalOptions.push({ val: rawName, label: rawName });
+    }
+  });
+
+  // Render options with pre-checked state matching details page
+  listEl.innerHTML = finalOptions.map(item => {
+    const isChecked = (
+      currentlyAssignedSet.has(item.val.toUpperCase()) || 
+      currentlyAssignedSet.has(item.label.toUpperCase()) ||
+      (item.val === "IT Admin" && currentlyAssignedSet.has("TESTING - IT ADMIN")) ||
+      (item.label === "Testing - IT Admin" && currentlyAssignedSet.has("IT ADMIN")) ||
+      (item.val.includes("IT") && currentlyAssignedSet.has("IT ADMIN")) ||
+      (item.label.includes("IT Admin") && currentlyAssignedSet.has("IT ADMIN"))
+    ) ? "checked" : "";
+
+    return `
+      <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-xs text-slate-700 select-none">
+        <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
+        <span class="truncate">${escapeHtml(item.label)}</span>
+      </label>
+    `;
+  }).join("");
+
+  // Update button text immediately so it reflects the pre-checked assignee
   updateEditAssigneeButtonText();
 }
 

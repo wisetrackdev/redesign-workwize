@@ -371,6 +371,13 @@ function renderJobDetails(data) {
       teamList = data.assignedTo.split(",").map(s => s.trim()).filter(Boolean);
     }
 
+    // Attach exact displayed assignees to cached data so update page pre-selects identical assignees
+    data._detailAssignees = teamList;
+    try {
+      sessionStorage.setItem("workwize_current_job_data", JSON.stringify(data));
+      localStorage.setItem("workwize_last_job_data", JSON.stringify(data));
+    } catch (e) {}
+
     if (teamList.length === 0) {
       assignedListEl.innerHTML = `
         <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">
