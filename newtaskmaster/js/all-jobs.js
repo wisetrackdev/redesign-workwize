@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
-  ["filterProperty", "filterArea", "filterStatus", "filterPriority", "filterAssignedTo", "filterDateSpan", "filterSortOrder"].forEach(id => {
+  ["filterProperty", "filterArea", "filterLocation", "filterStatus", "filterPriority", "filterAssignedTo", "filterDateSpan", "filterSortOrder"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener("change", () => {
@@ -400,6 +400,20 @@ async function populateFilterDropdowns() {
     });
   }
 
+  // Populate Locations
+  const locationSelect = document.getElementById("filterLocation");
+  if (locationSelect) {
+    const locations = [...new Set(allJobsStore.map(j => j.location))].filter(Boolean).sort();
+    locations.forEach(loc => {
+      if (!Array.from(locationSelect.options).some(o => o.value.toLowerCase() === loc.toLowerCase())) {
+        const opt = document.createElement("option");
+        opt.value = loc;
+        opt.textContent = `Location: ${loc}`;
+        locationSelect.appendChild(opt);
+      }
+    });
+  }
+
   // Populate Assignees
   if (assignedSelect) {
     const assignees = [...new Set(allJobsStore.map(j => j.assignedTo))].filter(Boolean).sort();
@@ -421,6 +435,7 @@ function filterAndRenderJobs() {
   const statusFilter = document.getElementById("filterStatus")?.value || "";
   const priorityFilter = document.getElementById("filterPriority")?.value || "";
   const assignedFilter = document.getElementById("filterAssignedTo")?.value || "";
+  const locationFilter = document.getElementById("filterLocation")?.value || "";
   const dateSpanFilter = document.getElementById("filterDateSpan")?.value || "";
 
   // Sync Header Segmented Tabs
@@ -455,6 +470,7 @@ function filterAndRenderJobs() {
     const matchStatus = !statusFilter || job.status.toLowerCase() === statusFilter.toLowerCase();
     const matchPriority = !priorityFilter || job.priority.toLowerCase() === priorityFilter.toLowerCase();
     const matchAssigned = !assignedFilter || job.assignedTo.toLowerCase() === assignedFilter.toLowerCase();
+    const matchLocation = !locationFilter || (job.location && job.location.toLowerCase() === locationFilter.toLowerCase());
 
     let matchDateSpan = true;
     if (dateSpanFilter && job.createdOn) {
@@ -467,7 +483,7 @@ function filterAndRenderJobs() {
       }
     }
 
-    return matchSearch && matchProp && matchArea && matchStatus && matchPriority && matchAssigned && matchDateSpan;
+    return matchSearch && matchProp && matchArea && matchStatus && matchPriority && matchAssigned && matchDateSpan && matchLocation;
   });
 
   // Apply current sorting
@@ -489,6 +505,7 @@ function updateActiveFilterBadge() {
   if (document.getElementById("filterAssignedTo")?.value) count++;
   if (document.getElementById("filterDateSpan")?.value) count++;
   if (document.getElementById("filterArea")?.value) count++;
+  if (document.getElementById("filterLocation")?.value) count++;
 
   const badge = document.getElementById("activeFilterBadge");
   const btn = document.getElementById("filterToggleBtn");
@@ -780,11 +797,13 @@ function resetAllFilters() {
   const statusSelect = document.getElementById("filterStatus");
   const prioritySelect = document.getElementById("filterPriority");
   const assignedSelect = document.getElementById("filterAssignedTo");
+  const locationSelect = document.getElementById("filterLocation");
   const dateSpanSelect = document.getElementById("filterDateSpan");
 
   if (searchInput) searchInput.value = "";
   if (propSelect) propSelect.value = "";
   if (areaSelect) areaSelect.value = "";
+  if (locationSelect) locationSelect.value = "";
   if (statusSelect) statusSelect.value = "";
   if (prioritySelect) prioritySelect.value = "";
   if (assignedSelect) assignedSelect.value = "";
@@ -961,6 +980,7 @@ function saveAllJobsState() {
     search: document.getElementById("jobSearchInput")?.value || "",
     prop: document.getElementById("filterProperty")?.value || "",
     area: document.getElementById("filterArea")?.value || "",
+    location: document.getElementById("filterLocation")?.value || "",
     status: document.getElementById("filterStatus")?.value || "",
     priority: document.getElementById("filterPriority")?.value || "",
     assignedTo: document.getElementById("filterAssignedTo")?.value || "",
@@ -990,6 +1010,8 @@ function restoreAllJobsState() {
     if (state.search && searchInput) searchInput.value = state.search;
     if (state.prop && propSelect) propSelect.value = state.prop;
     if (state.area && areaSelect) areaSelect.value = state.area;
+    const locationSelect = document.getElementById("filterLocation");
+    if (state.location && locationSelect) locationSelect.value = state.location;
     if (state.status && statusSelect) statusSelect.value = state.status;
     if (state.priority && prioritySelect) prioritySelect.value = state.priority;
     if (state.assignedTo && assignedSelect) assignedSelect.value = state.assignedTo;

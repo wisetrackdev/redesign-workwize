@@ -511,6 +511,31 @@ async function populateModalDropdowns() {
           }).join("");
           updateModalAssigneeButtonText();
         }
+
+        // Also populate editAssignedToMenu with identical condition if present on update page
+        const editMenuEl = document.getElementById("editAssignedToMenu");
+        if (editMenuEl && Array.isArray(data.propEmp) && data.propEmp.length > 0) {
+          const selectedSet = new Set(Array.from(document.querySelectorAll("#editAssignedToMenu .edit-assignee-cb:checked")).map(cb => cb.value));
+          editMenuEl.innerHTML = data.propEmp.map(emp => {
+            const val = emp.teamId || emp.teamName;
+            let label = emp.teamName;
+            if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+              const desg = (emp.manager.desg || "").trim();
+              const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
+              label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
+            }
+            const isChecked = selectedSet.has(val) ? "checked" : "";
+            return `
+              <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-xs text-slate-700 select-none">
+                <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
+                <span class="truncate">${escapeHtml(label)}</span>
+              </label>
+            `;
+          }).join("");
+          if (typeof updateEditAssigneeButtonText === "function") {
+            updateEditAssigneeButtonText();
+          }
+        }
       }
     } catch (err) {
       console.warn("Could not load dynamic property info for modal:", err);
