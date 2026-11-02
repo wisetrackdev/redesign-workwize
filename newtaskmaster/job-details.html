@@ -304,9 +304,11 @@
               <span id="dynOwnerCommentsCount" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">0</span>
             </div>
 
-            <!-- Current Owner Comment Display -->
-            <div class="w-full text-xs text-purple-950 bg-white/80 border border-purple-200/80 rounded-xl p-3.5 leading-relaxed" id="dynJobOwnerComment">
-              <span class="text-slate-400 italic">No owner comment recorded yet.</span>
+            <!-- Owner Comments View Display (shows up to 5 comments, then scrollbar appears) -->
+            <div class="space-y-2 max-h-[350px] overflow-y-auto pr-1" id="dynJobOwnerComment">
+              <div class="w-full text-xs text-purple-950 bg-white/80 border border-purple-200/80 rounded-xl p-3.5 leading-relaxed">
+                <span class="text-slate-400 italic">No owner comment recorded yet.</span>
+              </div>
             </div>
 
             <!-- Chronological History List -->

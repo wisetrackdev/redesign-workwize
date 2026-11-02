@@ -1,9 +1,9 @@
 
-function toggleAssigneeDropdown(event, menuId) {
-  if (event && event.stopPropagation) {
-    event.stopPropagation();
+function toggleAssigneeDropdown(eventOrId, optionalMenuId) {
+  if (eventOrId && typeof eventOrId.stopPropagation === "function") {
+    eventOrId.stopPropagation();
   }
-  const id = (typeof event === "string" && !menuId) ? event : (menuId || "editAssignedToMenu");
+  const id = (typeof eventOrId === "string" && !optionalMenuId) ? eventOrId : (optionalMenuId || "editAssignedToMenu");
   const menu = document.getElementById(id);
   if (!menu) return;
   menu.classList.toggle("hidden");
@@ -98,6 +98,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (cachedJob) {
     currentJobData = cachedJob;
     populateEditForm(cachedJob);
+    populateEditAssignees(cachedJob);
   }
 
   // Attach submit listener
@@ -154,6 +155,7 @@ async function loadJobForEditing(jobId) {
       if (res && res.success && res.jobdata) {
         currentJobData = res.jobdata;
         populateEditForm(res.jobdata);
+        await populateEditAssignees(res.jobdata);
         loaded = true;
       }
     } catch (err) {
@@ -251,65 +253,109 @@ function extractJobAssignees(data) {
   return result;
 }
 
-function populateEditAssignees(data) {
+function extractLatestOwnerComment(data) {
+  if (!data) return "";
+
+  // 1. Check owner_comments_history if available
+  if (Array.isArray(data.owner_comments_history) && data.owner_comments_history.length > 0) {
+    const sorted = [...data.owner_comments_history].sort((a, b) => {
+      const timeA = a.commentDate ? new Date(a.commentDate).getTime() : 0;
+      const timeB = b.commentDate ? new Date(b.commentDate).getTime() : 0;
+      return timeB - timeA;
+    });
+    const latestFromHistory = (sorted[0].commentDetail || sorted[0].commentText || sorted[0].comment || "").trim();
+    if (latestFromHistory) return latestFromHistory;
+  }
+
+  // 2. Check comments array for OWNERCOMMENT
+  if (Array.isArray(data.comments) && data.comments.length > 0) {
+    const ownerComments = data.comments.filter(c => c && c.commentId && String(c.commentId).startsWith("OWNERCOMMENT"));
+    if (ownerComments.length > 0) {
+      ownerComments.sort((a, b) => {
+        const timeA = a.commentDate ? new Date(a.commentDate).getTime() : 0;
+        const timeB = b.commentDate ? new Date(b.commentDate).getTime() : 0;
+        return timeB - timeA;
+      });
+      const latestFromComments = (ownerComments[0].commentDetail || ownerComments[0].commentText || ownerComments[0].comment || "").trim();
+      if (latestFromComments) return latestFromComments;
+    }
+  }
+
+  // 3. Direct owner_comment property
+  if (data.owner_comment && typeof data.owner_comment === "string") {
+    return data.owner_comment.trim();
+  }
+
+  return "";
+}
+
+async function populateEditAssignees(data) {
   const listEl = document.getElementById("editAssignedToMenu");
   if (!listEl) return;
 
   const assignedNames = extractJobAssignees(data);
   const currentlyAssignedSet = new Set(assignedNames.map(a => a.toUpperCase()));
 
-  // Base options (EXACT SAME AS ADD NEW JOB POPUP)
-  const baseOptions = [
-    { val: "Facilities Team", label: "Facilities Team" },
-    { val: "Engineering Team", label: "Engineering Team" },
-    { val: "IT Admin", label: "Testing - IT Admin" },
-    { val: "Safety Team", label: "Safety Team" }
-  ];
-
+  // Fetch dynamic property employee/assignee info from WorkWizeAPI (identical to Add New Job popup)
   let empList = [];
-  if (Array.isArray(data?.propEmp) && data.propEmp.length > 0) {
+  if (typeof WorkWizeAPI !== "undefined") {
+    try {
+      const propId = data?.propId || WorkWizeAPI.getCurrentProperty();
+      const propInfo = await WorkWizeAPI.getPropertyInfo(propId);
+      if (propInfo && Array.isArray(propInfo.propEmp) && propInfo.propEmp.length > 0) {
+        empList = propInfo.propEmp;
+      }
+    } catch (err) {
+      console.warn("Could not load dynamic property info for edit assignees:", err);
+    }
+  }
+
+  if (empList.length === 0 && Array.isArray(data?.propEmp) && data.propEmp.length > 0) {
     empList = data.propEmp;
   }
 
   let finalOptions = [];
   if (empList.length > 0) {
     finalOptions = empList.map(emp => {
-      const val = emp.teamId || emp.teamName;
+      const val = emp.teamId || emp.teamName || emp.userName || emp.id;
       let label = emp.teamName;
       if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
         const desg = (emp.manager.desg || "").trim();
         const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
         label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
+      } else if (emp.firstName || emp.desg) {
+        const desg = (emp.desg || "").trim();
+        const name = `${emp.firstName || ""} ${emp.lastName || ""}`.trim();
+        label = desg ? (emp.teamName ? `${desg} [${emp.teamName}]` : desg) : (name ? (emp.teamName ? `${name} [${emp.teamName}]` : name) : (emp.teamName || emp.userName));
       }
       return { val, label };
     });
   } else {
-    finalOptions = [...baseOptions];
+    // Exact fallback as Add New Job modal
+    finalOptions = [
+      { val: "Facilities Team", label: "Facilities Team" },
+      { val: "Engineering Team", label: "Engineering Team" },
+      { val: "IT Admin", label: "Testing - IT Admin" },
+      { val: "Safety Team", label: "Safety Team" }
+    ];
   }
 
-  // Ensure any assignee showing in job-detail is present in the options list!
-  assignedNames.forEach(rawName => {
-    const norm = rawName.toUpperCase();
-    const alreadyExists = finalOptions.some(opt => 
-      opt.val.toUpperCase() === norm || 
-      opt.label.toUpperCase() === norm ||
-      (opt.val === "IT Admin" && norm === "TESTING - IT ADMIN") ||
-      (opt.label === "Testing - IT Admin" && norm === "IT ADMIN")
-    );
-    if (!alreadyExists) {
-      finalOptions.push({ val: rawName, label: rawName });
-    }
-  });
-
-  // Render options with pre-checked state matching details page
+  // Pre-check any assignee matching this job - do NOT add raw team names
   listEl.innerHTML = finalOptions.map(item => {
+    const valUpper = (item.val || "").toUpperCase();
+    const labelUpper = (item.label || "").toUpperCase();
+
     const isChecked = (
-      currentlyAssignedSet.has(item.val.toUpperCase()) || 
-      currentlyAssignedSet.has(item.label.toUpperCase()) ||
+      currentlyAssignedSet.has(valUpper) ||
+      currentlyAssignedSet.has(labelUpper) ||
       (item.val === "IT Admin" && currentlyAssignedSet.has("TESTING - IT ADMIN")) ||
       (item.label === "Testing - IT Admin" && currentlyAssignedSet.has("IT ADMIN")) ||
-      (item.val.includes("IT") && currentlyAssignedSet.has("IT ADMIN")) ||
-      (item.label.includes("IT Admin") && currentlyAssignedSet.has("IT ADMIN"))
+      (valUpper.includes("IT") && currentlyAssignedSet.has("IT ADMIN")) ||
+      (labelUpper.includes("IT ADMIN") && currentlyAssignedSet.has("IT ADMIN")) ||
+      Array.from(currentlyAssignedSet).some(assigned => {
+        if (!assigned) return false;
+        return valUpper === assigned || labelUpper === assigned || labelUpper.includes(assigned) || assigned.includes(valUpper);
+      })
     ) ? "checked" : "";
 
     return `
@@ -382,8 +428,8 @@ function populateEditForm(data) {
     setSelectValue("editAreaName", data.areaName || data.area || "Development/Project");
   }
 
-  // Populate Owner Comment
-  setInputValue("editOwnerComment", data.owner_comment || "");
+  // Populate Owner Comment with the last comment ready for editing
+  setInputValue("editOwnerComment", extractLatestOwnerComment(data));
 
   // Dates & strings
   setInputValue("editExpectedCompletion", formatDateForInput(data.expectedCompletion || data.expectedDate));

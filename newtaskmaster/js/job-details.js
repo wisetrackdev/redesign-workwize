@@ -297,51 +297,80 @@ function renderJobDetails(data) {
   const btnEditOwnerCommentText = document.getElementById("btnEditOwnerCommentText");
 
   if (ownerCard && ownerText) {
-    const commentsHistory = Array.isArray(data.owner_comments_history) ? [...data.owner_comments_history] : [];
-    // Also extract owner comments from data.comments if present
-    if (Array.isArray(data.comments)) {
-      data.comments.forEach(c => {
-        if (c.commentId && c.commentId.startsWith("OWNERCOMMENT") && !commentsHistory.some(h => h.commentDetail === c.commentDetail && h.commentDate === c.commentDate)) {
-          commentsHistory.push(c);
+    const allOwnerComments = [];
+
+    if (Array.isArray(data.owner_comments_history)) {
+      data.owner_comments_history.forEach(h => {
+        const text = (h.commentDetail || h.commentText || h.comment || "").trim();
+        if (text && !allOwnerComments.some(c => c.commentDetail === text && c.commentDate === h.commentDate)) {
+          allOwnerComments.push({
+            commentDetail: text,
+            commentDate: h.commentDate || "",
+            author: h.firstName ? `${h.firstName} ${h.lastName || ""}`.trim() : "Owner"
+          });
         }
       });
     }
 
-    const latestComment = (data.owner_comment || "").trim();
-    if (latestComment) {
-      if (btnEditOwnerCommentText) btnEditOwnerCommentText.textContent = "Edit";
-      const latestDate = commentsHistory[0]?.commentDate ? formatDate(commentsHistory[0].commentDate) : "Active Note";
-      ownerText.innerHTML = `
-        <div class="flex items-center justify-between mb-1.5 text-[11px] text-purple-700 font-semibold border-b border-purple-200/60 pb-1">
-          <span class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-purple-600"></i> Property Owner Directive</span>
-          <span class="text-purple-500 font-mono text-[10px]">${latestDate}</span>
-        </div>
-        <div class="text-xs text-purple-950 whitespace-pre-wrap leading-relaxed">${escapeHtml(latestComment)}</div>
-      `;
+    if (Array.isArray(data.comments)) {
+      data.comments.forEach(c => {
+        if (c && c.commentId && String(c.commentId).startsWith("OWNERCOMMENT")) {
+          const text = (c.commentDetail || c.commentText || c.comment || "").trim();
+          if (text && !allOwnerComments.some(item => item.commentDetail === text && item.commentDate === c.commentDate)) {
+            allOwnerComments.push({
+              commentDetail: text,
+              commentDate: c.commentDate || "",
+              author: c.firstName ? `${c.firstName} ${c.lastName || ""}`.trim() : "Owner"
+            });
+          }
+        }
+      });
+    }
+
+    const directOwnerComment = (data.owner_comment || "").trim();
+    if (directOwnerComment && !allOwnerComments.some(c => c.commentDetail === directOwnerComment)) {
+      allOwnerComments.unshift({
+        commentDetail: directOwnerComment,
+        commentDate: data.jobDate || data.jobCreatedOn || new Date().toISOString(),
+        author: "Owner"
+      });
+    }
+
+    // Sort newest comments first
+    allOwnerComments.sort((a, b) => {
+      const timeA = a.commentDate ? new Date(a.commentDate).getTime() : 0;
+      const timeB = b.commentDate ? new Date(b.commentDate).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    if (allOwnerComments.length === 0) {
+      if (ownerCountBadge) ownerCountBadge.textContent = "0";
+      ownerText.className = "w-full text-xs text-purple-950 bg-white/80 border border-purple-200/80 rounded-xl p-3.5 leading-relaxed";
+      ownerText.innerHTML = `<span class="text-slate-400 italic">No owner comment recorded yet.</span>`;
+      if (ownerHistoryContainer) ownerHistoryContainer.classList.add("hidden");
     } else {
-      if (btnEditOwnerCommentText) btnEditOwnerCommentText.textContent = "+ Add Comment";
-      ownerText.innerHTML = `<span class="text-slate-400 italic">No owner comment recorded yet. Click "+ Add Comment" to record special owner instructions.</span>`;
-    }
-
-    if (ownerCountBadge) {
-      ownerCountBadge.textContent = Math.max(commentsHistory.length, latestComment ? 1 : 0);
-    }
-
-    if (ownerHistoryContainer && ownerHistoryList) {
-      if (commentsHistory.length > 0) {
-        ownerHistoryContainer.classList.remove("hidden");
-        ownerHistoryList.innerHTML = commentsHistory.map((h, idx) => `
-          <div class="p-2.5 rounded-lg bg-white border border-purple-200/80 text-xs text-purple-950 shadow-2xs">
-            <div class="flex items-center justify-between text-[10px] text-purple-600 font-semibold mb-1">
-              <span class="flex items-center gap-1"><i class="fa-solid fa-clock-rotate-left text-[9px]"></i> Log Entry #${commentsHistory.length - idx}</span>
-              <span class="font-mono text-slate-400">${formatDate(h.commentDate)}</span>
-            </div>
-            <div class="whitespace-pre-wrap leading-relaxed text-slate-800">${escapeHtml(h.commentDetail || "")}</div>
+      if (ownerCountBadge) ownerCountBadge.textContent = allOwnerComments.length;
+      
+      // Store latest comment on data for instant pre-fill in update page
+      data.owner_comment = allOwnerComments[0].commentDetail;
+      
+      // Container with max-height for 5 comments, followed by scrollbar
+      ownerText.className = "space-y-2 max-h-[350px] overflow-y-auto pr-1";
+      ownerText.innerHTML = allOwnerComments.map((c, idx) => `
+        <div class="p-3 rounded-xl bg-white border border-purple-200/80 text-xs text-purple-950 shadow-2xs">
+          <div class="flex items-center justify-between text-[10px] text-purple-600 font-semibold mb-1 pb-1 border-b border-purple-100/80">
+            <span class="flex items-center gap-1 font-medium text-purple-700">
+              <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
+              <span>Comment #${allOwnerComments.length - idx}</span>
+              ${idx === 0 ? '<span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 text-[9px] font-bold ml-1">Latest</span>' : ''}
+            </span>
+            <span class="font-mono text-slate-400 text-[10px]">${formatDate(c.commentDate)}</span>
           </div>
-        `).join("");
-      } else {
-        ownerHistoryContainer.classList.add("hidden");
-      }
+          <div class="whitespace-pre-wrap leading-relaxed text-slate-800 pt-0.5">${escapeHtml(c.commentDetail)}</div>
+        </div>
+      `).join("");
+
+      if (ownerHistoryContainer) ownerHistoryContainer.classList.add("hidden");
     }
   }
 

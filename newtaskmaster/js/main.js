@@ -410,8 +410,12 @@ function handleModalCcfChange() {
   }
 }
 
-function toggleAssigneeDropdown(menuId) {
-  const menu = document.getElementById(menuId);
+function toggleAssigneeDropdown(eventOrId, optionalMenuId) {
+  if (eventOrId && typeof eventOrId.stopPropagation === "function") {
+    eventOrId.stopPropagation();
+  }
+  const targetId = (typeof eventOrId === "string" && !optionalMenuId) ? eventOrId : (optionalMenuId || "modalAssignedToMenu");
+  const menu = document.getElementById(targetId);
   if (!menu) return;
   menu.classList.toggle("hidden");
 }
@@ -470,7 +474,8 @@ document.addEventListener("click", function(e) {
 async function populateModalDropdowns() {
   const areaSelect = document.getElementById("modalArea");
   const menuEl = document.getElementById("modalAssignedToMenu");
-  if (!areaSelect && !menuEl) return;
+  const editMenuEl = document.getElementById("editAssignedToMenu");
+  if (!areaSelect && !menuEl && !editMenuEl) return;
 
   if (typeof WorkWizeAPI !== "undefined") {
     const propId = WorkWizeAPI.getCurrentProperty();
