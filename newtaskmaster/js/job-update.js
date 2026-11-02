@@ -476,6 +476,7 @@ async function handleJobUpdateSubmit(e) {
     const remarks = document.getElementById("editRemarks").value;
     const budget = document.getElementById("editBudget").value;
     const finalExp = document.getElementById("editFinalExp").value;
+    const ownerCommentVal = document.getElementById("editOwnerComment")?.value.trim() || "";
     const newComment = document.getElementById("editNewComment").value;
     const photoFileInput = document.getElementById("editPhotoFile");
 
@@ -522,40 +523,53 @@ async function handleJobUpdateSubmit(e) {
         }
       }
 
-      // 1c. If user modified Owner's Comment, save via JB-OWNERCOMMENT
-    const ownerCommentVal = document.getElementById("editOwnerComment")?.value.trim() || "";
-    if (ownerCommentVal !== (currentJobData?.owner_comment || "")) {
-      try {
-        const ownerForm = new FormData();
-        ownerForm.append("propID", propId);
-        ownerForm.append("jobID", rawJobId);
-        ownerForm.append("areaID", areaName || "");
-        ownerForm.append("field", "JB-OWNERCOMMENT");
-        ownerForm.append("data", ownerCommentVal);
-        await WorkWizeAPI.updateJobFields(ownerForm);
-      } catch (ownerErr) {
-        console.warn("Error updating owner comment:", ownerErr);
+      // 1b. Update expectedCompletion if provided
+      if (expectedCompletion) {
+        try {
+          const expForm = new FormData();
+          expForm.append("propID", propId);
+          expForm.append("jobID", rawJobId);
+          expForm.append("field", "JB-EXPCOMPDATE");
+          expForm.append("data", expectedCompletion);
+          await WorkWizeAPI.updateJobFields(expForm);
+        } catch (expErr) {
+          console.warn("Error updating expected completion:", expErr);
+        }
       }
-    }
 
-    // 1d. Also update assignees via JB-TEAMS in updateJobFields
-    try {
-      const teamsForm = new FormData();
-      teamsForm.append("propID", propId);
-      teamsForm.append("jobID", rawJobId);
-      teamsForm.append("field", "JB-TEAMS");
-      selectedAssignees.forEach(a => {
-        teamsForm.append("data", a.id);
-      });
-      await WorkWizeAPI.updateJobFields(teamsForm);
-    } catch (teamsErr) {
-      console.warn("Error updating teams via fields:", teamsErr);
-    }
+      // 1c. If user modified Owner's Comment, save via JB-OWNERCOMMENT
+      if (ownerCommentVal && ownerCommentVal !== (currentJobData?.owner_comment || "")) {
+        try {
+          const ownerForm = new FormData();
+          ownerForm.append("propID", propId);
+          ownerForm.append("jobID", rawJobId);
+          ownerForm.append("areaID", areaName || "");
+          ownerForm.append("field", "JB-OWNERCOMMENT");
+          ownerForm.append("data", ownerCommentVal);
+          await WorkWizeAPI.updateJobFields(ownerForm);
+        } catch (ownerErr) {
+          console.warn("Error updating owner comment:", ownerErr);
+        }
+      }
 
-    // 2. If user entered a progress note or attached a file, send comment API
+      // 1d. Also update assignees via JB-TEAMS in updateJobFields
+      try {
+        const teamsForm = new FormData();
+        teamsForm.append("propID", propId);
+        teamsForm.append("jobID", rawJobId);
+        teamsForm.append("field", "JB-TEAMS");
+        selectedAssignees.forEach(a => {
+          teamsForm.append("data", a.id);
+        });
+        await WorkWizeAPI.updateJobFields(teamsForm);
+      } catch (teamsErr) {
+        console.warn("Error updating teams via fields:", teamsErr);
+      }
+
+      // 2. If user entered a progress note or attached a file, send comment API
       if (newComment.trim() || (photoFileInput && photoFileInput.files && photoFileInput.files.length > 0)) {
         try {
-          const fileToUpload = (photoFileInput && photoFileInput.files.length > 0) ? photoFileInput.files[0] : null;
+          const fileToUpload = (photoFileInput && photoFileInput.files && photoFileInput.files.length > 0) ? photoFileInput.files[0] : null;
           await WorkWizeAPI.addComment(rawJobId, newComment, fileToUpload);
         } catch (commentErr) {
           console.warn("addComment error:", commentErr);
@@ -563,23 +577,55 @@ async function handleJobUpdateSubmit(e) {
       }
     }
 
-    // 3. Update local database cache
-    if (typeof WorkWizeDB !== "undefined") {
-      WorkWizeDB.updateJob(rawJobId, {
-        status: normalizeStatusString(jobStatus),
-        priority: normalizePriorityString(priority),
-        assignedTo: assignedText,
-        teams: selectedAssignees.map(a => ({ teamID: a.id, teamName: a.name })),
-        owner_comment: ownerCommentVal,
-        expectedDate: expectedCompletion,
-        refNo: refNum,
-        area: areaName,
-        location: jobLocation,
-        villaNumber: villaNumber,
-        details: jobDetail,
-        remarks: remarks,
-        budget: Number(budget || 0)
-      });
+    // Update sessionStorage / localStorage cache for fast display on details page
+    try {
+      if (currentJobData) {
+        currentJobData.jobStatus = jobStatus;
+        currentJobData.status = jobStatus;
+        currentJobData.priority = priority;
+        currentJobData.areaName = areaName;
+        currentJobData.area = areaName;
+        currentJobData.villaNumber = villaNumber;
+        currentJobData.jobLocation = jobLocation;
+        currentJobData.location = jobLocation;
+        currentJobData.refNum = refNum;
+        currentJobData.refNo = refNum;
+        currentJobData.jobDetail = jobDetail;
+        currentJobData.details = jobDetail;
+        currentJobData.remarks = remarks;
+        currentJobData.budget = Number(budget || 0);
+        currentJobData.finalExp = Number(finalExp || 0);
+        currentJobData.owner_comment = ownerCommentVal;
+        currentJobData.expectedCompletion = expectedCompletion;
+        currentJobData.expectedDate = expectedCompletion;
+        currentJobData.teams = selectedAssignees.map(a => ({ teamID: a.id, teamName: a.name }));
+        sessionStorage.setItem("workwize_current_job_data", JSON.stringify(currentJobData));
+      }
+    } catch (eCache) {
+      console.warn("Error updating session cache:", eCache);
+    }
+
+    // 3. Update local database cache safely
+    try {
+      if (typeof WorkWizeDB !== "undefined") {
+        WorkWizeDB.updateJob(rawJobId, {
+          status: normalizeStatusString(jobStatus),
+          priority: normalizePriorityString(priority),
+          assignedTo: assignedText,
+          teams: selectedAssignees.map(a => ({ teamID: a.id, teamName: a.name })),
+          owner_comment: ownerCommentVal,
+          expectedDate: expectedCompletion,
+          refNo: refNum,
+          area: areaName,
+          location: jobLocation,
+          villaNumber: villaNumber,
+          details: jobDetail,
+          remarks: remarks,
+          budget: Number(budget || 0)
+        });
+      }
+    } catch (eDb) {
+      console.warn("Error updating local DB:", eDb);
     }
 
     showToast("Job order updated successfully!", "success");

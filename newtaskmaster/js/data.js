@@ -34,13 +34,17 @@ const WorkWizeDB = {
   },
 
   getJobById: function(id) {
+    if (!id) return null;
     const jobs = this.getJobs();
-    return jobs.find(j => j.id.toLowerCase() === id.toLowerCase());
+    const strId = String(id).toLowerCase();
+    return jobs.find(j => j && j.id && String(j.id).toLowerCase() === strId);
   },
 
   updateJob: function(id, updatedFields) {
+    if (!id) return null;
     const jobs = this.getJobs();
-    const index = jobs.findIndex(j => j.id.toLowerCase() === id.toLowerCase());
+    const strId = String(id).toLowerCase();
+    const index = jobs.findIndex(j => j && j.id && String(j.id).toLowerCase() === strId);
     if (index !== -1) {
       jobs[index] = { ...jobs[index], ...updatedFields };
       this.saveJobs(jobs);
@@ -50,8 +54,10 @@ const WorkWizeDB = {
   },
 
   deleteJob: function(id) {
+    if (!id) return false;
     let jobs = this.getJobs();
-    jobs = jobs.filter(j => j.id.toLowerCase() !== id.toLowerCase());
+    const strId = String(id).toLowerCase();
+    jobs = jobs.filter(j => !(j && j.id && String(j.id).toLowerCase() === strId));
     this.saveJobs(jobs);
     return true;
   },
