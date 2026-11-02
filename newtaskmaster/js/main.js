@@ -817,6 +817,20 @@ async function submitJobForm() {
 
       const plainDetails = details.replace(/<[^>]*>/g, "").trim() || "New Job";
 
+      const uploadedFilePreviews = (modalUploadFiles || []).map(f => {
+        let objectUrl = "";
+        try {
+          objectUrl = URL.createObjectURL(f);
+        } catch (_) {}
+        return {
+          name: f.name,
+          fileName: f.name,
+          url: objectUrl,
+          size: f.size,
+          type: f.type
+        };
+      });
+
       const newJobObj = {
         id: createdId,
         rawId: createdId,
@@ -843,7 +857,9 @@ async function submitJobForm() {
         details: details,
         jobDetail: details,
         remarks: remarks,
-        jobremark: remarks
+        jobremark: remarks,
+        uploads: uploadedFilePreviews,
+        imageUploads: uploadedFilePreviews
       };
       WorkWizeDB.addJob(newJobObj);
     }

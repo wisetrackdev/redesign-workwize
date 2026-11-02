@@ -421,7 +421,7 @@ async function populateFilterDropdowns() {
       if (!Array.from(locationSelect.options).some(o => o.value.toLowerCase() === loc.toLowerCase())) {
         const opt = document.createElement("option");
         opt.value = loc;
-        opt.textContent = `Location: ${loc}`;
+        opt.textContent = `${loc}`;
         locationSelect.appendChild(opt);
       }
     });

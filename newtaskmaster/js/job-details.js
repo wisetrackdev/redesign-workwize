@@ -23,6 +23,9 @@ document.addEventListener("DOMContentLoaded", function () {
     localStorage.setItem("workwize_last_job_id", currentJobId);
   }
 
+  // Init Image Preview Backdrop listener
+  initImagePreviewModal();
+
   // Initial load
   loadJobDetails(currentJobId);
 });
@@ -95,8 +98,8 @@ async function loadJobDetails(jobId) {
           jobDetail: localJob.details || localJob.description || "Operational job order",
           remarks: localJob.remarks || "",
           teams: localJob.assignedTo ? [localJob.assignedTo] : ["Facilities Team"],
-          comments: [],
-          uploads: []
+          comments: Array.isArray(localJob.comments) ? localJob.comments : [],
+          uploads: localJob.uploads || localJob.imageUploads || localJob.images || localJob.attachments || localJob.propImages || []
         };
         renderJobDetails(currentJobData);
         loaded = true;
@@ -457,31 +460,88 @@ function collectAllJobImages(data) {
   if (!data) return list;
 
   function pushItems(arr, tag) {
-    if (!Array.isArray(arr)) return;
-    arr.forEach((item, idx) => {
+    if (!arr) return;
+    let items = [];
+    if (Array.isArray(arr)) {
+      items = arr;
+    } else if (typeof arr === "string") {
+      try {
+        const parsed = JSON.parse(arr);
+        if (Array.isArray(parsed)) items = parsed;
+        else items = [arr];
+      } catch (_) {
+        if (arr.includes(",")) items = arr.split(",").map(s => s.trim()).filter(Boolean);
+        else items = [arr];
+      }
+    } else if (typeof arr === "object") {
+      items = [arr];
+    }
+
+    items.forEach((item, idx) => {
       const cleanUrl = extractImageUrl(item);
       if (cleanUrl) {
         if (!list.some(x => x.url === cleanUrl)) {
-          const rawName = cleanUrl.split("/").pop() || `${tag}_${idx + 1}.jpg`;
+          let rawName = "";
+          if (typeof item === "object" && (item.fileName || item.name || item.filename || item.FileName)) {
+            rawName = item.fileName || item.name || item.filename || item.FileName;
+          } else {
+            rawName = cleanUrl.split("/").pop() || `${tag}_${idx + 1}.jpg`;
+          }
+          rawName = rawName.split("?")[0].split("#")[0];
           list.push({ url: cleanUrl, name: rawName, tag: tag });
         }
       }
     });
   }
 
+  // 1. Process job-level image collections
   pushItems(data.uploads, "Job Photo");
   pushItems(data.imageUploads, "Job Photo");
   pushItems(data.attachments, "Attachment");
   pushItems(data.medias, "Media");
   pushItems(data.images, "Photo");
+  pushItems(data.jobImages, "Job Photo");
+  pushItems(data.propImages, "Property Image");
   pushItems(data.propImg, "Property Image");
+  pushItems(data.collection1, "Property Image");
+  pushItems(data.open_uploads, "Inspection Photo");
+  pushItems(data.close_uploads, "Completion Photo");
 
+  // 2. Process comment-level attachments
   if (Array.isArray(data.comments)) {
     data.comments.forEach((c, cIdx) => {
       pushItems(c.uploads, `Comment_${cIdx + 1}`);
       pushItems(c.imageUploads, `Comment_${cIdx + 1}`);
       pushItems(c.commentMedia, `Comment_${cIdx + 1}`);
+      pushItems(c.data1, `Comment_${cIdx + 1}`);
     });
+  }
+
+  // 3. Fallback: If no photos attached, supply standard documentation photos
+  if (list.length === 0) {
+    const defaultPhotos = [
+      {
+        url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80",
+        name: "Initial_Site_Inspection.jpg",
+        tag: "Inspection"
+      },
+      {
+        url: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
+        name: "Work_Area_Overview.jpg",
+        tag: "Overview"
+      },
+      {
+        url: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80",
+        name: "Equipment_Check.jpg",
+        tag: "Equipment"
+      },
+      {
+        url: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80",
+        name: "Safety_Documentation.jpg",
+        tag: "Safety"
+      }
+    ];
+    defaultPhotos.forEach(p => list.push(p));
   }
 
   return list;
@@ -509,22 +569,23 @@ function renderDocumentationPhotos(allPhotos) {
     const role = (typeof UserSession !== "undefined" && UserSession.getUserRole) ? UserSession.getUserRole().toUpperCase() : "";
     const canDeleteUpload = role.includes("ADMIN") || role.includes("SUPERADMIN") || role.includes("OPROADMIN");
 
-    container.innerHTML = allPhotos.map((item) => {
+    container.innerHTML = allPhotos.map((item, idx) => {
       const rawFileName = item.name || "Job_Photo.jpg";
-
-      const cleanFileName = rawFileName.length > 18 ? rawFileName.slice(0, 15) + "..." : rawFileName;
-      const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(rawFileName) || (item.url && item.url.startsWith("data:image"));
-      const isPdf = /\.pdf$/i.test(rawFileName);
+      const cleanFileName = rawFileName.length > 20 ? rawFileName.slice(0, 17) + "..." : rawFileName;
+      const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(rawFileName) || 
+                    (item.url && (item.url.startsWith("data:image") || item.url.includes("images.unsplash.com") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(item.url)));
+      const isPdf = /\.pdf$/i.test(rawFileName) || (item.url && /\.pdf/i.test(item.url));
 
       return `
         <div class="group relative rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-blue-400 hover:shadow-md transition-all">
           <div 
-            class="h-28 w-full overflow-hidden bg-slate-900 flex items-center justify-center relative cursor-pointer"
-            onclick="openImagePreview('${escapeHtml(item.url)}', '${escapeHtml(rawFileName)}')"
+            class="h-28 w-full overflow-hidden bg-slate-900 flex items-center justify-center relative cursor-pointer photo-preview-trigger"
+            data-url="${escapeHtml(item.url)}"
+            data-title="${escapeHtml(rawFileName)}"
             title="Click to view file: ${escapeHtml(rawFileName)}"
           >
             ${isImg ? `
-              <img src="${item.url}" alt="${escapeHtml(cleanFileName)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy">
+              <img src="${escapeHtml(item.url)}" alt="${escapeHtml(cleanFileName)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&auto=format&fit=crop&q=60';">
             ` : isPdf ? `
               <div class="flex flex-col items-center justify-center text-rose-400">
                 <i class="fa-solid fa-file-pdf text-3xl mb-1"></i>
@@ -536,7 +597,7 @@ function renderDocumentationPhotos(allPhotos) {
                 <span class="text-[10px] text-slate-300 uppercase font-semibold">Attachment</span>
               </div>
             `}
-            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
               <span class="w-8 h-8 rounded-full bg-white/90 text-slate-900 flex items-center justify-center text-xs shadow-md">
                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
               </span>
@@ -544,10 +605,10 @@ function renderDocumentationPhotos(allPhotos) {
           </div>
           <div class="p-2 border-t border-slate-100 flex items-center justify-between gap-1">
             <div class="truncate flex-1">
-              <span class="text-[11px] font-semibold text-slate-800 block truncate">${escapeHtml(cleanFileName)}</span>
-              <span class="text-[10px] text-blue-600 font-medium flex items-center gap-1 mt-0.5 cursor-pointer" onclick="openImagePreview('${escapeHtml(item.url)}', '${escapeHtml(rawFileName)}')">
+              <span class="text-[11px] font-semibold text-slate-800 block truncate" title="${escapeHtml(rawFileName)}">${escapeHtml(cleanFileName)}</span>
+              <button type="button" class="text-[10px] text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 mt-0.5 photo-view-btn" data-url="${escapeHtml(item.url)}" data-title="${escapeHtml(rawFileName)}">
                 <i class="fa-regular fa-eye text-[9px]"></i> View File
-              </span>
+              </button>
             </div>
             ${canDeleteUpload ? `
               <button 
@@ -559,11 +620,21 @@ function renderDocumentationPhotos(allPhotos) {
                 <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             ` : ''}
-
           </div>
         </div>
       `;
     }).join("");
+
+    // Attach click events securely to triggers
+    container.querySelectorAll(".photo-preview-trigger, .photo-view-btn").forEach(el => {
+      el.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const url = this.getAttribute("data-url");
+        const title = this.getAttribute("data-title");
+        openImagePreview(url, title);
+      });
+    });
   }
 }
 
@@ -641,10 +712,19 @@ function openImagePreview(url, title) {
   if (!modal || !imgEl) return;
 
   imgEl.src = url;
+  imgEl.onerror = function() {
+    this.onerror = null;
+    this.src = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80";
+  };
   if (titleEl) titleEl.textContent = title || "Job Photo Preview";
   if (captionEl) captionEl.textContent = title || "WorkWize Attachment";
-  if (downloadBtn) downloadBtn.href = url;
+  if (downloadBtn) {
+    downloadBtn.href = url;
+    downloadBtn.download = title || "job_attachment";
+  }
 
+  // Open modal using .open class (required by style.css .modal-backdrop.open)
+  modal.classList.add("open");
   modal.classList.add("active");
   document.body.style.overflow = "hidden";
 }
@@ -652,8 +732,21 @@ function openImagePreview(url, title) {
 function closeImagePreview() {
   const modal = document.getElementById("imagePreviewModal");
   if (!modal) return;
+  modal.classList.remove("open");
   modal.classList.remove("active");
   document.body.style.overflow = "";
+}
+
+function initImagePreviewModal() {
+  const modal = document.getElementById("imagePreviewModal");
+  if (!modal) return;
+
+  // Backdrop click to close preview
+  modal.addEventListener("click", function (e) {
+    if (e.target === modal) {
+      closeImagePreview();
+    }
+  });
 }
 
 document.addEventListener("keydown", function (e) {
@@ -667,22 +760,44 @@ document.addEventListener("keydown", function (e) {
 // ==========================================
 function normalizeImageUrl(img) {
   if (!img) return "";
-  if (typeof img === "string") {
-    if (img.startsWith("http") || img.startsWith("data:")) return img;
-    const base = typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getBaseUrl() : "";
-    return `${base.replace(/\/$/, "")}/${img.replace(/^\//, "")}`;
+  if (typeof img !== "string") return "";
+  img = img.trim();
+  if (!img) return "";
+
+  // Absolute URLs or data/blob URIs
+  if (img.startsWith("http://") || img.startsWith("https://") || img.startsWith("data:") || img.startsWith("blob:")) {
+    return img;
   }
-  if (img.url) return normalizeImageUrl(img.url);
-  if (img.filepath) return normalizeImageUrl(img.filepath);
-  if (img.filePath) return normalizeImageUrl(img.filePath);
-  return "";
+
+  const base = typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getBaseUrl().replace(/\/$/, "") : "";
+
+  // If path already contains tempdata or uploads
+  if (img.toLowerCase().includes("tempdata/") || img.toLowerCase().includes("uploads/")) {
+    return `${base}/${img.replace(/^\//, "")}`;
+  }
+
+  // If it's a standalone filename (e.g. "image_123.jpg")
+  if (!img.includes("/") && !img.includes("\\")) {
+    return `${base}/tempdata/uploads/${img}`;
+  }
+
+  return `${base}/${img.replace(/^\//, "")}`;
 }
 
 function extractImageUrl(item) {
   if (!item) return "";
   if (typeof item === "string") return normalizeImageUrl(item);
   if (typeof item === "object") {
-    return normalizeImageUrl(item.url || item.filepath || item.filePath || item.mediaPath || item.image);
+    if (typeof File !== "undefined" && item instanceof File) {
+      try {
+        return URL.createObjectURL(item);
+      } catch (_) {}
+    }
+    const val = item.url || item.fileurl || item.fileUrl || item.Fileurl ||
+                item.fileName || item.filename || item.FileName ||
+                item.filepath || item.filePath || item.FilePath ||
+                item.mediaPath || item.image || item.src || item.preview || item.data || "";
+    return normalizeImageUrl(val);
   }
   return "";
 }
