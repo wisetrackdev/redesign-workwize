@@ -833,15 +833,12 @@ function openEditAssigneeModal() {
     d.assignedTo.split(",").forEach(s => currentlyAssignedSet.add(s.trim().toUpperCase()));
   }
 
-  // Default fallback teams
+  // Exact same fallback teams as create new job modal
   const defaultTeams = [
     { id: "Facilities Team", name: "Facilities Team" },
     { id: "Engineering Team", name: "Engineering Team" },
-    { id: "Electrical Maintenance", name: "Electrical Maintenance" },
-    { id: "Plumbing Maintenance", name: "Plumbing Maintenance" },
-    { id: "Housekeeping Team", name: "Housekeeping Team" },
-    { id: "Safety Team", name: "Safety Team" },
-    { id: "IT Admin", name: "Testing - IT Admin" }
+    { id: "IT Admin", name: "Testing - IT Admin" },
+    { id: "Safety Team", name: "Safety Team" }
   ];
 
   function renderCheckboxes(teamArr) {
@@ -856,26 +853,41 @@ function openEditAssigneeModal() {
     }).join("");
   }
 
-  renderCheckboxes(defaultTeams);
-
-  // If live API has getPropertyInfo
-  if (typeof WorkWizeAPI !== "undefined") {
-    const propId = d.propId || WorkWizeAPI.getCurrentProperty();
-    WorkWizeAPI.getPropertyInfo(propId).then(data => {
-      if (data && Array.isArray(data.propEmp) && data.propEmp.length > 0) {
-        const dynamicTeams = data.propEmp.map(emp => {
-          const val = emp.teamId || emp.teamName;
-          let label = emp.teamName;
-          if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
-            const desg = (emp.manager.desg || "").trim();
-            const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
-            label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
-          }
-          return { id: val, name: label };
-        });
-        renderCheckboxes(dynamicTeams);
+  // Check if allTeams exists in job data first (from getjobbyid)
+  if (Array.isArray(d.allTeams) && d.allTeams.length > 0) {
+    const teamsFromData = d.allTeams.map(emp => {
+      const val = emp.teamId || emp.teamName;
+      let label = emp.teamName;
+      if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+        const desg = (emp.manager.desg || "").trim();
+        const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
+        label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
       }
-    }).catch(err => console.warn("Error fetching dynamic teams for modal:", err));
+      return { id: val, name: label };
+    });
+    renderCheckboxes(teamsFromData);
+  } else {
+    renderCheckboxes(defaultTeams);
+
+    // If live API has getPropertyInfo
+    if (typeof WorkWizeAPI !== "undefined") {
+      const propId = d.propId || WorkWizeAPI.getCurrentProperty();
+      WorkWizeAPI.getPropertyInfo(propId).then(data => {
+        if (data && Array.isArray(data.propEmp) && data.propEmp.length > 0) {
+          const dynamicTeams = data.propEmp.map(emp => {
+            const val = emp.teamId || emp.teamName;
+            let label = emp.teamName;
+            if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+              const desg = (emp.manager.desg || "").trim();
+              const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
+              label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
+            }
+            return { id: val, name: label };
+          });
+          renderCheckboxes(dynamicTeams);
+        }
+      }).catch(err => console.warn("Error fetching dynamic teams for modal:", err));
+    }
   }
 
   modal.classList.add("open");

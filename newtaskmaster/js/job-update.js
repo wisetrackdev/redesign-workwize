@@ -129,7 +129,7 @@ async function loadJobForEditing(jobId) {
       const res = await WorkWizeAPI.getJobById(jobId);
       if (res && res.success && res.jobdata) {
         currentJobData = res.jobdata;
-        populateEditForm(res.jobdata);
+        await populateEditForm(res.jobdata);
         loaded = true;
       }
     } catch (err) {
@@ -148,7 +148,7 @@ async function loadJobForEditing(jobId) {
           );
           if (matched) {
             currentJobData = matched;
-            populateEditForm(matched);
+            await populateEditForm(matched);
             loaded = true;
           }
         }
@@ -186,7 +186,7 @@ async function loadJobForEditing(jobId) {
         remarks: localJob.remarks || "",
         teams: localJob.assignedTo ? [localJob.assignedTo] : ["Facilities Team"]
       };
-      populateEditForm(currentJobData);
+      await populateEditForm(currentJobData);
       loaded = true;
     }
   }
@@ -198,7 +198,93 @@ async function loadJobForEditing(jobId) {
   }
 }
 
-function populateEditForm(data) {
+async function populateEditAssignees(data) {
+  const menuEl = document.getElementById("editAssignedToMenu");
+  if (!menuEl) return;
+
+  const currentlyAssignedSet = new Set();
+  if (Array.isArray(data?.teams) && data.teams.length > 0) {
+    data.teams.forEach(t => {
+      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
+      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
+      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase());
+    });
+  } else if (Array.isArray(data?.data1) && data.data1.length > 0) {
+    data.data1.forEach(t => {
+      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
+      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
+      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase());
+    });
+  } else if (data?.assignedTo) {
+    data.assignedTo.split(",").forEach(s => currentlyAssignedSet.add(s.trim().toUpperCase()));
+  }
+
+  let empList = [];
+  if (Array.isArray(data?.allTeams) && data.allTeams.length > 0) {
+    empList = data.allTeams;
+  } else if (Array.isArray(data?.propEmp) && data.propEmp.length > 0) {
+    empList = data.propEmp;
+  } else if (typeof WorkWizeAPI !== "undefined") {
+    try {
+      const propId = data?.propId || WorkWizeAPI.getCurrentProperty();
+      const propInfo = await WorkWizeAPI.getPropertyInfo(propId);
+      if (propInfo && Array.isArray(propInfo.propEmp) && propInfo.propEmp.length > 0) {
+        empList = propInfo.propEmp;
+      }
+    } catch (e) {
+      console.warn("Could not load dynamic property info for edit:", e);
+    }
+  }
+
+  if (empList.length > 0) {
+    menuEl.innerHTML = empList.map(emp => {
+      const val = emp.teamId || emp.teamName;
+      let label = emp.teamName;
+      if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+        const desg = (emp.manager.desg || "").trim();
+        const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
+        label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
+      }
+      const isChecked = (
+        currentlyAssignedSet.has(val.toString().toUpperCase()) || 
+        currentlyAssignedSet.has(label.toString().toUpperCase()) || 
+        currentlyAssignedSet.has((emp.teamName || "").toString().toUpperCase()) ||
+        (emp.manager && (
+          currentlyAssignedSet.has((emp.manager.firstName || "").toUpperCase()) ||
+          currentlyAssignedSet.has(`${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim().toUpperCase())
+        ))
+      ) ? "checked" : "";
+
+      return `
+        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+          <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
+          <span class="truncate">${escapeHtml(label)}</span>
+        </label>
+      `;
+    }).join("");
+  } else {
+    // Exact same fallback as create new job popup
+    const defaultList = [
+      { val: "Facilities Team", label: "Facilities Team" },
+      { val: "Engineering Team", label: "Engineering Team" },
+      { val: "IT Admin", label: "Testing - IT Admin" },
+      { val: "Safety Team", label: "Safety Team" }
+    ];
+    menuEl.innerHTML = defaultList.map(item => {
+      const isChecked = (currentlyAssignedSet.has(item.val.toUpperCase()) || currentlyAssignedSet.has(item.label.toUpperCase())) ? "checked" : "";
+      return `
+        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+          <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
+          <span class="truncate">${escapeHtml(item.label)}</span>
+        </label>
+      `;
+    }).join("");
+  }
+
+  updateEditAssigneeButtonText();
+}
+
+async function populateEditForm(data) {
   const displayId = data.orgjobId || data.jobId || currentJobId;
 
   // Header reference fields
@@ -221,65 +307,24 @@ function populateEditForm(data) {
   // Form Fields
   setSelectValue("editJobStatus", mapToStatusValue(data.jobStatus || data.status));
   setSelectValue("editJobPriority", mapToPriorityValue(data.priority));
-  
-  // Populating Assign To multi-select checkboxes
-  const menuEl = document.getElementById("editAssignedToMenu");
-  const currentlyAssignedSet = new Set();
-  
-  if (Array.isArray(data.teams) && data.teams.length > 0) {
-    data.teams.forEach(t => {
-      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
-      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
-      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase());
-    });
-  } else if (Array.isArray(data.data1) && data.data1.length > 0) {
-    data.data1.forEach(t => {
-      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
-      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
-    });
-  } else if (data.assignedTo) {
-    data.assignedTo.split(",").forEach(s => {
-      currentlyAssignedSet.add(s.trim().toUpperCase());
-    });
-  }
 
-  // Pre-check checkboxes in menu
-  if (menuEl) {
-    const cbs = menuEl.querySelectorAll(".edit-assignee-cb");
-    cbs.forEach(cb => {
-      const valUpper = (cb.value || "").toUpperCase();
-      const nameUpper = (cb.dataset.name || "").toUpperCase();
-      if (currentlyAssignedSet.has(valUpper) || currentlyAssignedSet.has(nameUpper)) {
-        cb.checked = true;
-      }
-    });
-    updateEditAssigneeButtonText();
-  }
+  // Populate Assign To dropdown identically to create new job popup
+  await populateEditAssignees(data);
 
-  // Populate dynamic teams from getPropertyInfo if available
-  if (typeof WorkWizeAPI !== "undefined" && menuEl) {
-    const propId = data.propId || WorkWizeAPI.getCurrentProperty();
-    WorkWizeAPI.getPropertyInfo(propId).then(propData => {
-      if (propData && Array.isArray(propData.propEmp) && propData.propEmp.length > 0) {
-        menuEl.innerHTML = propData.propEmp.map(emp => {
-          const val = emp.teamId || emp.teamName;
-          let label = emp.teamName;
-          if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
-            const desg = (emp.manager.desg || "").trim();
-            const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
-            label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
-          }
-          const isChecked = (currentlyAssignedSet.has(val.toString().toUpperCase()) || currentlyAssignedSet.has(label.toString().toUpperCase()) || currentlyAssignedSet.has(emp.teamName.toString().toUpperCase())) ? "checked" : "";
-          return `
-            <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
-              <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
-              <span class="truncate">${escapeHtml(label)}</span>
-            </label>
-          `;
-        }).join("");
-        updateEditAssigneeButtonText();
-      }
-    }).catch(err => console.warn("getPropertyInfo error in edit:", err));
+  // Populate dynamic areas if available
+  const areaSelect = document.getElementById("editAreaName");
+  if (areaSelect && Array.isArray(data.allareas) && data.allareas.length > 0) {
+    const curArea = data.areaName || data.area || data.areaID || areaSelect.value;
+    areaSelect.innerHTML = `<option value="">Select Area</option>`;
+    data.allareas.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value = a.areaid || a.areaId || a.areaName;
+      opt.textContent = a.areaName;
+      areaSelect.appendChild(opt);
+    });
+    setSelectValue("editAreaName", curArea);
+  } else {
+    setSelectValue("editAreaName", data.areaName || data.area || "Development/Project");
   }
 
   // Populate Owner Comment
@@ -288,7 +333,6 @@ function populateEditForm(data) {
   // Dates & strings
   setInputValue("editExpectedCompletion", formatDateForInput(data.expectedCompletion || data.expectedDate));
   setInputValue("editRefNum", data.refNum || "");
-  setSelectValue("editAreaName", data.areaName || data.area || "Development/Project");
   setInputValue("editJobLocation", data.jobLocation || data.location || "");
   setInputValue("editVillaNumber", data.villaNumber && data.villaNumber !== "-" ? data.villaNumber : "");
   setInputValue("editJobDetail", data.jobDetail || data.details || data.description || "");
