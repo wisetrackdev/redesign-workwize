@@ -854,3 +854,12 @@ body {
 .format-color-chip:hover {
   transform: scale(1.2);
 }
+
+/* Ensure table headers are formatted with Capitalize */
+table th,
+.table th,
+.ww-table th,
+thead th {
+  text-transform: capitalize !important;
+  letter-spacing: normal !important;
+}
