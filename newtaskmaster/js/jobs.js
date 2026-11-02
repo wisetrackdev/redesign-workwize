@@ -477,6 +477,17 @@ function getAreaIcon(name) {
   return "fa-layer-group";
 }
 
+function renderRichText(str) {
+  if (str === null || str === undefined) return "";
+  const s = String(str);
+  if (/<[a-z][\s\S]*>/i.test(s)) {
+    return s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+            .replace(/on\w+="[^"]*"/gi, "")
+            .replace(/javascript:/gi, "");
+  }
+  return escapeHtml(s).replace(/\n/g, "<br>");
+}
+
 function escapeHtml(str) {
   return String(str || "").replace(/'/g, "\\'").replace(/"/g, "&quot;");
 }
@@ -1134,7 +1145,7 @@ function renderAreaModalRows(jobs) {
               <span class="font-bold text-blue-400 flex items-center gap-1.5 text-[11px]"><i class="fa-solid fa-file-lines"></i> Job Details Preview</span>
               <span class="text-[10px] text-slate-400">${displayId}</span>
             </div>
-            <p class="whitespace-pre-wrap leading-relaxed text-slate-200 text-xs">${escapeHtml(detailText)}</p>
+            <p class="whitespace-pre-wrap leading-relaxed text-slate-200 text-xs">${renderRichText(detailText)}</p>
             <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
               <span>Location: <b class="text-slate-200">${escapeHtml(j.jobLocation || j.location || 'N/A')}</b></span>
               <span>Villa: <b class="text-slate-200">${escapeHtml(j.villaNumber || 'N/A')}</b></span>

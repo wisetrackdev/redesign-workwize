@@ -76,15 +76,15 @@ function initUserDropdown() {
   const userBtn = document.getElementById("userProfileBtn");
   const userMenu = document.getElementById("userProfileMenu");
 
-  // Sync user info from session
-  let userEmail = "admin@workwize.io";
-  let userRole = "Admin";
-  let userName = "Admin";
+  // Sync user info from session - defaults to IT [App admin] & it@workwise.in
+  let userEmail = "it@workwise.in";
+  let userRole = "App admin";
+  let userName = "IT";
 
   if (typeof UserSession !== "undefined") {
-    userEmail = UserSession.getUserEmail();
-    userRole = UserSession.getUserRole();
-    userName = UserSession.getUserName();
+    userEmail = UserSession.getUserEmail() || userEmail;
+    userRole = UserSession.getUserRole() || userRole;
+    userName = UserSession.getUserName() || userName;
   } else if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.getStoredUserData()) {
     const u = WorkWizeAPI.getStoredUserData();
     userEmail = u.email || u.username || userEmail;
@@ -92,18 +92,20 @@ function initUserDropdown() {
     userName = u.name || userEmail.split("@")[0];
   }
 
+  const displayTitle = (userName === "IT" && userRole === "App admin") ? "IT [App admin]" : `${userName} [${userRole}]`;
+
   // Update outer header profile display
   if (userBtn) {
     const nameSpan = userBtn.querySelector(".header-user-display-name") || userBtn.querySelector("span.text-xs.font-bold");
     const roleSpan = userBtn.querySelector(".header-user-display-role") || userBtn.querySelector("span.text-\\[10px\\]");
 
     if (nameSpan) {
-      nameSpan.textContent = userEmail;
-      nameSpan.title = userEmail;
+      nameSpan.textContent = displayTitle;
+      nameSpan.title = displayTitle;
       nameSpan.classList.add("truncate", "max-w-[140px]");
     }
     if (roleSpan) {
-      roleSpan.textContent = userRole;
+      roleSpan.textContent = userEmail;
     }
   }
 
@@ -112,7 +114,7 @@ function initUserDropdown() {
     const menuName = userMenu.querySelector(".header-menu-user-name") || userMenu.querySelector("p.font-semibold");
     const menuEmail = userMenu.querySelector(".header-menu-user-email") || userMenu.querySelector("p.text-\\[11px\\]");
 
-    if (menuName) menuName.textContent = `${userName} [${userRole}]`;
+    if (menuName) menuName.textContent = displayTitle;
     if (menuEmail) menuEmail.textContent = userEmail;
   }
 
@@ -246,6 +248,70 @@ function initTopHeaderSearch() {
 let currentStep = 1;
 let modalUploadFiles = [];
 
+
+// Rich Text Formatting & Editor Utilities
+function initRichEditors() {
+  ["modalJobDetails", "modalRemarks"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.tagName.toLowerCase() !== "textarea") {
+      try {
+        if (!Object.getOwnPropertyDescriptor(el, "value")) {
+          Object.defineProperty(el, "value", {
+            get: function () {
+              const t = this.innerText ? this.innerText.trim() : "";
+              if (!t) return "";
+              return this.innerHTML.trim();
+            },
+            set: function (val) {
+              this.innerHTML = val || "";
+            },
+            configurable: true
+          });
+        }
+      } catch (_) {}
+    }
+  });
+}
+
+function formatRichText(targetId, command, val = null) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.focus();
+  document.execCommand(command, false, val);
+}
+
+function formatRichTextColor(targetId, color) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.focus();
+  try {
+    document.execCommand("styleWithCSS", false, true);
+  } catch (_) {}
+  document.execCommand("foreColor", false, color);
+}
+
+function getRichEditorValue(id) {
+  const el = document.getElementById(id);
+  if (!el) return "";
+  if (el.tagName.toLowerCase() === "textarea" || el.tagName.toLowerCase() === "input") {
+    return el.value.trim();
+  }
+  const text = el.innerText.trim();
+  const html = el.innerHTML.trim();
+  if (!text) return "";
+  return html;
+}
+
+function setRichEditorValue(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el.tagName.toLowerCase() === "textarea" || el.tagName.toLowerCase() === "input") {
+    el.value = val || "";
+  } else {
+    el.innerHTML = val || "";
+  }
+}
+
 function initAddJobModal() {
   const openModalBtns = document.querySelectorAll(".btn-open-job-modal");
   const modal = document.getElementById("addJobModal");
@@ -310,10 +376,23 @@ function handleModalAreaChange() {
   const villaRequired = document.getElementById("villaRequiredMark");
   if (!areaSelect || !villaInput) return;
 
-  villaInput.placeholder = "e.g. V-104";
-  villaInput.disabled = false;
-  villaInput.classList.remove("disabled:opacity-60", "disabled:cursor-not-allowed");
-  if (villaRequired) villaRequired.classList.add("hidden");
+  const selectedText = (areaSelect.options[areaSelect.selectedIndex]?.text || "").toUpperCase().trim();
+  const selectedVal = (areaSelect.value || "").toUpperCase().trim();
+
+  const isVilla = selectedText.includes("GUEST VILLA") || selectedVal.includes("GUEST VILLA") || selectedText.includes("VILLA");
+
+  if (isVilla) {
+    villaInput.disabled = false;
+    villaInput.placeholder = "e.g. V-104";
+    villaInput.classList.remove("disabled:opacity-60", "disabled:cursor-not-allowed");
+    if (villaRequired) villaRequired.classList.remove("hidden");
+  } else {
+    villaInput.disabled = true;
+    villaInput.value = "";
+    villaInput.placeholder = "Disabled (Select Villa Area)";
+    villaInput.classList.add("disabled:opacity-60", "disabled:cursor-not-allowed");
+    if (villaRequired) villaRequired.classList.add("hidden");
+  }
 }
 
 // Handle CCF Department condition
@@ -335,7 +414,8 @@ function handleModalCcfChange() {
 async function populateModalDropdowns() {
   const areaSelect = document.getElementById("modalArea");
   const assignedSelect = document.getElementById("modalAssignedTo");
-  if (!areaSelect && !assignedSelect) return;
+  const createdBySelect = document.getElementById("modalCreatedBy");
+  if (!areaSelect && !assignedSelect && !createdBySelect) return;
 
   if (typeof WorkWizeAPI !== "undefined") {
     const propId = WorkWizeAPI.getCurrentProperty();
@@ -372,6 +452,30 @@ async function populateModalDropdowns() {
             assignedSelect.appendChild(opt);
           });
           if (currentAssigned) assignedSelect.value = currentAssigned;
+        }
+
+        // Populate Created By
+        if (createdBySelect) {
+          const currentCreator = createdBySelect.value || "IT [App admin]";
+          const creatorOpts = [
+            '<option value="">Select Created By</option>',
+            '<option value="IT [App admin]">IT [App admin]</option>'
+          ];
+          if (Array.isArray(data.propEmp) && data.propEmp.length > 0) {
+            data.propEmp.forEach(emp => {
+              let label = emp.teamName;
+              if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+                const desg = (emp.manager.desg || "").trim();
+                const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
+                label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
+              }
+              if (label && label !== "IT [App admin]" && !creatorOpts.some(o => o.includes(`"${label}"`))) {
+                creatorOpts.push(`<option value="${label}">${label}</option>`);
+              }
+            });
+          }
+          createdBySelect.innerHTML = creatorOpts.join("");
+          createdBySelect.value = currentCreator;
         }
       }
     } catch (err) {
@@ -424,13 +528,25 @@ function validateJobForm() {
   const status = document.getElementById("modalStatus")?.value;
   const location = document.getElementById("modalLocation")?.value.trim();
   const creationDate = document.getElementById("modalJobCreationDate")?.value;
+  const createdBy = document.getElementById("modalCreatedBy")?.value;
   const assignedTo = document.getElementById("modalAssignedTo")?.value;
   const costCenter = document.getElementById("modalCostCenter")?.value;
   const ccfDept = document.getElementById("modalCcfDept")?.value.trim();
-  const details = document.getElementById("modalJobDetails")?.value.trim();
+  const details = getRichEditorValue("modalJobDetails");
 
   if (!areaSelect || !areaSelect.value) {
     showToast("Please select Area", "error");
+    return false;
+  }
+
+  // Villa Number condition: Required ONLY if Guest Villa / Villa area is selected
+  const selectedAreaText = (areaSelect.options[areaSelect.selectedIndex]?.text || "").toUpperCase().trim();
+  const selectedAreaVal = (areaSelect.value || "").toUpperCase().trim();
+  const isVillaArea = selectedAreaText.includes("GUEST VILLA") || selectedAreaVal.includes("GUEST VILLA") || selectedAreaText.includes("VILLA");
+  const villa = document.getElementById("modalVillaNumber")?.value.trim() || "";
+
+  if (isVillaArea && !villa) {
+    showToast("Please enter Villa Number for Villa Area", "error");
     return false;
   }
 
@@ -451,6 +567,11 @@ function validateJobForm() {
 
   if (!creationDate) {
     showToast("Please select Job Creation Date", "error");
+    return false;
+  }
+
+  if (!createdBy) {
+    showToast("Please select Created By", "error");
     return false;
   }
 
@@ -523,6 +644,8 @@ async function submitJobForm() {
   formData.append("ccf", costCenter);
   formData.append("ccfdept", ccfDept);
   formData.append("jobremark", remarks);
+  formData.append("createdBy", createdBy);
+  formData.append("userId", createdBy);
   if (assignedTo) {
     formData.append("assignedTo", assignedTo);
   }
@@ -747,6 +870,12 @@ window.handleModalAreaChange = handleModalAreaChange;
 window.handleModalCcfChange = handleModalCcfChange;
 window.populateModalDropdowns = populateModalDropdowns;
 window.submitJobForm = submitJobForm;
+window.formatRichText = formatRichText;
+window.formatRichTextColor = formatRichTextColor;
+window.getRichEditorValue = getRichEditorValue;
+window.setRichEditorValue = setRichEditorValue;
+window.initRichEditors = initRichEditors;
+
 window.updateHeaderBadges = updateHeaderBadges;
 window.initHeaderNavAndBadges = initHeaderNavAndBadges;
 

@@ -813,3 +813,44 @@ body {
   background-color: #f8fafc;
   color: #94a3b8;
 }
+
+/* Rich Text Editor Styling */
+.rich-text-editor[contenteditable="true"]:empty:before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+  display: block;
+}
+.rich-text-editor[contenteditable="true"]:focus {
+  outline: none;
+}
+.format-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 11px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+}
+.format-btn:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+.format-color-chip {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  display: inline-block;
+}
+.format-color-chip:hover {
+  transform: scale(1.2);
+}

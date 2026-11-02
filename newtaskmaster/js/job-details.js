@@ -222,7 +222,7 @@ function renderJobDetails(data) {
   const detailTextEl = document.getElementById("dynJobDetailText");
   if (detailTextEl) {
     const rawDetail = data.jobDetail || data.details || data.description || "No specific details provided for this job order.";
-    detailTextEl.innerHTML = escapeHtml(rawDetail).replace(/\n/g, "<br>");
+    detailTextEl.innerHTML = renderRichText(rawDetail);
   }
 
   // 8. Key Attributes Grid
@@ -266,7 +266,7 @@ function renderJobDetails(data) {
   if (remarksCard && remarksText) {
     if (data.remarks && String(data.remarks).trim().length > 0 && data.remarks !== "null") {
       remarksCard.classList.remove("hidden");
-      remarksText.innerHTML = escapeHtml(data.remarks).replace(/\n/g, "<br>");
+      remarksText.innerHTML = renderRichText(data.remarks);
     } else {
       remarksCard.classList.add("hidden");
     }
@@ -650,6 +650,17 @@ function formatDate(d) {
   } catch (e) {
     return d;
   }
+}
+
+function renderRichText(str) {
+  if (str === null || str === undefined) return "";
+  const s = String(str);
+  if (/<[a-z][\s\S]*>/i.test(s)) {
+    return s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+            .replace(/on\w+="[^"]*"/gi, "")
+            .replace(/javascript:/gi, "");
+  }
+  return escapeHtml(s).replace(/\n/g, "<br>");
 }
 
 function escapeHtml(str) {

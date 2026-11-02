@@ -573,7 +573,7 @@ function renderTableRows() {
             <span class="font-bold text-blue-400 flex items-center gap-1.5 text-[11px]"><i class="fa-solid fa-file-lines"></i> Job Details Preview</span>
             <span class="text-[10px] text-slate-400">${job.id}</span>
           </div>
-          <p class="whitespace-pre-wrap leading-relaxed text-slate-200 text-xs">${escapeHtml(job.details)}</p>
+          <p class="whitespace-pre-wrap leading-relaxed text-slate-200 text-xs">${renderRichText(job.details)}</p>
           <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
             <span>Area: <b class="text-slate-200">${escapeHtml(job.area)}</b></span>
             <span>Location: <b class="text-slate-200">${escapeHtml(job.location || 'N/A')}</b></span>
@@ -880,6 +880,17 @@ function exportJobsToCSV() {
   document.body.removeChild(link);
 
   showToast(`Exported ${filteredJobs.length} jobs to CSV.`, "success");
+}
+
+function renderRichText(str) {
+  if (str === null || str === undefined) return "";
+  const s = String(str);
+  if (/<[a-z][\s\S]*>/i.test(s)) {
+    return s.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+            .replace(/on\w+="[^"]*"/gi, "")
+            .replace(/javascript:/gi, "");
+  }
+  return escapeHtml(s).replace(/\n/g, "<br>");
 }
 
 function escapeHtml(str) {
