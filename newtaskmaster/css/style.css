@@ -596,7 +596,7 @@ body {
   color: #64748b;
   font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
+  text-transform: capitalize;
   letter-spacing: 0.05em;
   padding: 14px 18px;
   text-align: left;
@@ -604,7 +604,7 @@ body {
   box-shadow: inset 0 -1px 0 #e2e8f0;
 }
 
-/* Dedicated Scrollable Table Container */
+/* Dedicated Scrollable Table Containerr */
 .table-scroll-container {
   min-height: 380px;
   max-height: calc(100vh - 275px);
