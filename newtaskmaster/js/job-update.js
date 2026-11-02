@@ -1,3 +1,46 @@
+
+function toggleAssigneeDropdown(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  menu.classList.toggle("hidden");
+}
+
+function updateEditAssigneeButtonText() {
+  const textEl = document.getElementById("editAssignedToText");
+  if (!textEl) return;
+  const cbs = document.querySelectorAll(".edit-assignee-cb:checked");
+  if (cbs.length === 0) {
+    textEl.textContent = "Select Assignee";
+    textEl.className = "text-slate-500 truncate";
+  } else if (cbs.length === 1) {
+    textEl.textContent = cbs[0].dataset.name || cbs[0].value;
+    textEl.className = "text-slate-800 font-semibold truncate";
+  } else {
+    const names = Array.from(cbs).map(cb => cb.dataset.name || cb.value);
+    textEl.textContent = `${names.length} selected (${names.join(", ")})`;
+    textEl.className = "text-slate-800 font-semibold truncate";
+  }
+}
+
+function getSelectedEditAssignees() {
+  const cbs = document.querySelectorAll(".edit-assignee-cb:checked");
+  return Array.from(cbs).map(cb => ({
+    id: cb.value,
+    name: cb.dataset.name || cb.value
+  }));
+}
+
+// Global click outside to close dropdowns
+document.addEventListener("click", function(e) {
+  const editMenu = document.getElementById("editAssignedToMenu");
+  const editBtn = document.getElementById("editAssignedToBtn");
+  if (editMenu && !editMenu.classList.contains("hidden")) {
+    if (!editMenu.contains(e.target) && !editBtn?.contains(e.target)) {
+      editMenu.classList.add("hidden");
+    }
+  }
+});
+
 /**
  * WorkWize Job Update Logic
  * Dedicated editor for job properties, assignment, schedule, and notes
@@ -179,14 +222,68 @@ function populateEditForm(data) {
   setSelectValue("editJobStatus", mapToStatusValue(data.jobStatus || data.status));
   setSelectValue("editJobPriority", mapToPriorityValue(data.priority));
   
-  // Assigned to
-  let assignedValue = "Facilities Team";
+  // Populating Assign To multi-select checkboxes
+  const menuEl = document.getElementById("editAssignedToMenu");
+  const currentlyAssignedSet = new Set();
+  
   if (Array.isArray(data.teams) && data.teams.length > 0) {
-    assignedValue = data.teams[0].teamName || data.teams[0].name || data.teams[0];
+    data.teams.forEach(t => {
+      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
+      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
+      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase());
+    });
+  } else if (Array.isArray(data.data1) && data.data1.length > 0) {
+    data.data1.forEach(t => {
+      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
+      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
+    });
   } else if (data.assignedTo) {
-    assignedValue = data.assignedTo;
+    data.assignedTo.split(",").forEach(s => {
+      currentlyAssignedSet.add(s.trim().toUpperCase());
+    });
   }
-  setSelectValue("editAssignedTo", assignedValue);
+
+  // Pre-check checkboxes in menu
+  if (menuEl) {
+    const cbs = menuEl.querySelectorAll(".edit-assignee-cb");
+    cbs.forEach(cb => {
+      const valUpper = (cb.value || "").toUpperCase();
+      const nameUpper = (cb.dataset.name || "").toUpperCase();
+      if (currentlyAssignedSet.has(valUpper) || currentlyAssignedSet.has(nameUpper)) {
+        cb.checked = true;
+      }
+    });
+    updateEditAssigneeButtonText();
+  }
+
+  // Populate dynamic teams from getPropertyInfo if available
+  if (typeof WorkWizeAPI !== "undefined" && menuEl) {
+    const propId = data.propId || WorkWizeAPI.getCurrentProperty();
+    WorkWizeAPI.getPropertyInfo(propId).then(propData => {
+      if (propData && Array.isArray(propData.propEmp) && propData.propEmp.length > 0) {
+        menuEl.innerHTML = propData.propEmp.map(emp => {
+          const val = emp.teamId || emp.teamName;
+          let label = emp.teamName;
+          if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+            const desg = (emp.manager.desg || "").trim();
+            const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
+            label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
+          }
+          const isChecked = (currentlyAssignedSet.has(val.toString().toUpperCase()) || currentlyAssignedSet.has(label.toString().toUpperCase()) || currentlyAssignedSet.has(emp.teamName.toString().toUpperCase())) ? "checked" : "";
+          return `
+            <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
+              <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
+              <span class="truncate">${escapeHtml(label)}</span>
+            </label>
+          `;
+        }).join("");
+        updateEditAssigneeButtonText();
+      }
+    }).catch(err => console.warn("getPropertyInfo error in edit:", err));
+  }
+
+  // Populate Owner Comment
+  setInputValue("editOwnerComment", data.owner_comment || "");
 
   // Dates & strings
   setInputValue("editExpectedCompletion", formatDateForInput(data.expectedCompletion || data.expectedDate));
@@ -217,7 +314,14 @@ async function handleJobUpdateSubmit(e) {
 
     const jobStatus = document.getElementById("editJobStatus").value;
     const priority = document.getElementById("editJobPriority").value;
-    const assignedTo = document.getElementById("editAssignedTo").value;
+    const selectedAssignees = getSelectedEditAssignees();
+    if (selectedAssignees.length === 0) {
+      showToast("Please select at least one Assignee", "error");
+      if (saveBtn) saveBtn.disabled = false;
+      if (saveBtnText) saveBtnText.textContent = "Save Changes";
+      return;
+    }
+    const assignedText = selectedAssignees.map(a => a.name).join(", ");
     const expectedCompletion = document.getElementById("editExpectedCompletion").value;
     const refNum = document.getElementById("editRefNum").value;
     const areaName = document.getElementById("editAreaName").value;
@@ -247,7 +351,9 @@ async function handleJobUpdateSubmit(e) {
     formData.append("budget", budget || "0");
     formData.append("expense", finalExp || "0");
     formData.append("jobActive", isClosed ? "0" : "1");
-    formData.append("assignedTo", assignedTo);
+    selectedAssignees.forEach(a => {
+      formData.append("assignedTo", a.id);
+    });
 
     let apiSucceeded = false;
 
@@ -271,7 +377,37 @@ async function handleJobUpdateSubmit(e) {
         }
       }
 
-      // 2. If user entered a progress note or attached a file, send comment API
+      // 1c. If user modified Owner's Comment, save via JB-OWNERCOMMENT
+    const ownerCommentVal = document.getElementById("editOwnerComment")?.value.trim() || "";
+    if (ownerCommentVal !== (currentJobData?.owner_comment || "")) {
+      try {
+        const ownerForm = new FormData();
+        ownerForm.append("propID", propId);
+        ownerForm.append("jobID", rawJobId);
+        ownerForm.append("areaID", areaName || "");
+        ownerForm.append("field", "JB-OWNERCOMMENT");
+        ownerForm.append("data", ownerCommentVal);
+        await WorkWizeAPI.updateJobFields(ownerForm);
+      } catch (ownerErr) {
+        console.warn("Error updating owner comment:", ownerErr);
+      }
+    }
+
+    // 1d. Also update assignees via JB-TEAMS in updateJobFields
+    try {
+      const teamsForm = new FormData();
+      teamsForm.append("propID", propId);
+      teamsForm.append("jobID", rawJobId);
+      teamsForm.append("field", "JB-TEAMS");
+      selectedAssignees.forEach(a => {
+        teamsForm.append("data", a.id);
+      });
+      await WorkWizeAPI.updateJobFields(teamsForm);
+    } catch (teamsErr) {
+      console.warn("Error updating teams via fields:", teamsErr);
+    }
+
+    // 2. If user entered a progress note or attached a file, send comment API
       if (newComment.trim() || (photoFileInput && photoFileInput.files && photoFileInput.files.length > 0)) {
         try {
           const fileToUpload = (photoFileInput && photoFileInput.files.length > 0) ? photoFileInput.files[0] : null;
@@ -287,7 +423,9 @@ async function handleJobUpdateSubmit(e) {
       WorkWizeDB.updateJob(rawJobId, {
         status: normalizeStatusString(jobStatus),
         priority: normalizePriorityString(priority),
-        assignedTo: assignedTo,
+        assignedTo: assignedText,
+        teams: selectedAssignees.map(a => ({ teamID: a.id, teamName: a.name })),
+        owner_comment: ownerCommentVal,
         expectedDate: expectedCompletion,
         refNo: refNum,
         area: areaName,

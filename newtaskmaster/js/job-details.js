@@ -272,12 +272,13 @@ function renderJobDetails(data) {
     }
   }
 
-  // 10. Owner's Comment Card & History Tracker (Point 1)
+  // 10. Owner's Comment Card & History Tracker
   const ownerCard = document.getElementById("ownerCommentCard");
   const ownerText = document.getElementById("dynJobOwnerComment");
   const ownerHistoryContainer = document.getElementById("dynOwnerCommentHistoryContainer");
   const ownerHistoryList = document.getElementById("dynOwnerCommentHistoryList");
   const ownerCountBadge = document.getElementById("dynOwnerCommentsCount");
+  const btnEditOwnerCommentText = document.getElementById("btnEditOwnerCommentText");
 
   if (ownerCard && ownerText) {
     const commentsHistory = Array.isArray(data.owner_comments_history) ? [...data.owner_comments_history] : [];
@@ -290,42 +291,41 @@ function renderJobDetails(data) {
       });
     }
 
-    if (data.owner_comment || commentsHistory.length > 0) {
-      ownerCard.classList.remove("hidden");
-      const latestComment = data.owner_comment || (commentsHistory[0] ? commentsHistory[0].commentDetail : "");
-      const latestDate = commentsHistory[0]?.commentDate ? formatDate(commentsHistory[0].commentDate) : "Latest";
-      const latestAuthor = ((commentsHistory[0]?.firstName || "Job Owner") + " " + (commentsHistory[0]?.lastName || "")).trim();
-
+    const latestComment = (data.owner_comment || "").trim();
+    if (latestComment) {
+      if (btnEditOwnerCommentText) btnEditOwnerCommentText.textContent = "Edit";
+      const latestDate = commentsHistory[0]?.commentDate ? formatDate(commentsHistory[0].commentDate) : "Active Note";
       ownerText.innerHTML = `
         <div class="flex items-center justify-between mb-1.5 text-[11px] text-purple-700 font-semibold border-b border-purple-200/60 pb-1">
-          <span class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-purple-600"></i> ${escapeHtml(latestAuthor)}</span>
+          <span class="flex items-center gap-1.5"><i class="fa-solid fa-crown text-purple-600"></i> Property Owner Directive</span>
           <span class="text-purple-500 font-mono text-[10px]">${latestDate}</span>
         </div>
         <div class="text-xs text-purple-950 whitespace-pre-wrap leading-relaxed">${escapeHtml(latestComment)}</div>
       `;
-
-      if (ownerCountBadge) {
-        ownerCountBadge.textContent = Math.max(commentsHistory.length, data.owner_comment ? 1 : 0);
-      }
-
-      if (ownerHistoryContainer && ownerHistoryList) {
-        if (commentsHistory.length > 1) {
-          ownerHistoryContainer.classList.remove("hidden");
-          ownerHistoryList.innerHTML = commentsHistory.slice(1).map(h => `
-            <div class="p-2.5 rounded-lg bg-white/90 border border-purple-200 text-xs text-purple-900 shadow-2xs">
-              <div class="flex items-center justify-between text-[10px] text-purple-600 font-semibold mb-1">
-                <span>${escapeHtml(h.firstName || "Owner")} ${escapeHtml(h.lastName || "")}</span>
-                <span class="font-mono text-slate-400">${formatDate(h.commentDate)}</span>
-              </div>
-              <div class="whitespace-pre-wrap leading-relaxed text-slate-800">${escapeHtml(h.commentDetail || "")}</div>
-            </div>
-          `).join("");
-        } else {
-          ownerHistoryContainer.classList.add("hidden");
-        }
-      }
     } else {
-      ownerCard.classList.add("hidden");
+      if (btnEditOwnerCommentText) btnEditOwnerCommentText.textContent = "+ Add Comment";
+      ownerText.innerHTML = `<span class="text-slate-400 italic">No owner comment recorded yet. Click "+ Add Comment" to record special owner instructions.</span>`;
+    }
+
+    if (ownerCountBadge) {
+      ownerCountBadge.textContent = Math.max(commentsHistory.length, latestComment ? 1 : 0);
+    }
+
+    if (ownerHistoryContainer && ownerHistoryList) {
+      if (commentsHistory.length > 0) {
+        ownerHistoryContainer.classList.remove("hidden");
+        ownerHistoryList.innerHTML = commentsHistory.map((h, idx) => `
+          <div class="p-2.5 rounded-lg bg-white border border-purple-200/80 text-xs text-purple-950 shadow-2xs">
+            <div class="flex items-center justify-between text-[10px] text-purple-600 font-semibold mb-1">
+              <span class="flex items-center gap-1"><i class="fa-solid fa-clock-rotate-left text-[9px]"></i> Log Entry #${commentsHistory.length - idx}</span>
+              <span class="font-mono text-slate-400">${formatDate(h.commentDate)}</span>
+            </div>
+            <div class="whitespace-pre-wrap leading-relaxed text-slate-800">${escapeHtml(h.commentDetail || "")}</div>
+          </div>
+        `).join("");
+      } else {
+        ownerHistoryContainer.classList.add("hidden");
+      }
     }
   }
 
@@ -343,18 +343,33 @@ function renderJobDetails(data) {
   // Point 8: Atmosphere Admin View-Only Mode Across Resorts
   applyAtmosphereAdminViewOnlyMode();
 
-  // 11. Assigned Team
-  const assignedEl = document.getElementById("dynJobAssigned");
-  if (assignedEl) {
-    let assignedText = "Unassigned";
+  // 11. Assigned Team / Assign To (Multiple badge support)
+  const assignedListEl = document.getElementById("dynJobAssignedList");
+  if (assignedListEl) {
+    let teamList = [];
     if (Array.isArray(data.teams) && data.teams.length > 0) {
-      assignedText = data.teams.map(t => t.teamName || t.name || t).join(", ");
+      teamList = data.teams.map(t => (typeof t === "object") ? (t.teamName || t.name) : t);
     } else if (Array.isArray(data.data1) && data.data1.length > 0) {
-      assignedText = data.data1.map(t => t.teamName || t.name || t).join(", ");
+      teamList = data.data1.map(t => (typeof t === "object") ? (t.teamName || t.name) : t);
     } else if (data.assignedTo) {
-      assignedText = data.assignedTo;
+      teamList = data.assignedTo.split(",").map(s => s.trim()).filter(Boolean);
     }
-    assignedEl.textContent = assignedText;
+
+    if (teamList.length === 0) {
+      assignedListEl.innerHTML = `
+        <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">
+          <i class="fa-solid fa-user-slash"></i>
+        </span>
+        <span class="text-slate-400 text-xs italic">Unassigned</span>
+      `;
+    } else {
+      assignedListEl.innerHTML = teamList.map(tm => `
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200/80 shadow-2xs">
+          <i class="fa-solid fa-user-check text-[10px] text-blue-500"></i>
+          <span>${escapeHtml(tm)}</span>
+        </span>
+      `).join("");
+    }
   }
 
   // 12. Financial Allocation
@@ -791,3 +806,214 @@ async function deleteCurrentJob() {
 }
 window.deleteCurrentJob = deleteCurrentJob;
 
+
+
+// ==========================================
+// Quick Edit Modals: Assign To & Owner Comment
+// ==========================================
+function openEditAssigneeModal() {
+  const modal = document.getElementById("editAssigneeModal");
+  const listEl = document.getElementById("editAssigneeModalList");
+  if (!modal || !listEl) return;
+
+  const currentlyAssignedSet = new Set();
+  const d = currentJobData || {};
+  if (Array.isArray(d.teams) && d.teams.length > 0) {
+    d.teams.forEach(t => {
+      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
+      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
+      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase());
+    });
+  } else if (Array.isArray(d.data1) && d.data1.length > 0) {
+    d.data1.forEach(t => {
+      currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
+      if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
+    });
+  } else if (d.assignedTo) {
+    d.assignedTo.split(",").forEach(s => currentlyAssignedSet.add(s.trim().toUpperCase()));
+  }
+
+  // Default fallback teams
+  const defaultTeams = [
+    { id: "Facilities Team", name: "Facilities Team" },
+    { id: "Engineering Team", name: "Engineering Team" },
+    { id: "Electrical Maintenance", name: "Electrical Maintenance" },
+    { id: "Plumbing Maintenance", name: "Plumbing Maintenance" },
+    { id: "Housekeeping Team", name: "Housekeeping Team" },
+    { id: "Safety Team", name: "Safety Team" },
+    { id: "IT Admin", name: "Testing - IT Admin" }
+  ];
+
+  function renderCheckboxes(teamArr) {
+    listEl.innerHTML = teamArr.map(emp => {
+      const isChecked = (currentlyAssignedSet.has(emp.id.toString().toUpperCase()) || currentlyAssignedSet.has(emp.name.toString().toUpperCase())) ? "checked" : "";
+      return `
+        <label class="flex items-center gap-2.5 p-2 hover:bg-slate-50 rounded-xl cursor-pointer border border-slate-100 select-none transition-colors">
+          <input type="checkbox" value="${escapeHtml(emp.id)}" data-name="${escapeHtml(emp.name)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 quick-assignee-cb" ${isChecked}>
+          <span class="text-xs font-semibold text-slate-800">${escapeHtml(emp.name)}</span>
+        </label>
+      `;
+    }).join("");
+  }
+
+  renderCheckboxes(defaultTeams);
+
+  // If live API has getPropertyInfo
+  if (typeof WorkWizeAPI !== "undefined") {
+    const propId = d.propId || WorkWizeAPI.getCurrentProperty();
+    WorkWizeAPI.getPropertyInfo(propId).then(data => {
+      if (data && Array.isArray(data.propEmp) && data.propEmp.length > 0) {
+        const dynamicTeams = data.propEmp.map(emp => {
+          const val = emp.teamId || emp.teamName;
+          let label = emp.teamName;
+          if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+            const desg = (emp.manager.desg || "").trim();
+            const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
+            label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
+          }
+          return { id: val, name: label };
+        });
+        renderCheckboxes(dynamicTeams);
+      }
+    }).catch(err => console.warn("Error fetching dynamic teams for modal:", err));
+  }
+
+  modal.classList.add("open");
+}
+
+function closeEditAssigneeModal() {
+  const modal = document.getElementById("editAssigneeModal");
+  if (modal) modal.classList.remove("open");
+}
+
+async function saveQuickAssignees() {
+  const selectedCbs = document.querySelectorAll(".quick-assignee-cb:checked");
+  if (selectedCbs.length === 0) {
+    showToast("Please select at least one assignee", "error");
+    return;
+  }
+
+  const selectedValues = Array.from(selectedCbs).map(cb => cb.value);
+  const selectedLabels = Array.from(selectedCbs).map(cb => cb.dataset.name || cb.value);
+
+  const saveBtn = document.getElementById("saveAssigneeModalBtn");
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+  }
+
+  const rawJobId = (currentJobData && currentJobData.jobId) ? currentJobData.jobId : currentJobId;
+  const propId = (currentJobData && currentJobData.propId) ? currentJobData.propId : (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "PROP001");
+
+  try {
+    if (typeof WorkWizeAPI !== "undefined") {
+      const form = new FormData();
+      form.append("propID", propId);
+      form.append("jobID", rawJobId);
+      form.append("field", "JB-TEAMS");
+      selectedValues.forEach(tm => {
+        form.append("data", tm);
+      });
+      await WorkWizeAPI.updateJobFields(form);
+    }
+
+    if (!currentJobData) currentJobData = {};
+    currentJobData.teams = selectedLabels.map((lbl, idx) => ({ teamID: selectedValues[idx], teamName: lbl }));
+    currentJobData.assignedTo = selectedLabels.join(", ");
+
+    if (typeof WorkWizeDB !== "undefined") {
+      WorkWizeDB.updateJob(rawJobId, {
+        assignedTo: currentJobData.assignedTo,
+        teams: currentJobData.teams
+      });
+    }
+
+    renderJobDetails(currentJobData);
+    closeEditAssigneeModal();
+    showToast("Assignees updated successfully!", "success");
+  } catch (err) {
+    console.error("Save assignees error:", err);
+    showToast("Failed to update assignees", "error");
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save Changes";
+    }
+  }
+}
+
+function openEditOwnerCommentModal() {
+  const modal = document.getElementById("editOwnerCommentModal");
+  const input = document.getElementById("modalOwnerCommentInput");
+  if (!modal || !input) return;
+
+  input.value = (currentJobData && currentJobData.owner_comment) ? currentJobData.owner_comment : "";
+  modal.classList.add("open");
+}
+
+function closeEditOwnerCommentModal() {
+  const modal = document.getElementById("editOwnerCommentModal");
+  if (modal) modal.classList.remove("open");
+}
+
+async function saveOwnerCommentModal() {
+  const input = document.getElementById("modalOwnerCommentInput");
+  const saveBtn = document.getElementById("saveOwnerCommentModalBtn");
+  if (!input) return;
+  const newComment = input.value.trim();
+
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Saving...";
+  }
+
+  const rawJobId = (currentJobData && currentJobData.jobId) ? currentJobData.jobId : currentJobId;
+  const propId = (currentJobData && currentJobData.propId) ? currentJobData.propId : (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "PROP001");
+  const areaId = (currentJobData && currentJobData.areaID) ? currentJobData.areaID : (currentJobData?.areaId || "");
+
+  try {
+    if (typeof WorkWizeAPI !== "undefined") {
+      const form = new FormData();
+      form.append("propID", propId);
+      form.append("jobID", rawJobId);
+      form.append("areaID", areaId);
+      form.append("field", "JB-OWNERCOMMENT");
+      form.append("data", newComment);
+      await WorkWizeAPI.updateJobFields(form);
+    }
+
+    if (!currentJobData) currentJobData = {};
+    if (!Array.isArray(currentJobData.owner_comments_history)) {
+      currentJobData.owner_comments_history = [];
+    }
+
+    if (currentJobData.owner_comment && currentJobData.owner_comment !== newComment) {
+      currentJobData.owner_comments_history.unshift({
+        commentDetail: currentJobData.owner_comment,
+        commentDate: new Date().toISOString(),
+        firstName: "Owner",
+        lastName: ""
+      });
+    }
+    currentJobData.owner_comment = newComment;
+
+    if (typeof WorkWizeDB !== "undefined") {
+      WorkWizeDB.updateJob(rawJobId, {
+        owner_comment: newComment,
+        owner_comments_history: currentJobData.owner_comments_history
+      });
+    }
+
+    renderJobDetails(currentJobData);
+    closeEditOwnerCommentModal();
+    showToast("Owner's comment updated successfully!", "success");
+  } catch (err) {
+    console.error("Save owner comment error:", err);
+    showToast("Failed to update owner comment", "error");
+  } finally {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = "Save Comment";
+    }
+  }
+}

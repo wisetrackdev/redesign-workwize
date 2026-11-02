@@ -410,11 +410,67 @@ function handleModalCcfChange() {
   }
 }
 
+function toggleAssigneeDropdown(menuId) {
+  const menu = document.getElementById(menuId);
+  if (!menu) return;
+  menu.classList.toggle("hidden");
+}
+
+function updateModalAssigneeButtonText() {
+  const textEl = document.getElementById("modalAssignedToText");
+  if (!textEl) return;
+  const cbs = document.querySelectorAll(".modal-assignee-cb:checked");
+  if (cbs.length === 0) {
+    textEl.textContent = "Select Assignee";
+    textEl.className = "text-slate-500 truncate";
+  } else if (cbs.length === 1) {
+    textEl.textContent = cbs[0].dataset.name || cbs[0].value;
+    textEl.className = "text-slate-800 font-semibold truncate";
+  } else {
+    const names = Array.from(cbs).map(cb => cb.dataset.name || cb.value);
+    textEl.textContent = `${names.length} selected (${names.join(", ")})`;
+    textEl.className = "text-slate-800 font-semibold truncate";
+  }
+}
+
+function getSelectedModalAssignees() {
+  const cbs = document.querySelectorAll(".modal-assignee-cb:checked");
+  return Array.from(cbs).map(cb => ({
+    id: cb.value,
+    name: cb.dataset.name || cb.value
+  }));
+}
+
+function clearModalAssignees() {
+  const cbs = document.querySelectorAll(".modal-assignee-cb");
+  cbs.forEach(cb => cb.checked = false);
+  updateModalAssigneeButtonText();
+}
+
+// Global click outside to close dropdowns
+document.addEventListener("click", function(e) {
+  const modalMenu = document.getElementById("modalAssignedToMenu");
+  const modalBtn = document.getElementById("modalAssignedToBtn");
+  if (modalMenu && !modalMenu.classList.contains("hidden")) {
+    if (!modalMenu.contains(e.target) && !modalBtn?.contains(e.target)) {
+      modalMenu.classList.add("hidden");
+    }
+  }
+
+  const editMenu = document.getElementById("editAssignedToMenu");
+  const editBtn = document.getElementById("editAssignedToBtn");
+  if (editMenu && !editMenu.classList.contains("hidden")) {
+    if (!editMenu.contains(e.target) && !editBtn?.contains(e.target)) {
+      editMenu.classList.add("hidden");
+    }
+  }
+});
+
 // Populate Area & Assignee dropdowns dynamically from API (getpropinfo)
 async function populateModalDropdowns() {
   const areaSelect = document.getElementById("modalArea");
-  const assignedSelect = document.getElementById("modalAssignedTo");
-  if (!areaSelect && !assignedSelect) return;
+  const menuEl = document.getElementById("modalAssignedToMenu");
+  if (!areaSelect && !menuEl) return;
 
   if (typeof WorkWizeAPI !== "undefined") {
     const propId = WorkWizeAPI.getCurrentProperty();
@@ -434,23 +490,26 @@ async function populateModalDropdowns() {
           if (currentVal) areaSelect.value = currentVal;
         }
 
-        // Populate Assignee
-        if (assignedSelect && Array.isArray(data.propEmp) && data.propEmp.length > 0) {
-          const currentAssigned = assignedSelect.value;
-          assignedSelect.innerHTML = `<option value="">Select Assignee</option>`;
-          data.propEmp.forEach(emp => {
-            const opt = document.createElement("option");
-            opt.value = emp.teamId || emp.teamName;
+        // Populate Assignee with checkboxes
+        if (menuEl && Array.isArray(data.propEmp) && data.propEmp.length > 0) {
+          const selectedSet = new Set(getSelectedModalAssignees().map(a => a.id));
+          menuEl.innerHTML = data.propEmp.map(emp => {
+            const val = emp.teamId || emp.teamName;
             let label = emp.teamName;
             if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
               const desg = (emp.manager.desg || "").trim();
               const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
               label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
             }
-            opt.textContent = label;
-            assignedSelect.appendChild(opt);
-          });
-          if (currentAssigned) assignedSelect.value = currentAssigned;
+            const isChecked = selectedSet.has(val) ? "checked" : "";
+            return `
+              <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-md cursor-pointer text-xs text-slate-700 select-none">
+                <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 modal-assignee-cb" ${isChecked} onchange="updateModalAssigneeButtonText()">
+                <span class="truncate">${escapeHtml(label)}</span>
+              </label>
+            `;
+          }).join("");
+          updateModalAssigneeButtonText();
         }
       }
     } catch (err) {
@@ -460,6 +519,7 @@ async function populateModalDropdowns() {
 }
 
 function openModal() {
+  clearModalAssignees();
   const modal = document.getElementById("addJobModal");
   if (!modal) return;
   modal.classList.add("open");
@@ -521,7 +581,7 @@ function validateJobForm() {
   const location = document.getElementById("modalLocation")?.value.trim();
   const creationDate = document.getElementById("modalJobCreationDate")?.value;
   const createdBy = document.getElementById("modalCreatedBy")?.value;
-  const assignedTo = document.getElementById("modalAssignedTo")?.value;
+  const selectedAssignees = getSelectedModalAssignees();
   const costCenter = document.getElementById("modalCostCenter")?.value;
   const ccfDept = document.getElementById("modalCcfDept")?.value.trim();
   const details = getRichEditorValue("modalJobDetails");
@@ -567,8 +627,8 @@ function validateJobForm() {
     if (createdByEl) createdByEl.value = "IT [App admin]";
   }
 
-  if (!assignedTo) {
-    showToast("Please select Assignee", "error");
+  if (selectedAssignees.length === 0) {
+    showToast("Please select at least one Assignee", "error");
     return false;
   }
 
@@ -608,9 +668,8 @@ async function submitJobForm() {
   const completionDate = document.getElementById("modalExpectedDate")?.value || "";
   const refNo = document.getElementById("modalReferenceNo")?.value.trim() || `REF-${Math.floor(10000 + Math.random() * 90000)}`;
 
-  const assignedSelect = document.getElementById("modalAssignedTo");
-  const assignedTo = assignedSelect?.value || "";
-  const assignedText = assignedSelect?.options[assignedSelect.selectedIndex]?.text || "Assigned Team";
+  const selectedAssignees = getSelectedModalAssignees();
+  const assignedText = selectedAssignees.length > 0 ? selectedAssignees.map(a => a.name).join(", ") : "Assigned Team";
 
   const budget = parseFloat(document.getElementById("modalBudget")?.value) || 0;
   const costCenter = document.getElementById("modalCostCenter")?.value || "";
@@ -638,9 +697,9 @@ async function submitJobForm() {
   formData.append("jobremark", remarks);
   formData.append("createdBy", createdBy);
   formData.append("userId", createdBy);
-  if (assignedTo) {
-    formData.append("assignedTo", assignedTo);
-  }
+  selectedAssignees.forEach(a => {
+    formData.append("assignedTo", a.id);
+  });
 
   // Append uploaded files
   if (modalUploadFiles && modalUploadFiles.length > 0) {
