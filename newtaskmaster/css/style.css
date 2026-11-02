@@ -604,7 +604,7 @@ body {
   box-shadow: inset 0 -1px 0 #e2e8f0;
 }
 
-/* Dedicated Scrollable Table Container*/
+/* Dedicated Scrollable Table Containerr*/
 .table-scroll-container {
   min-height: 380px;
   max-height: calc(100vh - 275px);
