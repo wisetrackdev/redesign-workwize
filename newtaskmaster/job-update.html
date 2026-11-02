@@ -194,30 +194,14 @@
               <label class="block text-xs font-bold text-slate-700 mb-1.5">
                 Assign To <span class="text-rose-500">*</span>
               </label>
-              <div class="relative" id="editAssignedToDropdown">
-                <button type="button" id="editAssignedToBtn" onclick="toggleAssigneeDropdown('editAssignedToMenu')" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 text-left flex items-center justify-between focus:border-blue-500 focus:bg-white outline-none">
-                  <span id="editAssignedToText" class="text-slate-500 truncate">Select Assignee</span>
-                  <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 ml-2 shrink-0"></i>
-                </button>
-                <div id="editAssignedToMenu" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl p-2 z-50 max-h-56 overflow-y-auto space-y-1">
-                  <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
-                    <input type="checkbox" value="Facilities Team" data-name="Facilities Team" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" onchange="updateEditAssigneeButtonText()">
-                    <span class="truncate">Facilities Team</span>
-                  </label>
-                  <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
-                    <input type="checkbox" value="Engineering Team" data-name="Engineering Team" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" onchange="updateEditAssigneeButtonText()">
-                    <span class="truncate">Engineering Team</span>
-                  </label>
-                  <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
-                    <input type="checkbox" value="IT Admin" data-name="Testing - IT Admin" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" onchange="updateEditAssigneeButtonText()">
-                    <span class="truncate">Testing - IT Admin</span>
-                  </label>
-                  <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
-                    <input type="checkbox" value="Safety Team" data-name="Safety Team" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" onchange="updateEditAssigneeButtonText()">
-                    <span class="truncate">Safety Team</span>
-                  </label>
-                </div>
-              </div>
+              <button type="button" id="editAssignedToBtn" onclick="openEditAssigneeModal()" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 text-left flex items-center justify-between hover:border-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all shadow-2xs">
+                <span id="editAssignedToText" class="text-slate-500 truncate">Select Assignee</span>
+                <span class="inline-flex items-center gap-1.5 text-blue-600 font-bold text-xs bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-lg border border-blue-200 shrink-0 ml-2">
+                  <i class="fa-solid fa-users-gear text-[11px]"></i>
+                  <span>Select</span>
+                </span>
+              </button>
+            </div>
             </div>
 
             <div>
@@ -385,6 +369,43 @@
       </form>
 
     </main>
+  </div>
+
+  
+  <!-- Assign To Selection Modal (Exact Match to Job Details Edit style) -->
+  <div id="editAssigneeModal" class="modal-backdrop">
+    <div class="modal-container !max-w-md">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm font-bold">
+            <i class="fa-solid fa-users-gear"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Assign To</h3>
+            <p class="text-[11px] text-slate-400">Select one or more teams / assignees</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeEditAssigneeModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div id="editAssigneeModalList" class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+          <!-- Dynamically populated checkboxes from allTeams / propEmp -->
+        </div>
+      </div>
+      <div class="p-4 px-5 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between rounded-b-2xl">
+        <span id="editAssigneeCountText" class="text-xs font-semibold text-slate-500">0 selected</span>
+        <div class="flex items-center gap-2.5">
+          <button type="button" onclick="closeEditAssigneeModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+            Cancel
+          </button>
+          <button type="button" onclick="confirmEditAssignees()" class="px-5 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all">
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Scripts -->

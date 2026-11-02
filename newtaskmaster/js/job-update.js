@@ -1,14 +1,35 @@
 
-function toggleAssigneeDropdown(menuId) {
-  const menu = document.getElementById(menuId);
-  if (!menu) return;
-  menu.classList.toggle("hidden");
+function openEditAssigneeModal() {
+  const modal = document.getElementById("editAssigneeModal");
+  if (!modal) return;
+  modal.classList.add("open");
+  updateEditAssigneeButtonText();
+}
+
+function closeEditAssigneeModal() {
+  const modal = document.getElementById("editAssigneeModal");
+  if (modal) modal.classList.remove("open");
+}
+
+function confirmEditAssignees() {
+  updateEditAssigneeButtonText();
+  closeEditAssigneeModal();
+}
+
+function onEditAssigneeModalChange() {
+  updateEditAssigneeButtonText();
 }
 
 function updateEditAssigneeButtonText() {
   const textEl = document.getElementById("editAssignedToText");
+  const countEl = document.getElementById("editAssigneeCountText");
+  const cbs = document.querySelectorAll("#editAssigneeModalList .edit-assignee-cb:checked");
+
+  if (countEl) {
+    countEl.textContent = `${cbs.length} selected`;
+  }
+
   if (!textEl) return;
-  const cbs = document.querySelectorAll(".edit-assignee-cb:checked");
   if (cbs.length === 0) {
     textEl.textContent = "Select Assignee";
     textEl.className = "text-slate-500 truncate";
@@ -23,24 +44,12 @@ function updateEditAssigneeButtonText() {
 }
 
 function getSelectedEditAssignees() {
-  const cbs = document.querySelectorAll(".edit-assignee-cb:checked");
+  const cbs = document.querySelectorAll("#editAssigneeModalList .edit-assignee-cb:checked");
   return Array.from(cbs).map(cb => ({
     id: cb.value,
     name: cb.dataset.name || cb.value
   }));
 }
-
-// Global click outside to close dropdowns
-document.addEventListener("click", function(e) {
-  const editMenu = document.getElementById("editAssignedToMenu");
-  const editBtn = document.getElementById("editAssignedToBtn");
-  if (editMenu && !editMenu.classList.contains("hidden")) {
-    if (!editMenu.contains(e.target) && !editBtn?.contains(e.target)) {
-      editMenu.classList.add("hidden");
-    }
-  }
-});
-
 /**
  * WorkWize Job Update Logic
  * Dedicated editor for job properties, assignment, schedule, and notes
@@ -199,8 +208,8 @@ async function loadJobForEditing(jobId) {
 }
 
 async function populateEditAssignees(data) {
-  const menuEl = document.getElementById("editAssignedToMenu");
-  if (!menuEl) return;
+  const listEl = document.getElementById("editAssigneeModalList");
+  if (!listEl) return;
 
   const currentlyAssignedSet = new Set();
   if (Array.isArray(data?.teams) && data.teams.length > 0) {
@@ -213,7 +222,6 @@ async function populateEditAssignees(data) {
     data.data1.forEach(t => {
       currentlyAssignedSet.add((t.teamName || t.name || t).toString().toUpperCase());
       if (t.teamID) currentlyAssignedSet.add(t.teamID.toString().toUpperCase());
-      if (t.teamId) currentlyAssignedSet.add(t.teamId.toString().toUpperCase());
     });
   } else if (data?.assignedTo) {
     data.assignedTo.split(",").forEach(s => currentlyAssignedSet.add(s.trim().toUpperCase()));
@@ -237,7 +245,7 @@ async function populateEditAssignees(data) {
   }
 
   if (empList.length > 0) {
-    menuEl.innerHTML = empList.map(emp => {
+    listEl.innerHTML = empList.map(emp => {
       const val = emp.teamId || emp.teamName;
       let label = emp.teamName;
       if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
@@ -256,26 +264,26 @@ async function populateEditAssignees(data) {
       ) ? "checked" : "";
 
       return `
-        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
-          <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
-          <span class="truncate">${escapeHtml(label)}</span>
+        <label class="flex items-center gap-2.5 p-2.5 hover:bg-slate-50 rounded-xl cursor-pointer border border-slate-100 select-none transition-colors">
+          <input type="checkbox" value="${escapeHtml(val)}" data-name="${escapeHtml(label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="onEditAssigneeModalChange()">
+          <span class="text-xs font-semibold text-slate-800">${escapeHtml(label)}</span>
         </label>
       `;
     }).join("");
   } else {
-    // Exact same fallback as create new job popup
+    // Exact same fallback as create new job popup & job details
     const defaultList = [
       { val: "Facilities Team", label: "Facilities Team" },
       { val: "Engineering Team", label: "Engineering Team" },
       { val: "IT Admin", label: "Testing - IT Admin" },
       { val: "Safety Team", label: "Safety Team" }
     ];
-    menuEl.innerHTML = defaultList.map(item => {
+    listEl.innerHTML = defaultList.map(item => {
       const isChecked = (currentlyAssignedSet.has(item.val.toUpperCase()) || currentlyAssignedSet.has(item.label.toUpperCase())) ? "checked" : "";
       return `
-        <label class="flex items-center gap-2 px-2.5 py-1.5 hover:bg-slate-50 rounded-lg cursor-pointer text-xs text-slate-700 select-none">
-          <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="updateEditAssigneeButtonText()">
-          <span class="truncate">${escapeHtml(item.label)}</span>
+        <label class="flex items-center gap-2.5 p-2.5 hover:bg-slate-50 rounded-xl cursor-pointer border border-slate-100 select-none transition-colors">
+          <input type="checkbox" value="${escapeHtml(item.val)}" data-name="${escapeHtml(item.label)}" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 edit-assignee-cb" ${isChecked} onchange="onEditAssigneeModalChange()">
+          <span class="text-xs font-semibold text-slate-800">${escapeHtml(item.label)}</span>
         </label>
       `;
     }).join("");
