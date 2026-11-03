@@ -326,11 +326,21 @@ function renderJobsByAreaTable(filterQuery = "") {
     const totalNum = Number(area.total) || 0;
     const openNum = Number(area.open) || 0;
     const safetyNum = Number(area.safety) || 0;
-    const resolvedNum = Math.max(0, totalNum - openNum);
 
-    const resolvedPct = totalNum > 0 ? Math.round((resolvedNum / totalNum) * 100) : 100;
-    const openPct = totalNum > 0 ? Math.round((openNum / totalNum) * 100) : 0;
-    const safetyPct = (totalNum > 0 && safetyNum > 0) ? Math.min(100, Math.round((safetyNum / totalNum) * 100)) : 0;
+    // Segment widths representing Total (Green), Open (Blue), and Safety (Red)
+    const weightSum = (totalNum + openNum + safetyNum) || 1;
+    let greenWidth = totalNum > 0 ? Math.round((totalNum / weightSum) * 100) : 0;
+    let blueWidth = openNum > 0 ? Math.round((openNum / weightSum) * 100) : 0;
+    let redWidth = safetyNum > 0 ? Math.round((safetyNum / weightSum) * 100) : 0;
+
+    if (totalNum > 0 || openNum > 0 || safetyNum > 0) {
+      const activeTotal = greenWidth + blueWidth + redWidth;
+      if (activeTotal > 0) {
+        greenWidth = Math.round((greenWidth / activeTotal) * 100);
+        blueWidth = Math.round((blueWidth / activeTotal) * 100);
+        redWidth = Math.max(0, 100 - greenWidth - blueWidth);
+      }
+    }
 
     const isLastRows = index >= (filtered.length - 3);
 
@@ -408,19 +418,31 @@ function renderJobsByAreaTable(filterQuery = "") {
         </a>
       </td>
       <td style="min-width: 250px;">
-        <!-- Compact Single-Line Multi-Segment Progress Bar -->
-        <div class="flex items-center gap-2.5">
-          <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden flex shadow-2xs" title="Resolved: ${resolvedNum} (${resolvedPct}%) | Open: ${openNum} (${openPct}%) | Safety: ${safetyNum}">
-            <div class="bg-emerald-500 h-full transition-all duration-300" style="width: ${resolvedPct}%"></div>
-            <div class="bg-blue-600 h-full transition-all duration-300" style="width: ${openPct}%"></div>
-            ${safetyNum > 0 ? `<div class="bg-rose-500 h-full transition-all duration-300" style="width: ${safetyPct}%"></div>` : ''}
+        <!-- Compact Progress Bar with Total (Green), Open (Blue), and Safety (Red) -->
+        <div class="flex items-center gap-2">
+          <div class="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden flex shadow-2xs">
+            ${totalNum > 0 ? `
+              <div class="bg-emerald-500 h-full transition-all duration-300 hover:brightness-110 cursor-pointer" style="width: ${greenWidth}%" title="Total Jobs: ${totalNum}" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')"></div>
+              ${blueWidth > 0 ? `<div class="bg-blue-600 h-full transition-all duration-300 hover:brightness-110 cursor-pointer" style="width: ${blueWidth}%" title="Open Jobs: ${openNum}" onclick="showAreaOpenJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')"></div>` : ''}
+              ${redWidth > 0 ? `<div class="bg-rose-500 h-full transition-all duration-300 hover:brightness-110 cursor-pointer" style="width: ${redWidth}%" title="Safety Issues: ${safetyNum}" onclick="${safetyNum > 0 ? `showAreaSafetyJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')` : 'void(0)'}"></div>` : ''}
+            ` : `
+              <div class="bg-slate-200 h-full w-full" title="Total Jobs: 0"></div>
+            `}
           </div>
-          <span class="text-xs font-extrabold text-emerald-600 shrink-0 w-9 text-right">${resolvedPct}%</span>
-          <div class="flex items-center gap-1.5 shrink-0 text-[10px] font-semibold text-slate-500">
-            <span class="inline-flex items-center gap-0.5 text-emerald-600" title="Resolved"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>${resolvedNum}</span>
-            <span class="text-slate-300">/</span>
-            <span class="inline-flex items-center gap-0.5 text-blue-600" title="Open"><span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>${openNum}</span>
-            ${safetyNum > 0 ? `<span class="inline-flex items-center gap-0.5 text-rose-600" title="Safety"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>${safetyNum}</span>` : ''}
+          <!-- Category count pills showing numbers and category on hover (Percentage removed) -->
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80 font-bold text-xs transition-colors cursor-pointer" title="Total Jobs: ${totalNum}" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+              <span>${totalNum}</span>
+            </span>
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/80 font-bold text-xs transition-colors cursor-pointer" title="Open Jobs: ${openNum}" onclick="showAreaOpenJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')">
+              <span class="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
+              <span>${openNum}</span>
+            </span>
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md ${safetyNum > 0 ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/80' : 'bg-slate-50 text-slate-400 border border-slate-200'} font-bold text-xs transition-colors cursor-pointer" title="Safety Issues: ${safetyNum}" onclick="${safetyNum > 0 ? `showAreaSafetyJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')` : 'void(0)'}">
+              <span class="w-2 h-2 rounded-full ${safetyNum > 0 ? 'bg-rose-500' : 'bg-slate-300'} shrink-0"></span>
+              <span>${safetyNum}</span>
+            </span>
           </div>
         </div>
       </td>
