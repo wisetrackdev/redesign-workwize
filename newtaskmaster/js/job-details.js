@@ -146,13 +146,19 @@ function renderJobDetails(data) {
   const heroUpdateBtn = document.getElementById("heroUpdateJobBtn");
   const bottomUpdateBtn = document.getElementById("bottomUpdateJobBtn");
 
-  // If job is closed, hide the "Update Job" buttons
+  // If job is closed, hide the "Update Job" buttons & update sidebar highlight
   if (isClosed) {
     if (heroUpdateBtn) heroUpdateBtn.classList.add("hidden");
     if (bottomUpdateBtn) bottomUpdateBtn.classList.add("hidden");
     if (backToJobsBtn) {
       backToJobsBtn.href = "closed-jobs.html";
       backToJobsBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Back to Closed Jobs';
+    }
+    const closedTab = document.getElementById("headerNavClosedJobs");
+    const allJobsTab = document.getElementById("headerNavAllJobs");
+    if (closedTab && allJobsTab) {
+      allJobsTab.classList.remove("on", "active");
+      closedTab.classList.add("on", "active");
     }
   } else {
     if (heroUpdateBtn) {
@@ -162,6 +168,12 @@ function renderJobDetails(data) {
     if (bottomUpdateBtn) {
       bottomUpdateBtn.classList.remove("hidden");
       bottomUpdateBtn.href = updateUrl;
+    }
+    const closedTab = document.getElementById("headerNavClosedJobs");
+    const allJobsTab = document.getElementById("headerNavAllJobs");
+    if (closedTab && allJobsTab && !(document.referrer && (document.referrer.includes("job-by-area.html") || document.referrer.includes("jobs.html")))) {
+      closedTab.classList.remove("on", "active");
+      allJobsTab.classList.add("on", "active");
     }
   }
 
@@ -303,6 +315,22 @@ function renderJobDetails(data) {
   if (createdOnEl) createdOnEl.textContent = formatDate(data.jobCreatedOn || data.createdOn);
   if (expectedEl) expectedEl.textContent = formatDate(data.expectedCompletion || data.expectedDate);
   if (refNumEl) refNumEl.textContent = (data.refNum && data.refNum !== "null") ? data.refNum : "-";
+
+  // Created By & Closed By Reference
+  const createdByEl = document.getElementById("dynJobCreatedBy");
+  const creator = (data.firstname || data.Firstname || data.lastname || data.Lastname)
+    ? `${data.firstname || data.Firstname || ""} ${data.lastname || data.Lastname || ""}`.trim()
+    : (data.createdBy || data.created_by || data.creator || "-");
+  if (createdByEl) createdByEl.textContent = creator || "-";
+
+  const closedByWrapper = document.getElementById("dynJobClosedByWrapper");
+  const closedByHeader = document.getElementById("dynJobClosedByHeader");
+  if (isClosed) {
+    if (closedByWrapper) closedByWrapper.classList.remove("hidden");
+    if (closedByHeader) closedByHeader.textContent = data.jobCloseBy || data.closedBy || "Authorized Officer";
+  } else {
+    if (closedByWrapper) closedByWrapper.classList.add("hidden");
+  }
 
   // 9. Remarks Card
   const remarksCard = document.getElementById("remarksCard");
@@ -627,6 +655,16 @@ function renderDocumentationPhotos(allPhotos) {
                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
               </span>
             </div>
+
+            <!-- Delete Icon directly visible on top-right of image -->
+            <button 
+              type="button" 
+              onclick="event.stopPropagation(); deleteJobAttachment('${escapeHtml(rawFileName)}', '${escapeHtml(item.url)}')"
+              class="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center shadow-md transition-all z-20 cursor-pointer" 
+              title="Delete this image"
+            >
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
           </div>
           <div class="p-2 border-t border-slate-100 flex items-center justify-between gap-1">
             <div class="truncate flex-1">
@@ -635,16 +673,14 @@ function renderDocumentationPhotos(allPhotos) {
                 <i class="fa-regular fa-eye text-[9px]"></i> View File
               </button>
             </div>
-            ${canDeleteUpload ? `
-              <button 
-                type="button" 
-                onclick="deleteJobAttachment('${escapeHtml(rawFileName)}')" 
-                class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors shrink-0" 
-                title="Delete attachment (OPRO Admin)"
-              >
-                <i class="fa-solid fa-trash-can text-xs"></i>
-              </button>
-            ` : ''}
+            <button 
+              type="button" 
+              onclick="deleteJobAttachment('${escapeHtml(rawFileName)}', '${escapeHtml(item.url)}')" 
+              class="w-7 h-7 rounded-lg text-rose-500 hover:text-white hover:bg-rose-600 flex items-center justify-center transition-colors shrink-0" 
+              title="Delete this image"
+            >
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
           </div>
         </div>
       `;
@@ -948,25 +984,57 @@ function applyAtmosphereAdminViewOnlyMode() {
 // ==========================================
 // Point 13: Delete Uploaded Attachments
 // ==========================================
-async function deleteJobAttachment(fileName) {
-  if (!confirm(`Are you sure you want to permanently delete "${fileName}"? This action cannot be undone.`)) return;
+async function deleteJobAttachment(fileName, fileUrl) {
+  const displayName = fileName || (fileUrl ? fileUrl.split("/").pop() : "this image");
+  if (!confirm(`Are you sure you want to permanently delete "${displayName}"? This action cannot be undone.`)) return;
 
   try {
     const propId = currentJobData?.propId || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "");
+    const cleanFileName = fileName || (fileUrl ? fileUrl.split("/").pop().split("?")[0] : "");
+
+    // 1. If it's a fallback / demo unsplash photo or local demo photo
+    if (fileUrl && (fileUrl.includes("images.unsplash.com") || fileUrl.startsWith("data:"))) {
+      if (currentJobData) {
+        if (Array.isArray(currentJobData.uploads)) currentJobData.uploads = currentJobData.uploads.filter(u => u !== fileUrl && u !== cleanFileName);
+        if (Array.isArray(currentJobData.imageUploads)) currentJobData.imageUploads = currentJobData.imageUploads.filter(u => u !== fileUrl && u !== cleanFileName);
+      }
+      showToast("Image removed successfully!", "success");
+      const remainingImages = collectAllJobImages(currentJobData).filter(img => img.url !== fileUrl && img.name !== cleanFileName);
+      renderDocumentationPhotos(remainingImages);
+      return;
+    }
+
+    // 2. Call backend delete API in oproface2 (api/jobtracker/deleteupload)
     await WorkWizeAPI.request("api/jobtracker/deleteupload", {
       method: "POST",
       body: {
         fileId: currentJobId,
         jobId: currentJobId,
-        fileName: fileName,
+        fileName: cleanFileName,
         propId: propId
       }
     });
 
-    showToast("Attachment removed successfully!", "success");
+    showToast("Image deleted successfully!", "success");
+
+    // Remove from in-memory arrays if cached
+    if (currentJobData) {
+      if (Array.isArray(currentJobData.uploads)) {
+        currentJobData.uploads = currentJobData.uploads.filter(u => !String(u).includes(cleanFileName));
+      }
+      if (Array.isArray(currentJobData.imageUploads)) {
+        currentJobData.imageUploads = currentJobData.imageUploads.filter(u => {
+          const fn = (typeof u === "object") ? (u.fileName || u.name) : u;
+          return !String(fn).includes(cleanFileName);
+        });
+      }
+    }
+
+    // Reload job details to refresh database state
     await loadJobDetails(currentJobId);
   } catch (err) {
-    showToast(err.message || "Failed to delete attachment", "error");
+    console.error("Delete image failed:", err);
+    showToast(err.message || "Failed to delete image", "error");
   }
 }
 window.deleteJobAttachment = deleteJobAttachment;

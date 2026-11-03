@@ -379,6 +379,7 @@ function populateEditForm(data) {
   const displayIdEl = document.getElementById("updateJobDisplayId");
   const propNameEl = document.getElementById("updateJobPropName");
   const createdDateEl = document.getElementById("updateJobCreatedDate");
+  const createdByEl = document.getElementById("updateJobCreatedBy");
   const statusBadge = document.getElementById("updateCurrentStatusBadge");
   const priorityBadge = document.getElementById("updateCurrentPriorityBadge");
 
@@ -386,7 +387,13 @@ function populateEditForm(data) {
   if (propNameEl) propNameEl.textContent = data.propName || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentPropertyName() : "Main Facility");
   if (createdDateEl) {
     const rawDate = data.jobCreatedOn || data.createdOn || data.openedOn || data.jobDate;
-    createdDateEl.textContent = rawDate ? `Created ${formatDate(rawDate)}` : "Created Recently";
+    createdDateEl.textContent = rawDate ? formatDate(rawDate) : "-";
+  }
+  if (createdByEl) {
+    const creator = (data.firstname || data.Firstname || data.lastname || data.Lastname)
+      ? `${data.firstname || data.Firstname || ""} ${data.lastname || data.Lastname || ""}`.trim()
+      : (data.createdBy || data.created_by || data.creator || "-");
+    createdByEl.textContent = creator || "-";
   }
 
   // Header badges

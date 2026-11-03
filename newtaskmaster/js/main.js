@@ -52,26 +52,16 @@ function initMobileSidebar() {
 }
 window.initMobileSidebar = initMobileSidebar;
 
-// Highlight active sidebar item according to URL & on click set active blue
+// Highlight active sidebar item according to URL & on click set active
 function initActiveSidebarLink() {
   const currentPath = window.location.pathname.split("/").pop() || "index.html";
-  const navLinks = document.querySelectorAll(".sidebar-nav-item");
+  const navLinks = document.querySelectorAll(".sidebar-tab, .tab, .sidebar-nav-item");
 
   navLinks.forEach(link => {
-    const href = link.getAttribute("href");
-    const isJobByArea = (currentPath === "job-by-area.html" || currentPath === "jobs.html") && (href === "job-by-area.html" || href === "jobs.html");
-    const isDashboard = (currentPath === "index.html" || currentPath === "dashboard.html") && href === "dashboard.html";
-
-    if (href === currentPath || isJobByArea || isDashboard) {
-      link.classList.add("active");
-    } else {
-      link.classList.remove("active");
-    }
-
-    // Click handler to immediately set active state and blue background
+    // Click handler to immediately set active state and highlight
     link.addEventListener("click", function () {
-      navLinks.forEach(item => item.classList.remove("active"));
-      this.classList.add("active");
+      navLinks.forEach(item => item.classList.remove("on", "active"));
+      this.classList.add("on", "active");
     });
   });
 }
@@ -1177,20 +1167,48 @@ function initHeaderNavAndBadges() {
   const oproTab = document.getElementById("headerNavOproDashboard");
 
   const tabs = [dashboardTab, jobByAreaTab, allJobsTab, closedJobsTab, teamsTab, oproTab].filter(Boolean);
-  tabs.forEach(t => t.classList.remove("on"));
+  tabs.forEach(t => t.classList.remove("on", "active"));
+
+  // Check if job is closed or comes from job-by-area (for job-details.html or job-update.html)
+  let isClosedContext = false;
+  let isAreaContext = false;
+  if (currentPath === "job-details.html" || currentPath === "job-update.html") {
+    try {
+      const cachedJob = sessionStorage.getItem("workwize_current_job_data");
+      if (cachedJob) {
+        const j = JSON.parse(cachedJob);
+        if (j.isActive === false || j.isActive === 0 || j.status === "Closed" || j.jobStatus === "Closed" || j.jobCloseOn) {
+          isClosedContext = true;
+        }
+      }
+    } catch (_) {}
+    if (document.referrer && document.referrer.includes("closed-jobs.html")) {
+      isClosedContext = true;
+    } else if (document.referrer && (document.referrer.includes("job-by-area.html") || document.referrer.includes("jobs.html"))) {
+      isAreaContext = true;
+    }
+  }
 
   // Highlight active tab according to current page
   if (currentPath === "dashboard.html" || currentPath === "index.html") {
-    if (dashboardTab) dashboardTab.classList.add("on");
-  } else if (currentPath === "job-by-area.html" || currentPath === "jobs.html") {
-    if (jobByAreaTab) jobByAreaTab.classList.add("on");
-  } else if (currentPath === "closed-jobs.html") {
-    if (closedJobsTab) closedJobsTab.classList.add("on");
+    if (dashboardTab) dashboardTab.classList.add("on", "active");
+  } else if (currentPath === "job-by-area.html" || currentPath === "jobs.html" || (isAreaContext && !isClosedContext)) {
+    if (jobByAreaTab) jobByAreaTab.classList.add("on", "active");
+  } else if (currentPath === "closed-jobs.html" || isClosedContext) {
+    if (closedJobsTab) closedJobsTab.classList.add("on", "active");
   } else if (currentPath === "all-jobs.html" || currentPath === "job-details.html" || currentPath === "job-update.html") {
-    if (allJobsTab) allJobsTab.classList.add("on");
+    if (allJobsTab) allJobsTab.classList.add("on", "active");
   } else if (currentPath === "opro-dashboard.html") {
-    if (oproTab) oproTab.classList.add("on");
+    if (oproTab) oproTab.classList.add("on", "active");
   }
+
+  // Click handler to immediately set active state and highlight
+  tabs.forEach(tab => {
+    tab.addEventListener("click", function () {
+      tabs.forEach(t => t.classList.remove("on", "active"));
+      this.classList.add("on", "active");
+    });
+  });
 
   // Initial badge update
   updateHeaderBadges();
