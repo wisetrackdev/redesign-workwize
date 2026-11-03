@@ -1179,52 +1179,19 @@ function initHeaderNavAndBadges() {
   const tabs = [dashboardTab, jobByAreaTab, allJobsTab, closedJobsTab, teamsTab, oproTab].filter(Boolean);
   tabs.forEach(t => t.classList.remove("on"));
 
-  // Highlight active tab according to current page & URL filter
+  // Highlight active tab according to current page
   if (currentPath === "dashboard.html" || currentPath === "index.html") {
     if (dashboardTab) dashboardTab.classList.add("on");
   } else if (currentPath === "job-by-area.html" || currentPath === "jobs.html") {
     if (jobByAreaTab) jobByAreaTab.classList.add("on");
+  } else if (currentPath === "closed-jobs.html") {
+    if (closedJobsTab) closedJobsTab.classList.add("on");
   } else if (currentPath === "all-jobs.html" || currentPath === "job-details.html" || currentPath === "job-update.html") {
-    if (statusParam === "Closed") {
-      if (closedJobsTab) closedJobsTab.classList.add("on");
-    } else {
-      if (allJobsTab) allJobsTab.classList.add("on");
-    }
+    if (allJobsTab) allJobsTab.classList.add("on");
   } else if (currentPath === "teams.html") {
     if (teamsTab) teamsTab.classList.add("on");
   } else if (currentPath === "opro-dashboard.html") {
     if (oproTab) oproTab.classList.add("on");
-  }
-
-  // When already on all-jobs.html, allow instant in-page tab switching between All Jobs and Closed Jobs
-  if (currentPath === "all-jobs.html") {
-    if (allJobsTab) {
-      allJobsTab.addEventListener("click", function (e) {
-        const statusSelect = document.getElementById("filterStatus");
-        if (statusSelect) {
-          e.preventDefault();
-          statusSelect.value = "";
-          if (typeof filterAndRenderJobs === "function") filterAndRenderJobs();
-          tabs.forEach(t => t.classList.remove("on"));
-          allJobsTab.classList.add("on");
-          history.pushState(null, "", "all-jobs.html");
-        }
-      });
-    }
-
-    if (closedJobsTab) {
-      closedJobsTab.addEventListener("click", function (e) {
-        const statusSelect = document.getElementById("filterStatus");
-        if (statusSelect) {
-          e.preventDefault();
-          statusSelect.value = "Closed";
-          if (typeof filterAndRenderJobs === "function") filterAndRenderJobs();
-          tabs.forEach(t => t.classList.remove("on"));
-          closedJobsTab.classList.add("on");
-          history.pushState(null, "", "all-jobs.html?status=Closed");
-        }
-      });
-    }
   }
 
   // Initial badge update

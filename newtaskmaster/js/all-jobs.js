@@ -451,18 +451,11 @@ function filterAndRenderJobs() {
   const locationFilter = document.getElementById("filterLocation")?.value || "";
   const dateSpanFilter = document.getElementById("filterDateSpan")?.value || "";
 
-  // Sync Header Segmented Tabs
+  // Ensure All Jobs tab is active
   const allJobsTab = document.getElementById("headerNavAllJobs");
   const closedJobsTab = document.getElementById("headerNavClosedJobs");
-  if (allJobsTab && closedJobsTab) {
-    if (statusFilter === "Closed") {
-      closedJobsTab.classList.add("on");
-      allJobsTab.classList.remove("on");
-    } else {
-      allJobsTab.classList.add("on");
-      closedJobsTab.classList.remove("on");
-    }
-  }
+  if (allJobsTab) allJobsTab.classList.add("on");
+  if (closedJobsTab) closedJobsTab.classList.remove("on");
 
   const now = new Date().getTime();
 

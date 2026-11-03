@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkWize | Closed Jobs</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen flex bg-[#F2F5FB]">
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden hidden"></div>
+
+  <!-- Sidebar Navigation -->
+  <aside id="appSidebar" class="app-sidebar fixed lg:sticky top-0 left-0 bottom-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col h-screen flex-shrink-0 transition-transform duration-300 -translate-x-full lg:translate-x-0 shadow-lg lg:shadow-none">
+    
+    <!-- Sidebar Brand Logo Header -->
+    <div class="h-16 px-5 flex items-center justify-between border-b border-slate-100 shrink-0">
+      <a href="job-by-area.html" class="flex items-center gap-2.5">
+        <img src="assets/logo.png" alt="WorkWize Logo" class="h-8 w-auto object-contain">
+      </a>
+      <button type="button" id="closeSidebarBtn" class="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
+    </div>
+
+    <!-- Property Selector Dropdown Card -->
+    <div class="p-3 border-b border-slate-100 shrink-0">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1 flex items-center justify-between">
+        <span>Current Property</span>
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      </div>
+      <div class="relative header-property-selector" id="headerPropertyDropdownContainer">
+        <button id="headerPropertyDropdownBtn" type="button" class="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-all shadow-2xs">
+          <div class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-hotel text-blue-600 text-xs shrink-0"></i>
+            <span id="headerCurrentPropertyName" class="truncate font-bold text-slate-800">Loading Property...</span>
+          </div>
+          <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 shrink-0 ml-1"></i>
+        </button>
+        <div id="headerPropertyMenu" class="hidden absolute left-0 right-0 top-full mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs text-slate-700 max-h-72 overflow-y-auto">
+          <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <span>Select Property</span>
+            <i class="fa-solid fa-building-circle-check text-blue-500"></i>
+          </div>
+          <div id="headerPropertyList" class="p-1 space-y-1">
+            <!-- Dynamically populated property options -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Menu Items -->
+    <div class="flex-1 overflow-y-auto py-3 px-3 space-y-1" id="tabs">
+      <div class="px-2 pt-1 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Main Navigation</div>
+
+      <a href="dashboard.html" class="tab sidebar-tab" id="headerNavDashboard" data-tab="dashboard">
+        <i class="fa-solid fa-house text-xs w-4 text-center"></i>
+        <span class="truncate">Dashboard</span>
+      </a>
+
+      <a href="job-by-area.html" class="tab sidebar-tab" id="headerNavJobByArea" data-tab="job-by-area">
+        <i class="fa-solid fa-layer-group text-xs w-4 text-center"></i>
+        <span class="truncate">Jobs by Area</span>
+      </a>
+
+      <a href="all-jobs.html" class="tab sidebar-tab" id="headerNavAllJobs" data-tab="all-jobs">
+        <i class="fa-solid fa-list-check text-xs w-4 text-center"></i>
+        <span class="truncate">All Jobs</span>
+        <span id="headerOpenBadge" class="badge ml-auto">0</span>
+      </a>
+
+      <a href="closed-jobs.html" class="tab sidebar-tab on" id="headerNavClosedJobs" data-tab="closed-jobs">
+        <i class="fa-regular fa-circle-check text-xs w-4 text-center"></i>
+        <span class="truncate">Closed Jobs</span>
+        <span id="headerClosedBadge" class="badge ml-auto">0</span>
+      </a>
+
+      <a href="teams.html" class="tab sidebar-tab" id="headerNavTeams" data-tab="teams">
+        <i class="fa-solid fa-users-gear text-xs w-4 text-center"></i>
+        <span class="truncate">Teams</span>
+      </a>
+
+      <div class="pt-3 pb-1.5 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Analytics</div>
+
+      <a href="opro-dashboard.html" class="tab sidebar-tab" id="headerNavOproDashboard" data-tab="opro-dashboard">
+        <i class="fa-solid fa-chart-pie text-xs w-4 text-center text-indigo-500"></i>
+        <span class="truncate">OPRO Dashboard</span>
+      </a>
+    </div>
+
+    <!-- Sidebar Bottom / User Profile & Logout -->
+    <div class="p-3 border-t border-slate-100 shrink-0 bg-slate-50/60">
+      <div class="relative">
+        <button id="userProfileBtn" type="button" class="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-white hover:shadow-xs transition-all text-left">
+          <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs uppercase shrink-0" id="headerUserAvatar">
+            <i class="fa-regular fa-user"></i>
+          </div>
+          <div class="text-left leading-tight min-w-0 flex-1">
+            <span class="text-xs font-bold text-slate-800 block truncate header-user-display-name">IT [App admin]</span>
+            <span class="text-[10px] text-slate-400 font-medium block truncate header-user-display-role">it@workwise.in</span>
+          </div>
+          <i class="fa-solid fa-chevron-up text-[10px] text-slate-400 shrink-0"></i>
+        </button>
+
+        <div id="userProfileMenu" class="hidden absolute left-0 right-0 bottom-full mb-2 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs text-slate-700 animate-fade-in">
+          <div class="px-3.5 py-2 border-b border-slate-100 font-medium">
+            <p class="text-slate-800 font-semibold header-menu-user-name">IT [App admin]</p>
+            <p class="text-slate-400 text-[11px] truncate header-menu-user-email">it@workwise.in</p>
+          </div>
+          <div class="p-1">
+            <a href="login.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-rose-50 text-rose-600 font-medium transition-colors">
+              <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i> Log Out
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 flex flex-col min-w-0 min-h-screen">
+
+    <!-- Mobile-Only Top Bar with Hamburger -->
+    <div class="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
+      <div class="flex items-center gap-3">
+        <button id="openSidebarBtn" type="button" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
+          <i class="fa-solid fa-bars text-base"></i>
+        </button>
+        <img src="assets/logo.png" alt="WorkWize Logo" class="h-7 w-auto object-contain">
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-slate-700 truncate max-w-[130px]" id="mobileHeaderPropertyName">Loading Property...</span>
+      </div>
+    </div>
+
+    <!-- Page Body -->
+    <main class="p-6 max-w-[100rem] w-full mx-auto space-y-4 sm:space-y-5">
+
+      <!-- Page Title & Header Actions -->
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Closed Jobs</h1>
+          </div>
+          <p class="text-xs text-slate-500 mt-0.5">Archive and history of all completed and resolved work orders</p>
+        </div>
+
+        <!-- Heading Actions: Search Bar + Filter Button + Export Button -->
+        <div class="flex flex-wrap items-center gap-2.5 sm:gap-3">
+          <!-- Search Bar beside Heading -->
+          <div class="relative w-full sm:w-72 md:w-80">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="jobSearchInput" placeholder="Search by ID, villa, details, location..." class="w-full text-xs bg-white border border-slate-200 rounded-xl pl-9 pr-3 py-2 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 shadow-sm transition-all">
+          </div>
+
+          <!-- Filter Button (Opens offcanvas sidebar) -->
+          <button type="button" id="filterToggleBtn" class="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-100">
+            <i class="fa-solid fa-sliders text-blue-600 text-xs"></i>
+            <span>Filter</span>
+            <span id="activeFilterBadge" class="hidden px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-blue-600 text-white leading-none">0</span>
+          </button>
+
+          <!-- Export Button -->
+          <button id="exportJobsBtn" class="btn-outline text-xs !py-2 !px-3.5 rounded-xl shadow-sm flex items-center gap-1.5" title="Export Closed Jobs to CSV">
+            <i class="fa-solid fa-arrow-up-from-bracket text-xs text-slate-500"></i>
+            <span>Export</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Bulk Actions Bar (Appears when rows are selected) -->
+      <div id="bulkActionBar" class="hidden bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-lg flex items-center justify-between text-xs animate-fade-in">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center font-bold text-[10px]" id="selectedCountSpan">0</span>
+          <span>closed jobs selected</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="exportJobsToCSV()" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-white transition-colors">
+            <i class="fa-solid fa-file-export mr-1"></i> Export Selected
+          </button>
+          <button onclick="document.getElementById('selectAllCheckbox').click()" class="px-3 py-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white transition-colors">
+            Deselect All
+          </button>
+        </div>
+      </div>
+
+      <!-- Closed Jobs TABLE VIEW (Exact 15 Headings from taskmaster prop-jobTrackerDataTable) -->
+      <div class="ww-card overflow-hidden !p-0 flex flex-col shadow-sm border border-slate-200/80 rounded-2xl bg-white">
+        <div class="table-scroll-container overflow-x-auto overflow-y-auto max-h-[calc(100vh-275px)] min-h-[380px]">
+          <table class="ww-table text-[11px] whitespace-nowrap">
+            <thead class="sticky top-0 bg-slate-50 z-10 border-b border-slate-200">
+              <tr>
+                <th style="width: 40px;">
+                  <input type="checkbox" id="selectAllCheckbox" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer">
+                </th>
+                <th style="min-width: 140px;">Job ID</th>
+                <th style="min-width: 90px;" id="closedJobsVillaColHeader">Villa</th>
+                <th style="min-width: 240px;">Job Details</th>
+                <th style="min-width: 135px;" class="cursor-pointer hover:text-blue-600 select-none" onclick="toggleSort('createdOn')" title="Click to sort by Create Date">
+                  Create Date <i id="sortIcon_createdOn" class="fa-solid fa-sort ml-1 text-slate-400"></i>
+                </th>
+                <th style="min-width: 140px;">Location</th>
+                <th style="min-width: 100px;">Priority</th>
+                <th style="min-width: 120px;">Status</th>
+                <th style="min-width: 110px;">Ref No</th>
+                <th style="min-width: 150px;">Assigned To</th>
+                <th style="min-width: 135px;" class="cursor-pointer hover:text-blue-600 select-none" onclick="toggleSort('closeDate')" title="Click to sort by Closed Date">
+                  Closed Date <i id="sortIcon_closeDate" class="fa-solid fa-arrow-down-short-wide ml-1 text-emerald-600"></i>
+                </th>
+                <th style="min-width: 110px;" class="text-center">Attachments</th>
+                <th style="min-width: 100px;" class="text-center">Comments</th>
+                <th style="min-width: 140px;">Created By</th>
+                <th style="min-width: 130px;">Property</th>
+                <th style="min-width: 165px;" class="cursor-pointer hover:text-blue-600 select-none" onclick="toggleSort('expectedCompletion')" title="Click to sort by Expected Completion Date">
+                  Expected Completion Date <i id="sortIcon_expectedCompletion" class="fa-solid fa-sort ml-1 text-slate-400"></i>
+                </th>
+                <th style="min-width: 80px;" class="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="closedJobsTableBody">
+              <!-- Dynamically populated via closed-jobs.js -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination & Counter Footer -->
+        <div class="pagination-footer border-t border-slate-200 bg-white px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="pagination-counter flex items-center gap-2 text-xs text-slate-500 font-medium">
+            <i class="fa-regular fa-circle-check text-emerald-500 text-xs"></i>
+            <span id="jobsCounterText">Loading closed jobs...</span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5 text-xs text-slate-500">
+              <span class="text-[11px] font-medium text-slate-400">Rows:</span>
+              <select id="pageSizeSelect" class="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:bg-white focus:border-blue-500 transition-colors cursor-pointer">
+                <option value="10">10</option>
+                <option value="12" selected>12</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+            <div class="pagination-container" id="jobsPagination">
+              <!-- Dynamically populated pagination buttons -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Filter Sidebar Drawer & Backdrop -->
+  <div id="filterSidebarBackdrop" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 transition-opacity duration-300 opacity-0 pointer-events-none"></div>
+
+  <aside id="filterSidebar" class="fixed top-0 right-0 bottom-0 w-full sm:w-[420px] bg-white z-50 shadow-2xl flex flex-col transform translate-x-full transition-transform duration-300 ease-in-out border-l border-slate-200">
+    <!-- Sidebar Header -->
+    <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm shadow-sm border border-emerald-100">
+          <i class="fa-solid fa-sliders"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 text-sm">Filter Closed Jobs</h3>
+          <p class="text-[11px] text-slate-400">Refine by priority, assignee, closed date & area</p>
+        </div>
+      </div>
+      <button type="button" id="closeFilterSidebarBtn" class="w-8 h-8 rounded-lg hover:bg-slate-200/70 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Sidebar Scrollable Body -->
+    <div class="flex-1 overflow-y-auto p-6 space-y-5">
+      <!-- Priority Filter -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-flag text-amber-500 text-[10px]"></i>
+          <span>Priority</span>
+        </label>
+        <select id="filterPriority" class="w-full text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium transition-all">
+          <option value="">Priority: All</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+          <option value="Safety">Safety</option>
+        </select>
+      </div>
+
+      <!-- Area Filter -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-layer-group text-blue-500 text-[10px]"></i>
+          <span>Area / Department</span>
+        </label>
+        <select id="filterArea" class="w-full text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium transition-all">
+          <option value="">Area: All Areas</option>
+        </select>
+      </div>
+
+      <!-- Location Filter -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-location-dot text-rose-500 text-[10px]"></i>
+          <span>Location</span>
+        </label>
+        <select id="filterLocation" class="w-full text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium transition-all">
+          <option value="">Location: All Locations</option>
+        </select>
+      </div>
+
+      <!-- Assigned To Filter -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-user-gear text-indigo-500 text-[10px]"></i>
+          <span>Assigned To</span>
+        </label>
+        <select id="filterAssignedTo" class="w-full text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium transition-all">
+          <option value="">Assigned: All</option>
+        </select>
+      </div>
+
+      <!-- Date Span / Closed Date Filter -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-calendar-days text-emerald-500 text-[10px]"></i>
+          <span>Closed Date / Span</span>
+        </label>
+        <select id="filterDateSpan" class="w-full text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium transition-all">
+          <option value="">Date: All Closed Dates</option>
+          <option value="d30">Within 30 Days</option>
+          <option value="d60">31 to 89 Days</option>
+          <option value="d90">90+ Days Ago</option>
+        </select>
+      </div>
+
+      <!-- Date Sort Order Filter -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-arrow-down-up-across-line text-purple-500 text-[10px]"></i>
+          <span>Sort By Date Order</span>
+        </label>
+        <select id="filterSortOrder" class="w-full text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium transition-all">
+          <option value="desc" selected>Newest to Oldest (Descending)</option>
+          <option value="asc">Oldest to Newest (Ascending)</option>
+        </select>
+      </div>
+
+      <!-- Property Filter (if applicable) -->
+      <div>
+        <label class="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+          <i class="fa-solid fa-hotel text-blue-500 text-[10px]"></i>
+          <span>Property</span>
+        </label>
+        <select id="filterProperty" class="w-full text-xs bg-slate-50 hover:bg-white border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium transition-all">
+          <option value="">Property: Current Property</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Sidebar Footer Actions -->
+    <div class="p-6 border-t border-slate-100 flex items-center gap-3 bg-slate-50/70">
+      <button type="button" id="clearFiltersBtn" class="flex-1 btn-outline text-xs !py-2.5">
+        <i class="fa-solid fa-rotate-left mr-1.5"></i> Reset All
+      </button>
+      <button type="button" id="applyFilterBtn" class="flex-1 btn-primary text-xs !py-2.5">
+        <i class="fa-solid fa-check mr-1.5"></i> Apply Filters
+      </button>
+    </div>
+  </aside>
+
+  <!-- Add Job Modal (Standard) -->
+  <div id="addJobModal" class="modal-backdrop hidden">
+    <div class="modal-content max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-scale-up">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-base shadow-sm border border-blue-100">
+            <i class="fa-solid fa-file-circle-plus"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-base">Create New Job Order</h3>
+            <p class="text-xs text-slate-400">Fill details and upload documentation to submit job</p>
+          </div>
+        </div>
+        <button id="closeJobModalBtn" class="w-8 h-8 rounded-lg hover:bg-slate-200/60 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body Form -->
+      <form id="addJobForm" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Operational Area *</label>
+            <select id="modalArea" required class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium">
+              <option value="">Select Area</option>
+            </select>
+          </div>
+          <div id="modalVillaFieldContainer">
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Room / Villa Number</label>
+            <input type="text" id="modalVilla" placeholder="e.g. Villa 104" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Priority Level *</label>
+            <select id="modalPriority" required class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-medium">
+              <option value="Medium" selected>Medium Priority</option>
+              <option value="High">High Priority</option>
+              <option value="Low">Low Priority</option>
+              <option value="Safety">Safety Critical</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Specific Location</label>
+            <input type="text" id="modalLocation" placeholder="e.g. Master Bedroom, Deck" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
+          </div>
+        </div>
+
+        <!-- Issue Details & Description -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Issue Description *</label>
+          <textarea id="modalDetails" rows="3" required placeholder="Describe the fault or maintenance request in detail..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 outline-none focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100"></textarea>
+        </div>
+
+        <!-- Assign To Team / Supervisors (Checkbox List) -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Assign To Team / Staff</label>
+          <div id="modalAssigneeContainer" class="border border-slate-200 rounded-xl p-2.5 max-h-36 overflow-y-auto space-y-1.5 bg-slate-50/50">
+            <p class="text-[11px] text-slate-400">Loading assignees...</p>
+          </div>
+        </div>
+
+        <!-- Documentation & Photos -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Documentation & Photos</label>
+          <div id="dropZone" class="border-2 border-dashed border-slate-200 hover:border-blue-400 rounded-xl p-5 text-center cursor-pointer transition-colors bg-slate-50/40">
+            <input type="file" id="modalJobFiles" multiple class="hidden">
+            <div class="w-9 h-9 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2 text-sm">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <p class="text-xs font-semibold text-slate-700">Drag & drop files here or <span class="text-blue-600 underline">click to upload</span></p>
+            <p class="text-[10px] text-slate-400 mt-1">All file types supported (Images, Videos, PDFs, Word, Excel, ZIP) up to 5MB</p>
+          </div>
+          <div id="uploadedFileList" class="space-y-2 mt-2"></div>
+        </div>
+      </form>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl">
+        <button id="cancelJobModalBtn" class="btn-outline text-xs">Cancel</button>
+        <button id="nextJobModalBtn" class="btn-primary text-xs">
+          <i class="fa-solid fa-paper-plane text-xs mr-1.5"></i> Submit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/closed-jobs.js"></script>
+</body>
+</html>
