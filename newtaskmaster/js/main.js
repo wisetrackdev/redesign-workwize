@@ -6,12 +6,30 @@ document.addEventListener("DOMContentLoaded", function () {
   initMobileSidebar();
   initActiveSidebarLink();
   initSidebarToggle();
+  initTableRowHighlight();
   initTopHeaderSearch();
   initPropertyDropdown();
   initAddJobModal();
   initUserDropdown();
   initHeaderNavAndBadges();
 });
+
+// Row click highlight for all tables across the application
+function initTableRowHighlight() {
+  document.addEventListener("click", function (e) {
+    const row = e.target.closest("tbody tr");
+    if (!row) return;
+    // Don't override if user clicked an interactive control directly
+    if (e.target.closest("a, button, input, select, textarea, .dropdown-menu, .row-checkbox")) return;
+
+    const tbody = row.closest("tbody");
+    if (tbody) {
+      tbody.querySelectorAll("tr").forEach(r => r.classList.remove("table-row-selected"));
+    }
+    row.classList.add("table-row-selected");
+  });
+}
+window.initTableRowHighlight = initTableRowHighlight;
 
 // Safe HTML escaping helper
 function escapeHtml(str) {

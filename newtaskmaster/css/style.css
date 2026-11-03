@@ -905,13 +905,19 @@ thead th {
   text-decoration: none !important;
 }
 
-.sidebar-tab.on {
-  background-color: #4058A6 !important;
+.sidebar-tab.on,
+.sidebar-tab.active,
+.tab.on,
+.tab.active {
+  background-color: #1a68ff !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(64, 88, 166, 0.25) !important;
+  box-shadow: 0 4px 14px rgba(26, 104, 255, 0.35) !important;
 }
 
-.sidebar-tab.on i {
+.sidebar-tab.on i,
+.sidebar-tab.active i,
+.tab.on i,
+.tab.active i {
   color: #ffffff !important;
 }
 
@@ -931,8 +937,21 @@ thead th {
   box-shadow: none !important;
 }
 
-.sidebar-tab.on .badge {
+.sidebar-tab.on .badge,
+.sidebar-tab.active .badge,
+.tab.on .badge,
+.tab.active .badge {
   background: rgba(255, 255, 255, 0.25) !important;
   color: #ffffff !important;
   box-shadow: none !important;
+}
+
+/* Clickable Table Row Highlight */
+tbody tr.table-row-selected {
+  background-color: #dbeafe !important;
+  border-left: 4px solid #1a68ff !important;
+}
+
+tbody tr.table-row-selected td {
+  background-color: #dbeafe !important;
 }

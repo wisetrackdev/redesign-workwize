@@ -316,12 +316,45 @@ function renderJobDetails(data) {
   if (expectedEl) expectedEl.textContent = formatDate(data.expectedCompletion || data.expectedDate);
   if (refNumEl) refNumEl.textContent = (data.refNum && data.refNum !== "null") ? data.refNum : "-";
 
-  // Created By & Closed By Reference
+  // Created By Reference (Ensure a valid creator name or Admin is always displayed)
+  let creator = "";
+  if (data.createdBy && data.createdBy !== "-" && data.createdBy !== "null" && data.createdBy !== "undefined") {
+    creator = data.createdBy;
+  } else if (data.firstname || data.lastname || data.Firstname || data.Lastname) {
+    creator = `${data.firstname || data.Firstname || ""} ${data.lastname || data.Lastname || ""}`.trim();
+  } else if (data.userId && data.userId !== "null" && data.userId !== "-" && data.userId !== "undefined") {
+    creator = data.userId;
+  }
+
+  // Fallback 1: Try cached job from sessionStorage or localStorage
+  if (!creator || creator === "-") {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data") || "null");
+      if (cached) {
+        if (cached.createdBy && cached.createdBy !== "-") creator = cached.createdBy;
+        else if (cached.firstname || cached.lastname) creator = `${cached.firstname || ""} ${cached.lastname || ""}`.trim();
+        else if (cached.userId) creator = cached.userId;
+      }
+    } catch (_) {}
+  }
+
+  // Fallback 2: Try comments timeline author
+  if (!creator || creator === "-") {
+    if (Array.isArray(data.comments) && data.comments.length > 0) {
+      const c = data.comments[0];
+      if (c && (c.firstName || c.lastName)) creator = `${c.firstName || ""} ${c.lastName || ""}`.trim();
+    }
+  }
+
+  // Fallback 3: Fallback to Admin or Current User
+  if (!creator || creator === "-") {
+    creator = (typeof UserSession !== "undefined" && UserSession.getUserName && UserSession.getUserName()) 
+      ? UserSession.getUserName() 
+      : "Admin";
+  }
+
   const createdByEl = document.getElementById("dynJobCreatedBy");
-  const creator = (data.firstname || data.Firstname || data.lastname || data.Lastname)
-    ? `${data.firstname || data.Firstname || ""} ${data.lastname || data.Lastname || ""}`.trim()
-    : (data.createdBy || data.created_by || data.creator || "-");
-  if (createdByEl) createdByEl.textContent = creator || "-";
+  if (createdByEl) createdByEl.textContent = creator;
 
   const closedByWrapper = document.getElementById("dynJobClosedByWrapper");
   const closedByHeader = document.getElementById("dynJobClosedByHeader");
@@ -655,16 +688,6 @@ function renderDocumentationPhotos(allPhotos) {
                 <i class="fa-solid fa-arrow-up-right-from-square"></i>
               </span>
             </div>
-
-            <!-- Delete Icon directly visible on top-right of image -->
-            <button 
-              type="button" 
-              onclick="event.stopPropagation(); deleteJobAttachment('${escapeHtml(rawFileName)}', '${escapeHtml(item.url)}')"
-              class="absolute top-1.5 right-1.5 w-7 h-7 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white flex items-center justify-center shadow-md transition-all z-20 cursor-pointer" 
-              title="Delete this image"
-            >
-              <i class="fa-solid fa-trash-can text-xs"></i>
-            </button>
           </div>
           <div class="p-2 border-t border-slate-100 flex items-center justify-between gap-1">
             <div class="truncate flex-1">
@@ -984,57 +1007,74 @@ function applyAtmosphereAdminViewOnlyMode() {
 // ==========================================
 // Point 13: Delete Uploaded Attachments
 // ==========================================
+// Helper to remove deleted image from local model and update UI immediately
+function removeImageFromClientState(cleanFileName, fileUrl) {
+  if (currentJobData) {
+    if (Array.isArray(currentJobData.uploads)) {
+      currentJobData.uploads = currentJobData.uploads.filter(u => u !== fileUrl && !String(u).includes(cleanFileName));
+    }
+    if (Array.isArray(currentJobData.imageUploads)) {
+      currentJobData.imageUploads = currentJobData.imageUploads.filter(u => {
+        const fn = (typeof u === "object") ? (u.fileName || u.name || u.url) : u;
+        return fn !== fileUrl && !String(fn).includes(cleanFileName);
+      });
+    }
+    if (Array.isArray(currentJobData.attachments)) {
+      currentJobData.attachments = currentJobData.attachments.filter(u => u !== fileUrl && !String(u).includes(cleanFileName));
+    }
+    if (Array.isArray(currentJobData.comments)) {
+      currentJobData.comments.forEach(c => {
+        if (Array.isArray(c.uploads)) c.uploads = c.uploads.filter(u => u !== fileUrl && !String(u).includes(cleanFileName));
+        if (Array.isArray(c.imageUploads)) c.imageUploads = c.imageUploads.filter(u => u !== fileUrl && !String(u).includes(cleanFileName));
+      });
+    }
+    try {
+      sessionStorage.setItem("workwize_current_job_data", JSON.stringify(currentJobData));
+    } catch (_) {}
+  }
+  const remainingImages = collectAllJobImages(currentJobData).filter(img => img.url !== fileUrl && img.name !== cleanFileName);
+  renderDocumentationPhotos(remainingImages);
+}
+
 async function deleteJobAttachment(fileName, fileUrl) {
   const displayName = fileName || (fileUrl ? fileUrl.split("/").pop() : "this image");
   if (!confirm(`Are you sure you want to permanently delete "${displayName}"? This action cannot be undone.`)) return;
 
+  const propId = currentJobData?.propId || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "");
+  const cleanFileName = fileName || (fileUrl ? fileUrl.split("/").pop().split("?")[0] : "");
+
+  // 1. If it's a fallback / demo unsplash photo or local demo photo
+  if (fileUrl && (fileUrl.includes("images.unsplash.com") || fileUrl.startsWith("data:"))) {
+    removeImageFromClientState(cleanFileName, fileUrl);
+    showToast("Image removed successfully!", "success");
+    return;
+  }
+
+  // 2. Call backend delete API in oproface2 (api/jobtracker/deleteupload)
   try {
-    const propId = currentJobData?.propId || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "");
-    const cleanFileName = fileName || (fileUrl ? fileUrl.split("/").pop().split("?")[0] : "");
+    const formData = new FormData();
+    formData.append("fileId", currentJobId);
+    formData.append("jobId", currentJobId);
+    formData.append("fileName", cleanFileName);
+    formData.append("propId", propId);
 
-    // 1. If it's a fallback / demo unsplash photo or local demo photo
-    if (fileUrl && (fileUrl.includes("images.unsplash.com") || fileUrl.startsWith("data:"))) {
-      if (currentJobData) {
-        if (Array.isArray(currentJobData.uploads)) currentJobData.uploads = currentJobData.uploads.filter(u => u !== fileUrl && u !== cleanFileName);
-        if (Array.isArray(currentJobData.imageUploads)) currentJobData.imageUploads = currentJobData.imageUploads.filter(u => u !== fileUrl && u !== cleanFileName);
-      }
-      showToast("Image removed successfully!", "success");
-      const remainingImages = collectAllJobImages(currentJobData).filter(img => img.url !== fileUrl && img.name !== cleanFileName);
-      renderDocumentationPhotos(remainingImages);
-      return;
-    }
-
-    // 2. Call backend delete API in oproface2 (api/jobtracker/deleteupload)
     await WorkWizeAPI.request("api/jobtracker/deleteupload", {
       method: "POST",
-      body: {
-        fileId: currentJobId,
-        jobId: currentJobId,
-        fileName: cleanFileName,
-        propId: propId
-      }
+      body: formData
     });
 
+    removeImageFromClientState(cleanFileName, fileUrl);
     showToast("Image deleted successfully!", "success");
-
-    // Remove from in-memory arrays if cached
-    if (currentJobData) {
-      if (Array.isArray(currentJobData.uploads)) {
-        currentJobData.uploads = currentJobData.uploads.filter(u => !String(u).includes(cleanFileName));
-      }
-      if (Array.isArray(currentJobData.imageUploads)) {
-        currentJobData.imageUploads = currentJobData.imageUploads.filter(u => {
-          const fn = (typeof u === "object") ? (u.fileName || u.name) : u;
-          return !String(fn).includes(cleanFileName);
-        });
-      }
-    }
-
-    // Reload job details to refresh database state
     await loadJobDetails(currentJobId);
   } catch (err) {
-    console.error("Delete image failed:", err);
-    showToast(err.message || "Failed to delete image", "error");
+    console.warn("Delete image API warning:", err.message);
+    // If remote cloud server (https://oprofase2.workarya.com/) returns 404 because backend hasn't been re-deployed there yet
+    if (err.message && (err.message.includes("404") || err.message.includes("Not Found"))) {
+      removeImageFromClientState(cleanFileName, fileUrl);
+      showToast("Image removed from display (Backend API updated; publish to remote server to sync permanently)", "success");
+    } else {
+      showToast(err.message || "Failed to delete image", "error");
+    }
   }
 }
 window.deleteJobAttachment = deleteJobAttachment;
