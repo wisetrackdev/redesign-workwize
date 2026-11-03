@@ -1078,7 +1078,7 @@ function renderAreaModalRows(jobs) {
   if (!jobs || jobs.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="15" class="py-12 text-center text-slate-400 text-xs">
+        <td colspan="11" class="py-12 text-center text-slate-400 text-xs">
           <i class="fa-regular fa-folder-open text-2xl text-slate-300 mb-2 block"></i>
           <span>No jobs found for this selection.</span>
         </td>
@@ -1122,10 +1122,8 @@ function renderAreaModalRows(jobs) {
       assignedText = j.assignedTo;
     }
 
-    const createdByText = `${j.firstname || ""} ${j.lastname || ""}`.trim() || "-";
     const attachmentsCount = j.uploadCount !== undefined ? j.uploadCount : (Array.isArray(j.imageUploads) ? j.imageUploads.length : 0);
     const commentsCount = j.commentCount !== undefined ? j.commentCount : (Array.isArray(j.comments) ? j.comments.length : 0);
-    const propDisplay = j.propName || WorkWizeAPI.getCurrentPropertyName() || "-";
     const detailText = j.jobDetail || j.details || j.title || "";
 
     return `
@@ -1171,26 +1169,39 @@ function renderAreaModalRows(jobs) {
         <td>
           <span class="badge-status ${statusCls}">${normStatus}</span>
         </td>
-        <!-- 8. REF NO -->
-        <td class="text-slate-600 font-mono text-[10px]">${(j.refNum && j.refNum !== 'null') ? j.refNum : (j.refNo || '<span class="text-slate-300">-</span>')}</td>
-        <!-- 9. ASSIGNED TO -->
-        <td class="text-slate-700">${assignedText}</td>
-        <!-- 10. CLOSED DATE -->
-        <td class="text-slate-500">${formatDateStr(j.jobCloseOn || j.closedOn)}</td>
-        <!-- 11. ATTACHMENTS -->
+        <!-- 8. ASSIGNED TO -->
+        <td class="text-slate-700 whitespace-nowrap">
+          <div class="flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
+              ${(assignedText || "IT").slice(0, 2).toUpperCase()}
+            </span>
+            <span>${assignedText}</span>
+          </div>
+        </td>
+        <!-- 9. ATTACHMENTS -->
         <td class="text-center font-semibold text-slate-600">
           <span class="inline-flex items-center gap-1"><i class="fa-regular fa-image text-blue-500"></i> ${attachmentsCount}</span>
         </td>
-        <!-- 12. COMMENTS -->
+        <!-- 10. COMMENTS -->
         <td class="text-center font-semibold text-slate-600">
           <span class="inline-flex items-center gap-1"><i class="fa-regular fa-comment text-slate-400"></i> ${commentsCount}</span>
         </td>
-        <!-- 13. CREATED BY -->
-        <td class="text-slate-600">${createdByText}</td>
-        <!-- 14. PROPERTY -->
-        <td class="text-slate-500">${propDisplay}</td>
-        <!-- 15. EXPECTED COMPLETION DATE -->
-        <td class="text-slate-500">${formatDateStr(j.expectedCompletion || j.expectedDate)}</td>
+        <!-- 11. ACTION -->
+        <td class="text-right">
+          <div class="relative inline-block text-left dropdown-group">
+            <button type="button" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" onclick="toggleRowMenu(this)">
+              <i class="fa-solid fa-ellipsis"></i>
+            </button>
+            <div class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 dropdown-menu">
+              <a href="job-details.html?id=${encodeURIComponent(rawId)}" target="_blank" class="flex items-center px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium transition-colors">
+                <i class="fa-regular fa-eye mr-2 text-blue-600"></i> View Details
+              </a>
+              <a href="job-update.html?id=${encodeURIComponent(rawId)}" target="_blank" class="flex items-center px-3 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-700 font-medium transition-colors">
+                <i class="fa-solid fa-pen-to-square mr-2 text-amber-600"></i> Update Job
+              </a>
+            </div>
+          </div>
+        </td>
       </tr>
     `;
   }).join("");

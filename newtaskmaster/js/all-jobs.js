@@ -151,7 +151,7 @@ async function loadAllJobsFromAPI() {
   if (tbody) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="17" class="py-12 text-center text-slate-400">
+        <td colspan="12" class="py-12 text-center text-slate-400">
           <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
           <p class="text-xs">Fetching job orders from server...</p>
         </td>
@@ -540,7 +540,7 @@ function renderTableRows() {
   if (filteredJobs.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="17" class="py-12 text-center text-slate-400">
+        <td colspan="12" class="py-12 text-center text-slate-400">
           <div class="flex flex-col items-center justify-center gap-3">
             <i class="fa-solid fa-magnifying-glass text-3xl text-slate-300"></i>
             <p class="font-medium text-slate-600">No jobs match your search and filter criteria.</p>
@@ -584,7 +584,7 @@ function renderTableRows() {
       <td class="font-semibold text-slate-800">
         ${job.villaNumber && job.villaNumber !== '-' ? job.villaNumber : '<span class="text-slate-300">-</span>'}
       </td>
-      <!-- Point 3: Interactive Job Details on Hover Preview Card -->
+      <!-- Interactive Job Details on Hover Preview Card -->
       <td class="max-w-[240px] relative group text-slate-700 font-medium">
         <div class="truncate cursor-help flex items-center gap-1.5" title="${escapeHtml(job.details)}">
           <span class="truncate">${escapeHtml(job.details)}</span>
@@ -615,33 +615,28 @@ function renderTableRows() {
           ${job.status}
         </span>
       </td>
-      <td class="text-slate-600 font-mono text-[10px]">${job.refNum || '<span class="text-slate-300">-</span>'}</td>
       <td class="text-slate-700 font-medium whitespace-nowrap">
         <div class="flex items-center gap-1.5">
-          <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
+          <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
             ${(job.assignedTo || "IT").slice(0, 2).toUpperCase()}
           </span>
           <span>${job.assignedTo}</span>
         </div>
       </td>
-      <td class="text-slate-500 whitespace-nowrap">${formatDate(job.closeDate)}</td>
       <td class="text-center font-semibold text-slate-600">
         <span class="inline-flex items-center gap-1"><i class="fa-regular fa-image text-blue-500"></i> ${job.uploadCount}</span>
       </td>
       <td class="text-center font-semibold text-slate-600">
         <span class="inline-flex items-center gap-1"><i class="fa-regular fa-comment text-slate-400"></i> ${job.commentCount}</span>
       </td>
-      <td class="text-slate-600 whitespace-nowrap">${job.createdBy}</td>
-      <td class="text-slate-500 whitespace-nowrap">${job.propName}</td>
-      <td class="text-slate-500 whitespace-nowrap">${formatDate(job.expectedCompletion)}</td>
       <td class="text-right">
         <div class="relative inline-block text-left dropdown-group">
-          <button class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" onclick="toggleJobActionMenu(this)">
+          <button class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" onclick="toggleJobActionMenu(this)">
             <i class="fa-solid fa-ellipsis"></i>
           </button>
           <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-30 text-xs text-slate-700 dropdown-menu">
             <a href="job-details.html?id=${encodeURIComponent(job.rawId || job.id)}" class="flex items-center px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium transition-colors">
-              <i class="fa-regular fa-eye mr-2.5 text-blue-600"></i> View Job
+              <i class="fa-regular fa-eye mr-2.5 text-blue-600"></i> View Details
             </a>
             <a href="job-update.html?id=${encodeURIComponent(job.rawId || job.id)}" class="flex items-center px-3 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-700 font-medium transition-colors">
               <i class="fa-solid fa-pen-to-square mr-2.5 text-amber-600"></i> Update Job
