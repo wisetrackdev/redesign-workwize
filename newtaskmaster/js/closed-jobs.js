@@ -327,7 +327,11 @@ function mapApiJobToModel(job, forceClosed = true) {
     closeDate: closeDate,
     uploadCount: job.uploadCount !== undefined ? job.uploadCount : (job.UploadCount !== undefined ? job.UploadCount : (Array.isArray(job.imageUploads) ? job.imageUploads.length : 0)),
     commentCount: job.commentCount !== undefined ? job.commentCount : (job.CommentCount !== undefined ? job.CommentCount : (Array.isArray(job.comments) ? job.comments.length : 0)),
-    createdBy: `${job.firstname || job.Firstname || ""} ${job.lastname || job.Lastname || ""}`.trim() || "-",
+    createdBy: (job.createdBy && job.createdBy !== "-" && job.createdBy !== "null" && job.createdBy !== "undefined")
+      ? job.createdBy
+      : ((job.firstname || job.Firstname || job.lastname || job.Lastname)
+          ? `${job.firstname || job.Firstname || ""} ${job.lastname || job.Lastname || ""}`.trim()
+          : (job.userId || job.creator || job.created_by || "-")),
     propName: job.propName || job.PropName || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentPropertyName() : "-"),
     area: job.areaName || job.AreaName || job.area || job.Area || "General Area"
   };

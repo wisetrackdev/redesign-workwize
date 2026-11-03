@@ -936,7 +936,10 @@ async function submitJobForm() {
         remarks: remarks,
         jobremark: remarks,
         uploads: uploadedFilePreviews,
-        imageUploads: uploadedFilePreviews
+        imageUploads: uploadedFilePreviews,
+        createdBy: createdBy,
+        userId: createdBy,
+        firstname: createdBy
       };
       WorkWizeDB.addJob(newJobObj);
     }

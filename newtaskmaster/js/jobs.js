@@ -78,6 +78,10 @@ function normalizeJobObject(raw) {
     commentCount: commentCount,
     firstname: firstname,
     lastname: lastname,
+    createdBy: (raw.createdBy && raw.createdBy !== "-" && raw.createdBy !== "null" && raw.createdBy !== "undefined")
+      ? raw.createdBy
+      : ((firstname || lastname) ? `${firstname} ${lastname}`.trim() : (raw.userId || raw.creator || raw.created_by || "-")),
+    userId: raw.userId || raw.createdBy || "",
     propName: propName,
     data1: data1,
     assignedTo: assignedTo,
@@ -1321,7 +1325,9 @@ function exportAreaJobsToCSV() {
     } else if (j.assignedTo) {
       assigned = j.assignedTo;
     }
-    const createdBy = `${j.firstname || ""} ${j.lastname || ""}`.trim() || "-";
+    const createdBy = (j.createdBy && j.createdBy !== "-" && j.createdBy !== "null" && j.createdBy !== "undefined")
+      ? j.createdBy
+      : (`${j.firstname || ""} ${j.lastname || ""}`.trim() || j.userId || "-");
 
     return [
       `"${displayId}"`,

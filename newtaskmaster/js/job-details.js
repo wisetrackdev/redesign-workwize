@@ -99,7 +99,11 @@ async function loadJobDetails(jobId) {
           remarks: localJob.remarks || "",
           teams: localJob.assignedTo ? [localJob.assignedTo] : ["Facilities Team"],
           comments: Array.isArray(localJob.comments) ? localJob.comments : [],
-          uploads: localJob.uploads || localJob.imageUploads || localJob.images || localJob.attachments || localJob.propImages || []
+          uploads: localJob.uploads || localJob.imageUploads || localJob.images || localJob.attachments || localJob.propImages || [],
+          createdBy: localJob.createdBy || localJob.userId || localJob.creator || localJob.firstname || "-",
+          userId: localJob.userId || localJob.createdBy || "",
+          firstname: localJob.firstname || "",
+          lastname: localJob.lastname || ""
         };
         renderJobDetails(currentJobData);
         loaded = true;
@@ -324,16 +328,21 @@ function renderJobDetails(data) {
     creator = `${data.firstname || data.Firstname || ""} ${data.lastname || data.Lastname || ""}`.trim();
   } else if (data.userId && data.userId !== "null" && data.userId !== "-" && data.userId !== "undefined") {
     creator = data.userId;
+  } else if (data.creator && data.creator !== "-" && data.creator !== "null" && data.creator !== "undefined") {
+    creator = data.creator;
+  } else if (data.created_by && data.created_by !== "-" && data.created_by !== "null" && data.created_by !== "undefined") {
+    creator = data.created_by;
   }
 
-  // Fallback 1: Try cached job from sessionStorage or localStorage
+  // Fallback 1: Try cached job from sessionStorage or localStorage (only if matching current job)
   if (!creator || creator === "-") {
     try {
       const cached = JSON.parse(sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data") || "null");
-      if (cached) {
+      if (cached && (cached.id === rawJobId || cached.jobId === rawJobId || cached.orgjobId === rawJobId || cached.rawId === rawJobId)) {
         if (cached.createdBy && cached.createdBy !== "-") creator = cached.createdBy;
         else if (cached.firstname || cached.lastname) creator = `${cached.firstname || ""} ${cached.lastname || ""}`.trim();
         else if (cached.userId) creator = cached.userId;
+        else if (cached.creator) creator = cached.creator;
       }
     } catch (_) {}
   }
@@ -346,11 +355,9 @@ function renderJobDetails(data) {
     }
   }
 
-  // Fallback 3: Fallback to Admin or Current User
+  // Fallback 3: Default to "Admin" if no creator specified in job data (Never use current logged-in user)
   if (!creator || creator === "-") {
-    creator = (typeof UserSession !== "undefined" && UserSession.getUserName && UserSession.getUserName()) 
-      ? UserSession.getUserName() 
-      : "Admin";
+    creator = "Admin";
   }
 
   const createdByEl = document.getElementById("dynJobCreatedBy");

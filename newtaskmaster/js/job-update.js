@@ -210,7 +210,11 @@ async function loadJobForEditing(jobId) {
         finalExp: 0,
         jobDetail: localJob.details || localJob.description || "",
         remarks: localJob.remarks || "",
-        teams: localJob.assignedTo ? [localJob.assignedTo] : ["Facilities Team"]
+        teams: localJob.assignedTo ? [localJob.assignedTo] : ["Facilities Team"],
+        createdBy: localJob.createdBy || localJob.userId || localJob.creator || localJob.firstname || "-",
+        userId: localJob.userId || localJob.createdBy || "",
+        firstname: localJob.firstname || "",
+        lastname: localJob.lastname || ""
       };
       populateEditForm(currentJobData);
       loaded = true;
@@ -390,10 +394,17 @@ function populateEditForm(data) {
     createdDateEl.textContent = rawDate ? formatDate(rawDate) : "-";
   }
   if (createdByEl) {
-    const creator = (data.firstname || data.Firstname || data.lastname || data.Lastname)
-      ? `${data.firstname || data.Firstname || ""} ${data.lastname || data.Lastname || ""}`.trim()
-      : (data.createdBy || data.created_by || data.creator || "-");
-    createdByEl.textContent = creator || "-";
+    let creator = "";
+    if (data.createdBy && data.createdBy !== "-" && data.createdBy !== "null" && data.createdBy !== "undefined") {
+      creator = data.createdBy;
+    } else if (data.firstname || data.lastname || data.Firstname || data.Lastname) {
+      creator = `${data.firstname || data.Firstname || ""} ${data.lastname || data.Lastname || ""}`.trim();
+    } else if (data.userId && data.userId !== "null" && data.userId !== "-" && data.userId !== "undefined") {
+      creator = data.userId;
+    } else if (data.creator || data.created_by) {
+      creator = data.creator || data.created_by;
+    }
+    createdByEl.textContent = creator || "Admin";
   }
 
   // Header badges
