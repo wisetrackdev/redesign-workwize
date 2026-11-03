@@ -323,28 +323,33 @@ function renderJobsByAreaTable(filterQuery = "") {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-blue-50/20 transition-colors";
 
-    const totalBarWidth = Math.max(6, Math.min(100, Math.round(((Number(area.total) || 0) / maxJobsInList) * 100)));
-    const openBarWidth = area.open > 0 ? Math.max(6, Math.min(100, Math.round(((Number(area.open) || 0) / maxJobsInList) * 100))) : 0;
-    const safetyBarWidth = area.safety > 0 ? Math.max(6, Math.min(100, Math.round(((Number(area.safety) || 0) / maxJobsInList) * 100))) : 0;
+    const totalNum = Number(area.total) || 0;
+    const openNum = Number(area.open) || 0;
+    const safetyNum = Number(area.safety) || 0;
+    const resolvedNum = Math.max(0, totalNum - openNum);
+
+    const resolvedPct = totalNum > 0 ? Math.round((resolvedNum / totalNum) * 100) : 100;
+    const openPct = totalNum > 0 ? Math.round((openNum / totalNum) * 100) : 0;
+    const safetyPct = (totalNum > 0 && safetyNum > 0) ? Math.min(100, Math.round((safetyNum / totalNum) * 100)) : 0;
 
     const isLastRows = index >= (filtered.length - 3);
 
     tr.innerHTML = `
       <td class="text-slate-400 font-medium">${index + 1}</td>
       <td class="font-medium text-slate-800">
-        <div class="flex items-center gap-2.5">
-          <span class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs shrink-0 shadow-xs">
+        <div class="flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs shrink-0 shadow-xs">
             <i class="fa-solid ${area.icon}"></i>
           </span>
           <div>
-            <a href="javascript:void(0);" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="hover:text-blue-600 font-bold text-slate-900 transition-colors cursor-pointer" title="Click to view all jobs in ${area.name}">
+            <a href="javascript:void(0);" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="hover:text-blue-600 font-bold text-slate-900 transition-colors cursor-pointer text-xs" title="Click to view all jobs in ${area.name}">
               ${area.name}
             </a>
           </div>
         </div>
       </td>
       <td>
-        <a href="javascript:void(0);" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="font-extrabold text-slate-900 hover:text-blue-600 transition-colors inline-flex items-center gap-1.5" title="View all ${area.total} jobs in ${area.name}">
+        <a href="javascript:void(0);" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="font-extrabold text-slate-900 hover:text-blue-600 transition-colors inline-flex items-center gap-1.5 text-xs" title="View all ${area.total} jobs in ${area.name}">
           <span>${area.total}</span>
           <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-slate-300 hover:text-blue-500"></i>
         </a>
@@ -353,10 +358,10 @@ function renderJobsByAreaTable(filterQuery = "") {
         <!-- Open Count with Interactive Split Button & Age Dropdown -->
         <div class="relative inline-block text-left dropdown-group">
           <div class="inline-flex items-center rounded-lg bg-blue-50 border border-blue-200/80 shadow-xs">
-            <button type="button" class="px-2.5 py-1 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors cursor-pointer" onclick="showAreaOpenJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" title="Click to view all ${area.open} open jobs in ${area.name}">
+            <button type="button" class="px-2 py-0.5 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors cursor-pointer" onclick="showAreaOpenJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" title="Click to view all ${area.open} open jobs in ${area.name}">
               <span>${area.open}</span>
             </button>
-            <button type="button" class="px-1.5 py-1 hover:bg-blue-100 text-blue-500 transition-colors border-l border-blue-200/60 cursor-pointer" onclick="toggleRowMenu(this)" title="View open jobs breakdown by age">
+            <button type="button" class="px-1.5 py-0.5 hover:bg-blue-100 text-blue-500 transition-colors border-l border-blue-200/60 cursor-pointer" onclick="toggleRowMenu(this)" title="View open jobs breakdown by age">
               <i class="fa-solid fa-chevron-down text-[9px]"></i>
             </button>
           </div>
@@ -398,44 +403,24 @@ function renderJobsByAreaTable(filterQuery = "") {
         </div>
       </td>
       <td>
-        <a href="javascript:void(0);" onclick="${area.safety > 0 ? `showAreaSafetyJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')` : 'void(0)'}" class="px-2.5 py-0.5 rounded-full text-xs font-bold transition-all ${area.safety > 0 ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 cursor-pointer' : 'text-slate-400 bg-slate-50 cursor-default'}">
+        <a href="javascript:void(0);" onclick="${area.safety > 0 ? `showAreaSafetyJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')` : 'void(0)'}" class="px-2 py-0.5 rounded-full text-xs font-bold transition-all ${area.safety > 0 ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 cursor-pointer' : 'text-slate-400 bg-slate-50 cursor-default'}">
           ${area.safety}
         </a>
       </td>
-      <td style="min-width: 260px;">
-        <!-- 3 Progress Graph Lines: Total Jobs, Open Jobs, Safety Issues -->
-        <div class="flex flex-col gap-1.5 py-1">
-          <!-- 1. Total Jobs -->
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] font-bold text-slate-600 w-16 shrink-0 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Total
-            </span>
-            <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: ${totalBarWidth}%" title="Total Jobs: ${area.total}"></div>
-            </div>
-            <span class="text-[11px] font-extrabold text-slate-700 w-6 text-right">${area.total}</span>
+      <td style="min-width: 250px;">
+        <!-- Compact Single-Line Multi-Segment Progress Bar -->
+        <div class="flex items-center gap-2.5">
+          <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden flex shadow-2xs" title="Resolved: ${resolvedNum} (${resolvedPct}%) | Open: ${openNum} (${openPct}%) | Safety: ${safetyNum}">
+            <div class="bg-emerald-500 h-full transition-all duration-300" style="width: ${resolvedPct}%"></div>
+            <div class="bg-blue-600 h-full transition-all duration-300" style="width: ${openPct}%"></div>
+            ${safetyNum > 0 ? `<div class="bg-rose-500 h-full transition-all duration-300" style="width: ${safetyPct}%"></div>` : ''}
           </div>
-
-          <!-- 2. Open Jobs -->
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] font-bold text-slate-600 w-16 shrink-0 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span> Open
-            </span>
-            <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="bg-blue-600 h-full rounded-full transition-all duration-300" style="width: ${openBarWidth}%" title="Open Jobs: ${area.open}"></div>
-            </div>
-            <span class="text-[11px] font-extrabold text-blue-600 w-6 text-right">${area.open}</span>
-          </div>
-
-          <!-- 3. Safety Issues -->
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] font-bold text-slate-600 w-16 shrink-0 flex items-center gap-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Safety
-            </span>
-            <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="bg-rose-500 h-full rounded-full transition-all duration-300" style="width: ${safetyBarWidth}%" title="Safety Issues: ${area.safety}"></div>
-            </div>
-            <span class="text-[11px] font-extrabold text-rose-600 w-6 text-right">${area.safety}</span>
+          <span class="text-xs font-extrabold text-emerald-600 shrink-0 w-9 text-right">${resolvedPct}%</span>
+          <div class="flex items-center gap-1.5 shrink-0 text-[10px] font-semibold text-slate-500">
+            <span class="inline-flex items-center gap-0.5 text-emerald-600" title="Resolved"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>${resolvedNum}</span>
+            <span class="text-slate-300">/</span>
+            <span class="inline-flex items-center gap-0.5 text-blue-600" title="Open"><span class="w-1.5 h-1.5 rounded-full bg-blue-600"></span>${openNum}</span>
+            ${safetyNum > 0 ? `<span class="inline-flex items-center gap-0.5 text-rose-600" title="Safety"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>${safetyNum}</span>` : ''}
           </div>
         </div>
       </td>
