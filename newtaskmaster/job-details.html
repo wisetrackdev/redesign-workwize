@@ -156,18 +156,22 @@
 
       <!-- Job Reference Banner -->
       <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-2.5 flex-wrap">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Job Order:</span>
-            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900" id="dynJobOrgId">Loading...</h1>
-            <span id="dynJobActiveBadge" class="badge-status badge-yet-to-commence text-xs font-bold px-3 py-0.5 rounded-full">Open</span>
-            <span id="dynJobStatus" class="badge-status badge-in-progress text-xs font-bold px-3 py-0.5 rounded-full">Yet to Commence</span>
-            <span id="dynJobPriority" class="badge-priority badge-priority-medium text-xs font-bold px-3 py-0.5 rounded-full">Medium</span>
+        <div class="space-y-2">
+          <div class="flex items-center gap-3 flex-wrap">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Job Order:</span>
+            <span class="px-3.5 py-1 bg-blue-600 text-white rounded-xl text-base sm:text-lg font-extrabold tracking-wide shadow-xs inline-flex items-center" id="dynJobOrgId">Loading...</span>
           </div>
-          <p class="text-xs text-slate-500 mt-1 flex items-center gap-2">
-            <span id="dynJobPropName">Property</span> &bull; 
-            <span id="dynJobCreatedOn">Created -</span>
-          </p>
+          <div class="text-xs text-slate-600 flex items-center gap-3 flex-wrap pt-0.5">
+            <span class="inline-flex items-center gap-1.5">
+              <span class="font-bold text-slate-700">Property:</span>
+              <span id="dynJobPropName" class="font-semibold text-slate-900">Property</span>
+            </span>
+            <span class="text-slate-300">&bull;</span>
+            <span class="inline-flex items-center gap-1.5">
+              <span class="font-bold text-slate-700">Created Date:</span>
+              <span id="dynJobCreatedOn" class="font-semibold text-slate-900">Created -</span>
+            </span>
+          </div>
         </div>
 
         <div class="flex items-center gap-2.5 flex-wrap">
@@ -200,113 +204,152 @@
         <span class="px-3 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg uppercase tracking-wider">Completed</span>
       </div>
 
-      <!-- 1. Status & Priority Section -->
-      <div class="ww-card space-y-4">
-        <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
-            <i class="fa-solid fa-arrows-spin"></i>
-          </div>
-          <h3 class="font-bold text-slate-900 text-sm">Status & Priority Settings</h3>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Job Status</label>
-            <div class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
-              <span id="viewJobStatusText" class="text-slate-800 font-bold">Yet to Commence</span>
-              <span id="viewJobStatusBadge" class="badge-status badge-yet-to-commence text-xs font-bold px-3 py-0.5 rounded-full">Yet to Commence</span>
+      <!-- 2-Column Grid Row 1: Location Details (Left) + Status & Priority Settings (Right) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
+        <!-- 1. Location Details -->
+        <div class="ww-card space-y-4 flex flex-col justify-between">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-location-dot"></i>
             </div>
-            <p class="text-[11px] text-slate-400 mt-1">Current operational status of this work order.</p>
+            <h3 class="font-bold text-slate-900 text-sm">Location Details</h3>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Priority Level</label>
-            <div class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
-              <span id="viewJobPriorityText" class="text-slate-800 font-bold">Medium Priority</span>
-              <span id="viewJobPriorityBadge" class="badge-priority badge-priority-medium text-xs font-bold px-3 py-0.5 rounded-full">Medium</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Operational Area</label>
+              <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
+                <i class="fa-solid fa-layer-group text-blue-500"></i>
+                <span id="dynJobAreaName">-</span>
+              </div>
             </div>
-            <p class="text-[11px] text-slate-400 mt-1">Priority assigned for technical dispatch.</p>
-          </div>
-        </div>
-      </div>
 
-      <!-- 2. Operational Assignment & Schedule -->
-      <div class="ww-card space-y-4">
-        <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">
-            <i class="fa-solid fa-users-gear"></i>
-          </div>
-          <h3 class="font-bold text-slate-900 text-sm">Assignment & Timeline</h3>
-        </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Specific Location / Room</label>
+              <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
+                <i class="fa-solid fa-door-open text-slate-400"></i>
+                <span id="dynJobLocation">-</span>
+              </div>
+            </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Assign To</label>
-            <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 min-h-[48px] flex items-center">
-              <div id="dynJobAssignedList" class="flex flex-wrap gap-1.5 items-center w-full">
-                <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold shrink-0">
-                  <i class="fa-solid fa-user-check"></i>
-                </span>
-                <span id="dynJobAssigned" class="truncate">Unassigned</span>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Villa Number</label>
+              <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
+                <i class="fa-solid fa-house-user text-blue-500"></i>
+                <span id="dynJobVillaDisplay">-</span>
               </div>
             </div>
           </div>
+        </div>
 
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Expected Completion Date</label>
-            <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
-              <i class="fa-regular fa-calendar-check text-blue-600"></i>
-              <span id="dynJobExpected">-</span>
+        <!-- 2. Status & Priority Settings -->
+        <div class="ww-card space-y-4 flex flex-col justify-between">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-arrows-spin"></i>
             </div>
+            <h3 class="font-bold text-slate-900 text-sm">Status & Priority Settings</h3>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Reference / Work Order #</label>
-            <div class="w-full text-xs font-mono font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
-              <i class="fa-solid fa-hashtag text-slate-400 text-[10px]"></i>
-              <span id="dynJobRefNum">-</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Job Status</label>
+              <div class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
+                <span id="viewJobStatusText" class="text-slate-800 font-bold">Yet to Commence</span>
+                <span id="viewJobStatusBadge" class="badge-status badge-yet-to-commence text-xs font-bold px-3 py-0.5 rounded-full">Yet to Commence</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Current operational status of this work order.</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Priority Level</label>
+              <div class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between">
+                <span id="viewJobPriorityText" class="text-slate-800 font-bold">Medium Priority</span>
+                <span id="viewJobPriorityBadge" class="badge-priority badge-priority-medium text-xs font-bold px-3 py-0.5 rounded-full">Medium</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Priority assigned for technical dispatch.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 3. Location Details -->
-      <div class="ww-card space-y-4">
-        <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
-            <i class="fa-solid fa-location-dot"></i>
+      <!-- 2-Column Grid Row 2: Assignment & Timeline (Left) + Financial Allocation (Right) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
+        <!-- 3. Assignment & Timeline -->
+        <div class="ww-card space-y-4 flex flex-col justify-between">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-users-gear"></i>
+            </div>
+            <h3 class="font-bold text-slate-900 text-sm">Assignment & Timeline</h3>
           </div>
-          <h3 class="font-bold text-slate-900 text-sm">Location Details</h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Assign To</label>
+              <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 min-h-[48px] flex items-center">
+                <div id="dynJobAssignedList" class="flex flex-wrap gap-1.5 items-center w-full">
+                  <span class="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                    <i class="fa-solid fa-user-check"></i>
+                  </span>
+                  <span id="dynJobAssigned" class="truncate">Unassigned</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Expected Completion</label>
+              <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
+                <i class="fa-regular fa-calendar-check text-blue-600"></i>
+                <span id="dynJobExpected">-</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Reference / Work Order #</label>
+              <div class="w-full text-xs font-mono font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
+                <i class="fa-solid fa-hashtag text-slate-400 text-[10px]"></i>
+                <span id="dynJobRefNum">-</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Operational Area</label>
-            <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
-              <i class="fa-solid fa-layer-group text-blue-500"></i>
-              <span id="dynJobAreaName">-</span>
+        <!-- 4. Financial Allocation -->
+        <div class="ww-card space-y-4 flex flex-col justify-between">
+          <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-dollar-sign"></i>
             </div>
+            <h3 class="font-bold text-slate-900 text-sm">Financial Allocation</h3>
           </div>
 
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Specific Location / Room</label>
-            <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
-              <i class="fa-solid fa-door-open text-slate-400"></i>
-              <span id="dynJobLocation">-</span>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Budget Allocated ($)</label>
+              <div class="w-full text-sm font-extrabold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl p-3" id="dynJobBudget">
+                $0
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Villa Number</label>
-            <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2">
-              <i class="fa-solid fa-house-user text-blue-500"></i>
-              <span id="dynJobVillaDisplay">-</span>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Cost Center</label>
+              <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3" id="dynJobCostCenter">
+                POMEC
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">Final Expense ($)</label>
+              <div class="w-full text-sm font-extrabold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl p-3" id="dynJobFinalExp">
+                $0
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 4. Job Scope & Remarks -->
+      <!-- 5. Job Scope & Remarks -->
       <div class="ww-card space-y-4">
         <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
           <div class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-xs font-bold">
@@ -327,64 +370,6 @@
             <label class="block text-xs font-bold text-slate-700 mb-1.5">Special Remarks / Operational Notes</label>
             <div class="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 min-h-[48px]" id="dynJobRemarks">
               No remarks noted.
-            </div>
-          </div>
-
-          <div id="ownerCommentCard" class="p-4 rounded-xl bg-purple-50/70 border border-purple-200/90 space-y-3">
-            <div class="flex items-center justify-between pb-2 border-b border-purple-200/60">
-              <div class="flex items-center gap-2">
-                <span class="w-6 h-6 rounded-md bg-purple-200/80 text-purple-700 flex items-center justify-center text-xs font-bold">
-                  <i class="fa-solid fa-crown text-[11px]"></i>
-                </span>
-                <h4 class="text-xs font-bold text-purple-900 uppercase tracking-wider">Owner's Comment</h4>
-              </div>
-              <span id="dynOwnerCommentsCount" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">0</span>
-            </div>
-
-            <!-- Owner Comments View Display (shows up to 5 comments, then scrollbar appears) -->
-            <div class="space-y-2 max-h-[350px] overflow-y-auto pr-1" id="dynJobOwnerComment">
-              <div class="w-full text-xs text-purple-950 bg-white/80 border border-purple-200/80 rounded-xl p-3.5 leading-relaxed">
-                <span class="text-slate-400 italic">No owner comment recorded yet.</span>
-              </div>
-            </div>
-
-            <!-- Chronological History List -->
-            <div id="dynOwnerCommentHistoryContainer" class="space-y-2 pt-2 border-t border-purple-200/50 hidden">
-              <span class="text-[10px] font-bold text-purple-800 tracking-wider block uppercase">Previous Comments by Job Owner (History)</span>
-              <div id="dynOwnerCommentHistoryList" class="space-y-2"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 5. Financial Allocation -->
-      <div class="ww-card space-y-4">
-        <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
-            <i class="fa-solid fa-dollar-sign"></i>
-          </div>
-<h3 class="font-bold text-slate-900 text-sm">Financial Allocation</h3>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Budget Allocated ($)</label>
-            <div class="w-full text-sm font-extrabold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl p-3" id="dynJobBudget">
-              $0
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Cost Center</label>
-            <div class="w-full text-xs font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3" id="dynJobCostCenter">
-              POMEC
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-bold text-slate-700 mb-1.5">Final Expense ($)</label>
-            <div class="w-full text-sm font-extrabold text-slate-900 bg-slate-50 border border-slate-200 rounded-xl p-3" id="dynJobFinalExp">
-              $0
             </div>
           </div>
         </div>
@@ -408,7 +393,35 @@
         </div>
       </div>
 
-      <!-- 7. Activity & Updates History -->
+      <!-- 7. Owner's Comment (Separate Dedicated Card Above Activity History) -->
+      <div id="ownerCommentCard" class="ww-card space-y-4 border-purple-200 bg-purple-50/30">
+        <div class="border-b border-purple-200/80 pb-3 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">
+              <i class="fa-solid fa-crown"></i>
+            </div>
+            <h3 class="font-bold text-purple-950 text-sm">Owner's Comment</h3>
+          </div>
+          <span id="dynOwnerCommentsCount" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">0</span>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Owner Comments View Display (shows up to 5 comments, then scrollbar appears) -->
+          <div class="space-y-2 max-h-[350px] overflow-y-auto pr-1" id="dynJobOwnerComment">
+            <div class="w-full text-xs text-purple-950 bg-white border border-purple-200/80 rounded-xl p-3.5 leading-relaxed">
+              <span class="text-slate-400 italic">No owner comment recorded yet.</span>
+            </div>
+          </div>
+
+          <!-- Chronological History List -->
+          <div id="dynOwnerCommentHistoryContainer" class="space-y-2 pt-2 border-t border-purple-200/50 hidden">
+            <span class="text-[10px] font-bold text-purple-800 tracking-wider block uppercase">Previous Comments by Job Owner (History)</span>
+            <div id="dynOwnerCommentHistoryList" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Activity & Updates History -->
       <div class="ww-card space-y-4">
         <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
           <div class="flex items-center gap-2">
