@@ -3,6 +3,7 @@
  */
 
 document.addEventListener("DOMContentLoaded", function () {
+  initMobileSidebar();
   initActiveSidebarLink();
   initSidebarToggle();
   initTopHeaderSearch();
@@ -23,6 +24,33 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 window.escapeHtml = escapeHtml;
+
+// Mobile sidebar drawer open/close
+function initMobileSidebar() {
+  const sidebar = document.getElementById("appSidebar");
+  const backdrop = document.getElementById("sidebarBackdrop");
+  const openBtn = document.getElementById("openSidebarBtn");
+  const closeBtn = document.getElementById("closeSidebarBtn");
+
+  if (!sidebar) return;
+
+  function openSidebar() {
+    sidebar.classList.remove("-translate-x-full");
+    if (backdrop) backdrop.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden", "lg:overflow-auto");
+  }
+
+  function closeSidebar() {
+    sidebar.classList.add("-translate-x-full");
+    if (backdrop) backdrop.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden", "lg:overflow-auto");
+  }
+
+  if (openBtn) openBtn.addEventListener("click", openSidebar);
+  if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
+  if (backdrop) backdrop.addEventListener("click", closeSidebar);
+}
+window.initMobileSidebar = initMobileSidebar;
 
 // Highlight active sidebar item according to URL & on click set active blue
 function initActiveSidebarLink() {
@@ -188,8 +216,12 @@ async function initPropertyDropdown() {
           currentPropId = currentProp.propId;
         }
 
+        const mobileNameSpan = document.getElementById("mobileHeaderPropertyName");
         if (nameSpan && currentProp) {
           nameSpan.textContent = currentProp.propName;
+        }
+        if (mobileNameSpan && currentProp) {
+          mobileNameSpan.textContent = currentProp.propName;
         }
 
         if (listContainer) {
@@ -213,6 +245,7 @@ async function initPropertyDropdown() {
               e.stopPropagation();
               WorkWizeAPI.setCurrentProperty(p.propId, p.propName);
               if (nameSpan) nameSpan.textContent = p.propName;
+              if (mobileNameSpan) mobileNameSpan.textContent = p.propName;
               menu.classList.add("hidden");
 
               // Refresh list rendering with new active state
@@ -228,11 +261,17 @@ async function initPropertyDropdown() {
           });
         }
       } else {
-        if (nameSpan) nameSpan.textContent = WorkWizeAPI.getCurrentPropertyName() || "Main Facility";
+        const fallbackName = WorkWizeAPI.getCurrentPropertyName() || "Main Facility";
+        if (nameSpan) nameSpan.textContent = fallbackName;
+        const mobileNameSpan = document.getElementById("mobileHeaderPropertyName");
+        if (mobileNameSpan) mobileNameSpan.textContent = fallbackName;
       }
     } catch (e) {
       console.warn("Could not load properties for header dropdown:", e);
-      if (nameSpan) nameSpan.textContent = WorkWizeAPI.getCurrentPropertyName() || "Main Facility";
+      const fallbackName = WorkWizeAPI.getCurrentPropertyName() || "Main Facility";
+      if (nameSpan) nameSpan.textContent = fallbackName;
+      const mobileNameSpan = document.getElementById("mobileHeaderPropertyName");
+      if (mobileNameSpan) mobileNameSpan.textContent = fallbackName;
     }
   }
 }
@@ -1104,8 +1143,10 @@ function initHeaderNavAndBadges() {
   const jobByAreaTab = document.getElementById("headerNavJobByArea");
   const allJobsTab = document.getElementById("headerNavAllJobs");
   const closedJobsTab = document.getElementById("headerNavClosedJobs");
+  const teamsTab = document.getElementById("headerNavTeams");
+  const oproTab = document.getElementById("headerNavOproDashboard");
 
-  const tabs = [dashboardTab, jobByAreaTab, allJobsTab, closedJobsTab].filter(Boolean);
+  const tabs = [dashboardTab, jobByAreaTab, allJobsTab, closedJobsTab, teamsTab, oproTab].filter(Boolean);
   tabs.forEach(t => t.classList.remove("on"));
 
   // Highlight active tab according to current page & URL filter
@@ -1113,12 +1154,16 @@ function initHeaderNavAndBadges() {
     if (dashboardTab) dashboardTab.classList.add("on");
   } else if (currentPath === "job-by-area.html" || currentPath === "jobs.html") {
     if (jobByAreaTab) jobByAreaTab.classList.add("on");
-  } else if (currentPath === "all-jobs.html") {
+  } else if (currentPath === "all-jobs.html" || currentPath === "job-details.html" || currentPath === "job-update.html") {
     if (statusParam === "Closed") {
       if (closedJobsTab) closedJobsTab.classList.add("on");
     } else {
       if (allJobsTab) allJobsTab.classList.add("on");
     }
+  } else if (currentPath === "teams.html") {
+    if (teamsTab) teamsTab.classList.add("on");
+  } else if (currentPath === "opro-dashboard.html") {
+    if (oproTab) oproTab.classList.add("on");
   }
 
   // When already on all-jobs.html, allow instant in-page tab switching between All Jobs and Closed Jobs

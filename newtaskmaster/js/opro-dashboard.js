@@ -91,8 +91,10 @@ function selectHeaderProperty(propId, propName) {
   if (typeof WorkWizeAPI !== "undefined") {
     WorkWizeAPI.setCurrentProperty(propId, propName);
   }
-  const nameEl = document.getElementById("headerSelectedPropertyName");
+  const nameEl = document.getElementById("headerSelectedPropertyName") || document.getElementById("headerCurrentPropertyName");
   if (nameEl) nameEl.textContent = propName;
+  const mobileNameEl = document.getElementById("mobileHeaderPropertyName");
+  if (mobileNameEl) mobileNameEl.textContent = propName;
 
   const select = document.getElementById("oproFilterProperty");
   if (select) {

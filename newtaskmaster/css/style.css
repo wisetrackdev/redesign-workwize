@@ -863,3 +863,68 @@ thead th {
   text-transform: capitalize !important;
   letter-spacing: normal !important;
 }
+
+
+/* ==========================================
+   Modern App Sidebar Navigation
+   ========================================== */
+.app-sidebar {
+  background-color: #ffffff;
+  border-right: 1px solid #E2E8F0;
+  box-shadow: 1px 0 12px rgba(15, 23, 42, 0.03);
+}
+
+.sidebar-tab {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 9px 12px !important;
+  border-radius: 10px !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  text-decoration: none !important;
+  transition: all 0.15s ease-in-out !important;
+  width: 100% !important;
+  white-space: nowrap !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.sidebar-tab:hover {
+  color: #1E293B !important;
+  background-color: #F1F5F9 !important;
+  text-decoration: none !important;
+}
+
+.sidebar-tab.on {
+  background-color: #4058A6 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(64, 88, 166, 0.25) !important;
+}
+
+.sidebar-tab.on i {
+  color: #ffffff !important;
+}
+
+.sidebar-tab .badge {
+  margin-left: auto !important;
+  background: #E2E8F0 !important;
+  color: #475569 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  min-width: 22px !important;
+  height: 18px !important;
+  padding: 0 6px !important;
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: none !important;
+}
+
+.sidebar-tab.on .badge {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
