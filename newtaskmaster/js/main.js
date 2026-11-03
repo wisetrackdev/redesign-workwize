@@ -1188,8 +1188,6 @@ function initHeaderNavAndBadges() {
     if (closedJobsTab) closedJobsTab.classList.add("on");
   } else if (currentPath === "all-jobs.html" || currentPath === "job-details.html" || currentPath === "job-update.html") {
     if (allJobsTab) allJobsTab.classList.add("on");
-  } else if (currentPath === "teams.html") {
-    if (teamsTab) teamsTab.classList.add("on");
   } else if (currentPath === "opro-dashboard.html") {
     if (oproTab) oproTab.classList.add("on");
   }

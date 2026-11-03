@@ -8,7 +8,7 @@ let closedJobsStore = [];
 let filteredJobs = [];
 let selectedJobIds = new Set();
 let currentPage = 1;
-let pageSize = 12;
+let pageSize = 25;
 let currentSortField = "closeDate";
 let currentSortOrder = "desc";
 let hasVillas = true;
@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (pageSizeSelect) {
     pageSizeSelect.value = pageSize;
     pageSizeSelect.addEventListener("change", function () {
-      pageSize = parseInt(this.value, 10) || 12;
+      pageSize = parseInt(this.value, 10) || 25;
       currentPage = 1;
       renderTableRows();
       renderPagination();
