@@ -198,8 +198,8 @@ async function loadAllJobsFromAPI() {
       allJobsStore = Array.from(combinedMap.values());
       sortJobsDescending(allJobsStore);
       populateFilterDropdowns();
-      const openCount = allJobsStore.filter(j => j.status !== "Closed").length;
-      const closedCount = allJobsStore.filter(j => j.status === "Closed").length;
+      const openCount = allJobsStore.filter(j => j.status !== "Closed" && !isClosedStatus(j)).length;
+      const closedCount = allJobsStore.filter(j => j.status === "Closed" || isClosedStatus(j)).length;
       if (typeof updateHeaderBadges === "function") updateHeaderBadges(openCount, closedCount);
       filterAndRenderJobs();
       return;
@@ -214,8 +214,8 @@ async function loadAllJobsFromAPI() {
     allJobsStore = localJobs.map(j => mapApiJobToModel(j));
     sortJobsDescending(allJobsStore);
     populateFilterDropdowns();
-    const openCount = allJobsStore.filter(j => j.status !== "Closed").length;
-    const closedCount = allJobsStore.filter(j => j.status === "Closed").length;
+    const openCount = allJobsStore.filter(j => j.status !== "Closed" && !isClosedStatus(j)).length;
+    const closedCount = allJobsStore.filter(j => j.status === "Closed" || isClosedStatus(j)).length;
     if (typeof updateHeaderBadges === "function") updateHeaderBadges(openCount, closedCount);
     filterAndRenderJobs();
     return;
@@ -460,6 +460,9 @@ function filterAndRenderJobs() {
   const now = new Date().getTime();
 
   filteredJobs = allJobsStore.filter(job => {
+    // Exclude closed jobs from All Jobs view (Closed jobs are only shown in closed-jobs.html)
+    if (job.status === "Closed" || isClosedStatus(job)) return false;
+
     const matchSearch = !searchQuery ||
       job.id.toLowerCase().includes(searchQuery) ||
       job.details.toLowerCase().includes(searchQuery) ||

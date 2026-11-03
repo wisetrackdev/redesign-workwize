@@ -130,15 +130,40 @@ function renderJobDetails(data) {
   // 1. Breadcrumbs & Org ID
   const breadcrumbEl = document.getElementById("dynJobBreadcrumbId");
   const orgIdEl = document.getElementById("dynJobOrgId");
+  const backToJobsBtn = document.getElementById("backToJobsBtn");
   if (breadcrumbEl) breadcrumbEl.textContent = displayId;
-  if (orgIdEl) orgIdEl.textContent = displayId;
+  if (orgIdEl) {
+    orgIdEl.textContent = displayId;
+    if (isClosed) {
+      orgIdEl.className = "px-3.5 py-1 bg-emerald-600 text-white rounded-xl text-base sm:text-lg font-extrabold tracking-wide shadow-xs inline-flex items-center";
+    } else {
+      orgIdEl.className = "px-3.5 py-1 bg-blue-600 text-white rounded-xl text-base sm:text-lg font-extrabold tracking-wide shadow-xs inline-flex items-center";
+    }
+  }
 
   // 2. Set Up "Update Job" buttons and store job data for instant edit
   const updateUrl = `job-update.html?id=${encodeURIComponent(rawJobId)}`;
   const heroUpdateBtn = document.getElementById("heroUpdateJobBtn");
   const bottomUpdateBtn = document.getElementById("bottomUpdateJobBtn");
-  if (heroUpdateBtn) heroUpdateBtn.href = updateUrl;
-  if (bottomUpdateBtn) bottomUpdateBtn.href = updateUrl;
+
+  // If job is closed, hide the "Update Job" buttons
+  if (isClosed) {
+    if (heroUpdateBtn) heroUpdateBtn.classList.add("hidden");
+    if (bottomUpdateBtn) bottomUpdateBtn.classList.add("hidden");
+    if (backToJobsBtn) {
+      backToJobsBtn.href = "closed-jobs.html";
+      backToJobsBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Back to Closed Jobs';
+    }
+  } else {
+    if (heroUpdateBtn) {
+      heroUpdateBtn.classList.remove("hidden");
+      heroUpdateBtn.href = updateUrl;
+    }
+    if (bottomUpdateBtn) {
+      bottomUpdateBtn.classList.remove("hidden");
+      bottomUpdateBtn.href = updateUrl;
+    }
+  }
 
   try {
     sessionStorage.setItem("workwize_current_job_data", JSON.stringify(data));
