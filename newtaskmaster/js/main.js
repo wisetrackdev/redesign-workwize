@@ -194,6 +194,13 @@ async function initPropertyDropdown() {
 
     btn.addEventListener("click", function (e) {
       e.stopPropagation();
+      const currentU = (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getStoredUserData === "function")
+        ? WorkWizeAPI.getStoredUserData()
+        : null;
+      const canSwitch = (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.isMultiPropertyUser === "function")
+        ? WorkWizeAPI.isMultiPropertyUser(currentU)
+        : false;
+      if (!canSwitch) return; // Non-admin users cannot open dropdown
       menu.classList.toggle("hidden");
     });
 
@@ -207,6 +214,26 @@ async function initPropertyDropdown() {
   if (typeof WorkWizeAPI !== "undefined") {
     try {
       const properties = await WorkWizeAPI.getAllProperties();
+      const userData = WorkWizeAPI.getStoredUserData();
+      const isMulti = WorkWizeAPI.isMultiPropertyUser(userData);
+      const chevron = btn.querySelector(".fa-chevron-down");
+
+      // UI permissions matching OPRO-FRONTEND:
+      // Admins (SUPERADMIN, ADMIN, OPROADMIN) can view/switch all properties.
+      // Regular staff only see their assigned property and cannot toggle/switch.
+      if (!isMulti || !Array.isArray(properties) || properties.length <= 1) {
+        if (chevron) chevron.style.display = "none";
+        btn.classList.remove("hover:bg-slate-100", "cursor-pointer");
+        btn.classList.add("cursor-default");
+        btn.setAttribute("title", "Assigned property");
+        menu.classList.add("hidden");
+      } else {
+        if (chevron) chevron.style.display = "";
+        btn.classList.add("hover:bg-slate-100", "cursor-pointer");
+        btn.classList.remove("cursor-default");
+        btn.removeAttribute("title");
+      }
+
       if (Array.isArray(properties) && properties.length > 0) {
         let currentPropId = WorkWizeAPI.getCurrentProperty();
         let currentProp = properties.find(p => String(p.propId) === String(currentPropId)) || properties[0];
@@ -226,39 +253,42 @@ async function initPropertyDropdown() {
 
         if (listContainer) {
           listContainer.innerHTML = "";
-          properties.forEach(p => {
-            const isSelected = String(p.propId) === String(currentPropId);
-            const item = document.createElement("button");
-            item.type = "button";
-            item.className = `w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors ${
-              isSelected ? "bg-blue-50 font-bold text-blue-600" : "hover:bg-slate-50 text-slate-700"
-            }`;
-            item.innerHTML = `
-              <span class="truncate flex items-center gap-2">
-                <i class="fa-solid fa-hotel ${isSelected ? 'text-blue-600' : 'text-slate-400'} text-xs"></i>
-                <span class="truncate">${p.propName}</span>
-              </span>
-              ${isSelected ? '<i class="fa-solid fa-circle-check text-blue-600 text-xs"></i>' : ''}
-            `;
+          // Only render property selection list if user is multi-property admin
+          if (isMulti && properties.length > 1) {
+            properties.forEach(p => {
+              const isSelected = String(p.propId) === String(currentPropId);
+              const item = document.createElement("button");
+              item.type = "button";
+              item.className = `w-full text-left px-3 py-2 rounded-lg flex items-center justify-between text-xs transition-colors ${
+                isSelected ? "bg-blue-50 font-bold text-blue-600" : "hover:bg-slate-50 text-slate-700"
+              }`;
+              item.innerHTML = `
+                <span class="truncate flex items-center gap-2">
+                  <i class="fa-solid fa-hotel ${isSelected ? 'text-blue-600' : 'text-slate-400'} text-xs"></i>
+                  <span class="truncate">${escapeHtml(p.propName)}</span>
+                </span>
+                ${isSelected ? '<i class="fa-solid fa-circle-check text-blue-600 text-xs"></i>' : ''}
+              `;
 
-            item.addEventListener("click", function (e) {
-              e.stopPropagation();
-              WorkWizeAPI.setCurrentProperty(p.propId, p.propName);
-              if (nameSpan) nameSpan.textContent = p.propName;
-              if (mobileNameSpan) mobileNameSpan.textContent = p.propName;
-              menu.classList.add("hidden");
+              item.addEventListener("click", function (e) {
+                e.stopPropagation();
+                WorkWizeAPI.setCurrentProperty(p.propId, p.propName);
+                if (nameSpan) nameSpan.textContent = p.propName;
+                if (mobileNameSpan) mobileNameSpan.textContent = p.propName;
+                menu.classList.add("hidden");
 
-              // Refresh list rendering with new active state
-              initPropertyDropdown();
+                // Refresh list rendering with new active state
+                initPropertyDropdown();
 
-              // Notify all pages and modules of property switch
-              window.dispatchEvent(new CustomEvent("workwize:propertyChanged", {
-                detail: { propId: p.propId, propName: p.propName }
-              }));
+                // Notify all pages and modules of property switch
+                window.dispatchEvent(new CustomEvent("workwize:propertyChanged", {
+                  detail: { propId: p.propId, propName: p.propName }
+                }));
+              });
+
+              listContainer.appendChild(item);
             });
-
-            listContainer.appendChild(item);
-          });
+          }
         }
       } else {
         const fallbackName = WorkWizeAPI.getCurrentPropertyName() || "Main Facility";

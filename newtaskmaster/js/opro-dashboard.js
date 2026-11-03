@@ -24,6 +24,9 @@ document.addEventListener("DOMContentLoaded", async function () {
   if (propBtn && propMenu) {
     propBtn.addEventListener("click", (e) => {
       e.stopPropagation();
+      const u = (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getStoredUserData === "function") ? WorkWizeAPI.getStoredUserData() : null;
+      const canSwitch = (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.isMultiPropertyUser === "function") ? WorkWizeAPI.isMultiPropertyUser(u) : false;
+      if (!canSwitch) return;
       propMenu.classList.toggle("hidden");
     });
     document.addEventListener("click", () => propMenu.classList.add("hidden"));
@@ -45,13 +48,19 @@ async function initOproDashboard() {
 
   // Fallback properties if API returned empty
   if (allPropertiesList.length === 0) {
-    allPropertiesList = [
-      { propId: "PROP-001", propName: "Atmosphere Kanifushi" },
-      { propId: "PROP-002", propName: "OBLU SELECT Lobigili" },
-      { propId: "PROP-003", propName: "OBLU XPERIENCE Ailafushi" },
-      { propId: "PROP-004", propName: "OZEN RESERVE BOLIFUSHI" },
-      { propId: "PROP-005", propName: "VARU by Atmosphere" }
-    ];
+    const userData = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getStoredUserData() : null;
+    const isMulti = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.isMultiPropertyUser(userData) : false;
+    if (userData && !isMulti && userData.prop) {
+      allPropertiesList = [{ propId: userData.prop, propName: WorkWizeAPI.getCurrentPropertyName() || "Assigned Property" }];
+    } else {
+      allPropertiesList = [
+        { propId: "PROP-001", propName: "Atmosphere Kanifushi" },
+        { propId: "PROP-002", propName: "OBLU SELECT Lobigili" },
+        { propId: "PROP-003", propName: "OBLU XPERIENCE Ailafushi" },
+        { propId: "PROP-004", propName: "OZEN RESERVE BOLIFUSHI" },
+        { propId: "PROP-005", propName: "VARU by Atmosphere" }
+      ];
+    }
   }
 
   populatePropertyDropdown();
@@ -66,24 +75,56 @@ async function initOproDashboard() {
 function populatePropertyDropdown() {
   const select = document.getElementById("oproFilterProperty");
   const headerList = document.getElementById("headerPropertyList");
+  const propBtn = document.getElementById("headerPropertyDropdownBtn");
+  const chevron = propBtn ? propBtn.querySelector(".fa-chevron-down") : null;
+  const isMulti = (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.isMultiPropertyUser === "function")
+    ? WorkWizeAPI.isMultiPropertyUser()
+    : false;
+
+  if (propBtn) {
+    if (!isMulti || allPropertiesList.length <= 1) {
+      if (chevron) chevron.style.display = "none";
+      propBtn.classList.remove("hover:bg-slate-100", "cursor-pointer");
+      propBtn.classList.add("cursor-default");
+    } else {
+      if (chevron) chevron.style.display = "";
+      propBtn.classList.add("hover:bg-slate-100", "cursor-pointer");
+      propBtn.classList.remove("cursor-default");
+    }
+  }
 
   if (select) {
-    // Keep 'ALL' as first option
-    select.innerHTML = '<option value="ALL">All Properties (Consolidated)</option>';
-    allPropertiesList.forEach(p => {
-      const opt = document.createElement("option");
-      opt.value = p.propId;
-      opt.textContent = p.propName;
-      select.appendChild(opt);
-    });
+    if (isMulti) {
+      // Keep 'ALL' as first option for admins
+      select.innerHTML = '<option value="ALL">All Properties (Consolidated)</option>';
+      allPropertiesList.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.propId;
+        opt.textContent = p.propName;
+        select.appendChild(opt);
+      });
+    } else {
+      select.innerHTML = '';
+      allPropertiesList.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.propId;
+        opt.textContent = p.propName;
+        select.appendChild(opt);
+      });
+      select.disabled = true;
+    }
   }
 
   if (headerList) {
-    headerList.innerHTML = allPropertiesList.map(p => `
-      <button type="button" onclick="selectHeaderProperty('${p.propId}', '${escapeHtml(p.propName)}')" class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between text-xs text-slate-700">
-        <span class="truncate font-medium">${escapeHtml(p.propName)}</span>
-      </button>
-    `).join("");
+    if (isMulti && allPropertiesList.length > 1) {
+      headerList.innerHTML = allPropertiesList.map(p => `
+        <button type="button" onclick="selectHeaderProperty('${p.propId}', '${escapeHtml(p.propName)}')" class="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between text-xs text-slate-700">
+          <span class="truncate font-medium">${escapeHtml(p.propName)}</span>
+        </button>
+      `).join("");
+    } else {
+      headerList.innerHTML = "";
+    }
   }
 }
 

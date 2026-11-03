@@ -31,17 +31,45 @@ const WorkWizeAPI = (function () {
     return data && data.jwt ? data.jwt : "";
   }
 
+  function isMultiPropertyUser(userData) {
+    const u = userData || getStoredUserData();
+    if (!u) return false;
+    let roles = u.role || [];
+    if (!Array.isArray(roles)) roles = [roles];
+    const upperRoles = roles.map(r => String(r).toUpperCase().replace(/\s+/g, "").trim());
+    const desg = String(u.desg || "").toUpperCase().replace(/\s+/g, "").trim();
+    const dept = String(u.department || "").toUpperCase().replace(/\s+/g, "").trim();
+    const adminKeywords = ["SUPERADMIN", "ADMIN", "OPROADMIN"];
+    return upperRoles.some(r => adminKeywords.includes(r)) || adminKeywords.includes(desg) || adminKeywords.includes(dept);
+  }
+
   function getCurrentProperty() {
+    const userData = getStoredUserData();
+    const isMulti = isMultiPropertyUser(userData);
+
+    // If regular user (non-admin), strictly lock property to user's assigned prop
+    if (!isMulti && userData && userData.prop) {
+      return userData.prop;
+    }
+
     const fromStorage = localStorage.getItem("workwize_current_property");
     if (fromStorage) return fromStorage;
 
-    const userData = getStoredUserData();
     if (userData && userData.prop) return userData.prop;
 
     return "PROP-001"; // Fallback default
   }
 
   function setCurrentProperty(propId, propName) {
+    const userData = getStoredUserData();
+    const isMulti = isMultiPropertyUser(userData);
+
+    // If regular user (non-admin), do not allow switching away from assigned property
+    if (!isMulti && userData && userData.prop && String(propId).toLowerCase() !== String(userData.prop).toLowerCase()) {
+      console.warn("User is restricted to assigned property:", userData.prop);
+      return;
+    }
+
     localStorage.setItem("workwize_current_property", propId);
     if (propName) {
       localStorage.setItem("workwize_current_property_name", propName);
@@ -170,14 +198,18 @@ const WorkWizeAPI = (function () {
         email: userEmail,
         role: roles,
         prop: claims.PrimaryProp || "",
-        desg: claims.Designation || "Admin",
+        desg: (claims.Designation && claims.Designation !== "NA") ? claims.Designation : "",
         access: access
       };
 
       localStorage.setItem("oproUserData", JSON.stringify(updatedUserData));
 
+      // Reset stored property on login so new user's assigned property is used
       if (updatedUserData.prop) {
         setCurrentProperty(updatedUserData.prop);
+      } else {
+        localStorage.removeItem("workwize_current_property");
+        localStorage.removeItem("workwize_current_property_name");
       }
 
       return { success: true, user: updatedUserData };
@@ -187,8 +219,34 @@ const WorkWizeAPI = (function () {
   }
 
   // 2. Properties (api/jobtracker/getallproperty)
-  async function getAllProperties() {
-    return await request("api/jobtracker/getallproperty", { method: "GET" });
+  // Mirrors OPRO-FRONTEND role condition:
+  // - SUPERADMIN, ADMIN, OPROADMIN can see and switch to all properties
+  // - Regular users can only see their assigned property (userData.prop)
+  async function getAllProperties(ignoreRole = false) {
+    const allProps = await request("api/jobtracker/getallproperty", { method: "GET" });
+    if (!Array.isArray(allProps)) return [];
+
+    if (ignoreRole) return allProps;
+
+    const userData = getStoredUserData();
+    if (isMultiPropertyUser(userData)) {
+      return allProps;
+    }
+
+    // Regular non-admin user: filter to only their assigned property from login (userData.prop)
+    const userPropId = userData ? (userData.prop || "").trim() : "";
+    if (!userPropId) return allProps;
+
+    const matched = allProps.filter(p => String(p.propId).toLowerCase() === userPropId.toLowerCase());
+    if (matched.length > 0) {
+      localStorage.setItem("workwize_current_property", matched[0].propId);
+      localStorage.setItem("workwize_current_property_name", matched[0].propName);
+      return matched;
+    }
+
+    // Fallback if property ID was not in returned array
+    const storedName = getCurrentPropertyName() || userPropId;
+    return [{ propId: userPropId, propName: storedName }];
   }
 
   // 3. Job Overview by Property (api/jobtracker/getjoboverview)
@@ -355,6 +413,7 @@ const WorkWizeAPI = (function () {
     getCurrentProperty,
     setCurrentProperty,
     getCurrentPropertyName,
+    isMultiPropertyUser,
     parseJwt,
     isLoggedIn,
     logout,
@@ -385,6 +444,9 @@ const UserSession = {
   },
   isLoggedIn: function () {
     return !!this.getUser();
+  },
+  isMultiPropertyUser: function () {
+    return WorkWizeAPI.isMultiPropertyUser(this.getUser());
   },
   getUserEmail: function () {
     const u = this.getUser();
