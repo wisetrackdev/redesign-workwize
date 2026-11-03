@@ -594,9 +594,6 @@ function collectAllJobImages(data) {
   pushItems(data.medias, "Media");
   pushItems(data.images, "Photo");
   pushItems(data.jobImages, "Job Photo");
-  pushItems(data.propImages, "Property Image");
-  pushItems(data.propImg, "Property Image");
-  pushItems(data.collection1, "Property Image");
   pushItems(data.open_uploads, "Inspection Photo");
   pushItems(data.close_uploads, "Completion Photo");
 
@@ -608,33 +605,6 @@ function collectAllJobImages(data) {
       pushItems(c.commentMedia, `Comment_${cIdx + 1}`);
       pushItems(c.data1, `Comment_${cIdx + 1}`);
     });
-  }
-
-  // 3. Fallback: If no photos attached, supply standard documentation photos
-  if (list.length === 0) {
-    const defaultPhotos = [
-      {
-        url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80",
-        name: "Initial_Site_Inspection.jpg",
-        tag: "Inspection"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
-        name: "Work_Area_Overview.jpg",
-        tag: "Overview"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80",
-        name: "Equipment_Check.jpg",
-        tag: "Equipment"
-      },
-      {
-        url: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80",
-        name: "Safety_Documentation.jpg",
-        tag: "Safety"
-      }
-    ];
-    defaultPhotos.forEach(p => list.push(p));
   }
 
   return list;
@@ -666,7 +636,7 @@ function renderDocumentationPhotos(allPhotos) {
       const rawFileName = item.name || "Job_Photo.jpg";
       const cleanFileName = rawFileName.length > 20 ? rawFileName.slice(0, 17) + "..." : rawFileName;
       const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(rawFileName) || 
-                    (item.url && (item.url.startsWith("data:image") || item.url.includes("images.unsplash.com") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(item.url)));
+                    (item.url && (item.url.startsWith("data:image") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(item.url)));
       const isPdf = /\.pdf$/i.test(rawFileName) || (item.url && /\.pdf/i.test(item.url));
 
       return `
@@ -678,7 +648,7 @@ function renderDocumentationPhotos(allPhotos) {
             title="Click to view file: ${escapeHtml(rawFileName)}"
           >
             ${isImg ? `
-              <img src="${escapeHtml(item.url)}" alt="${escapeHtml(cleanFileName)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=500&auto=format&fit=crop&q=60';">
+              <img src="${escapeHtml(item.url)}" alt="${escapeHtml(cleanFileName)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'flex flex-col items-center justify-center text-slate-400 h-full\\'><i class=\\'fa-regular fa-image text-3xl mb-1 text-slate-400\\'></i><span class=\\'text-[10px] text-slate-400\\'>Photo Unavailable</span></div>';">
             ` : isPdf ? `
               <div class="flex flex-col items-center justify-center text-rose-400">
                 <i class="fa-solid fa-file-pdf text-3xl mb-1"></i>
@@ -805,7 +775,7 @@ function openImagePreview(url, title) {
   imgEl.src = url;
   imgEl.onerror = function() {
     this.onerror = null;
-    this.src = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80";
+    this.style.display = "none";
   };
   if (titleEl) titleEl.textContent = title || "Job Photo Preview";
   if (captionEl) captionEl.textContent = title || "WorkWize Attachment";
@@ -1050,8 +1020,8 @@ async function deleteJobAttachment(fileName, fileUrl) {
   const propId = currentJobData?.propId || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "");
   const cleanFileName = fileName || (fileUrl ? fileUrl.split("/").pop().split("?")[0] : "");
 
-  // 1. If it's a fallback / demo unsplash photo or local demo photo
-  if (fileUrl && (fileUrl.includes("images.unsplash.com") || fileUrl.startsWith("data:"))) {
+  // 1. If it's a local demo / data URL photo
+  if (fileUrl && fileUrl.startsWith("data:")) {
     removeImageFromClientState(cleanFileName, fileUrl);
     showToast("Image removed successfully!", "success");
     return;
