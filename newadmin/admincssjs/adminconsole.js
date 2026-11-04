@@ -1644,7 +1644,68 @@ function FilterTeamsByStatus(status) {
   RenderTeamsDataTable(filtered);
 }
 
+function CheckEmployeeTeamAssignments(email) {
+  if (!email) return [];
+  var target = (email || '').toString().trim().toLowerCase();
+  var found = [];
+  var teams = Array.isArray(allTeamsCache) ? allTeamsCache : [];
+
+  teams.forEach(function (team) {
+    var tName = team.teamName || team.teamId || 'Team';
+    var matchedInTeam = false;
+
+    // Check team manager
+    if (team.manager && team.manager.email && team.manager.email.trim().toLowerCase() === target) {
+      matchedInTeam = true;
+    }
+    // Check team members
+    if (!matchedInTeam && Array.isArray(team.members)) {
+      matchedInTeam = team.members.some(function (m) {
+        return m && m.email && m.email.trim().toLowerCase() === target;
+      });
+    }
+    if (matchedInTeam) {
+      found.push('Team: ' + tName);
+    }
+
+    // Check subteams
+    var subList = team.propsubteams || team.subteams || [];
+    if (Array.isArray(subList)) {
+      subList.forEach(function (st) {
+        var sName = st.subteamName || st.teamName || st.subteamId || 'SubTeam';
+        var matchedInSub = false;
+
+        if (st.manager && st.manager.email && st.manager.email.trim().toLowerCase() === target) {
+          matchedInSub = true;
+        }
+        var mList = st.subteams || st.members || [];
+        if (!matchedInSub && Array.isArray(mList)) {
+          matchedInSub = mList.some(function (sm) {
+            return sm && sm.email && sm.email.trim().toLowerCase() === target;
+          });
+        }
+        if (matchedInSub) {
+          found.push('Sub-Team: ' + sName + ' (' + tName + ')');
+        }
+      });
+    }
+  });
+
+  return found;
+}
+
 function ToggleTeamStatus(propId, teamId, isActive) {
+  if (isActive === false) {
+    var targetTeam = (allTeamsCache || []).find(function(t) {
+      return (t.teamId == teamId || t.teamID == teamId) && (t.propId == propId || t.propID == propId);
+    });
+    var subteams = (targetTeam && (targetTeam.propsubteams || targetTeam.subteams)) || [];
+    if (subteams.length > 0) {
+      showTopToast('warning', 'Action Blocked', 'This team has ' + subteams.length + ' sub-team(s). Please deactivate or remove the sub-team(s) first.');
+      return;
+    }
+  }
+
   var jwt = GetStoredJwt();
   var ep = applicationdomain + 'api/admin/toggleteamstatus';
   var formData = new FormData();
@@ -1664,12 +1725,17 @@ function ToggleTeamStatus(propId, teamId, isActive) {
     },
     success: function (res) {
       unblockUI('#section-block');
-      toastr.success(isActive ? 'Team marked active successfully!' : 'Team marked inactive successfully!');
-      GetAllTeams();
+      if (res === true || res === "true") {
+        showTopToast('success', 'Team Status', isActive ? 'Team marked active successfully!' : 'Team marked inactive successfully!');
+        GetAllTeams();
+      } else {
+        showTopToast('error', 'Cannot Deactivate Team', isActive ? 'Failed to activate team' : 'Cannot deactivate team. Please remove or deactivate sub-team(s) first.');
+        GetAllTeams();
+      }
     },
     error: function (xhr) {
       unblockUI('#section-block');
-      toastr.error('Failed to update team status');
+      showTopToast('error', 'Team Status', 'Failed to update team status');
     }
   });
 }
@@ -4220,7 +4286,21 @@ function ShowEmpData(userdata) {
     $(`#emp_active-lable`).text('In Active');
   }
 
-
+  $('#emp_active').off('change').on('change', function () {
+    if (!this.checked) {
+      var email = $('#emp-email').val();
+      var assigned = CheckEmployeeTeamAssignments(email);
+      if (assigned.length > 0) {
+        this.checked = true;
+        $('#emp_active-lable').text('Active');
+        showTopToast('warning', 'Cannot Deactivate Employee', 'Employee is currently assigned to: ' + assigned.join(', ') + '. Please unassign employee first.');
+        return;
+      }
+      $('#emp_active-lable').text('In Active');
+    } else {
+      $('#emp_active-lable').text('Active');
+    }
+  });
 
   ShowPopupModal('editpropertyEmployee');
 }
@@ -4241,6 +4321,16 @@ function SubmitEditEmployee() {
   var checkstatus = $('#emp_active').is(':checked');
   if (checkstatus === false) {
     activestatus = 0;
+  }
+
+  if (activestatus === 0) {
+    var assigned = CheckEmployeeTeamAssignments(emp_email);
+    if (assigned.length > 0) {
+      $('#emp_active').prop('checked', true);
+      $('#emp_active-lable').text('Active');
+      showTopToast('warning', 'Cannot Deactivate Employee', 'Employee is currently assigned to: ' + assigned.join(', ') + '. Please unassign employee first.');
+      return;
+    }
   }
 
   if (emp_first_name !== '' && emp_last_name !== '' && emp_email !== '' && emp_designation !== '' && roles.length >= 1) {
@@ -4291,7 +4381,7 @@ function SubmitEditEmployee() {
                   SuccessMessageCustom('Employee Registration', userdata, 'success')
                 }
                 else {
-                  var userdata = `<p>Failed to modify employee</p>`
+                  var userdata = `<p>Failed to modify employee. Please ensure employee is not assigned to active teams or sub-teams.</p>`
                   SuccessMessageCustom('Employee Registration', userdata, 'error')
                 }
 
@@ -4335,23 +4425,59 @@ function SubmitEditEmployee() {
 
 
 
+function showTopToast(type, title, message) {
+  var cleanMsg = (message || "").toString().replace(/<[^>]+>/g, " ").trim();
+  var toastType = (type || 'info').toLowerCase();
+  if (toastType === 'danger') toastType = 'error';
+
+  if (typeof toastr !== 'undefined') {
+    toastr.options = {
+      "closeButton": true,
+      "debug": false,
+      "newestOnTop": true,
+      "progressBar": true,
+      "positionClass": "toast-top-right",
+      "preventDuplicates": false,
+      "onclick": null,
+      "showDuration": "300",
+      "hideDuration": "300",
+      "timeOut": "2000",
+      "extendedTimeOut": "1000",
+      "showEasing": "swing",
+      "hideEasing": "linear",
+      "showMethod": "fadeIn",
+      "hideMethod": "fadeOut"
+    };
+    if (typeof toastr[toastType] === 'function') {
+      toastr[toastType](cleanMsg, title || '');
+    } else {
+      toastr.info(cleanMsg, title || '');
+    }
+  } else if (typeof Toastify === 'function') {
+    var bgColors = {
+      success: '#28a745',
+      error: '#dc3545',
+      warning: '#ffc107',
+      info: '#17a2b8'
+    };
+    Toastify({
+      text: (title ? title + ': ' : '') + cleanMsg,
+      duration: 2000,
+      close: true,
+      gravity: "top",
+      position: "right",
+      backgroundColor: bgColors[toastType] || '#333'
+    }).showToast();
+  } else {
+    alert((title ? title + '\n' : '') + cleanMsg);
+  }
+}
+
 function SuccessMessage3(Title, userdata) {
-  Swal.fire({
-    title: Title,
-    html: userdata,
-    icon: "success",
-  });
-  $(".swal2-confirm").removeClass("btn-primary");
-  $(".swal2-confirm").addClass("btn-yellotick-rev");
+  showTopToast('success', Title, userdata);
 }
 
 function SuccessMessageCustom(Title, userdata, icon) {
-  Swal.fire({
-    title: Title,
-    html: userdata,
-    icon: icon,
-  });
-  $(".swal2-confirm").removeClass("btn-primary");
-  $(".swal2-confirm").addClass("btn-dark");
+  showTopToast(icon || 'success', Title, userdata);
 }
 

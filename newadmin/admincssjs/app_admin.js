@@ -271,25 +271,56 @@ function fixtable(){
 }
 
 
-function NotifyToast(type, message) {
-    Command: toastr[type](message)
+function showTopToast(type, title, message) {
+  var cleanMsg = (message || "").toString().replace(/<[^>]+>/g, " ").trim();
+  var toastType = (type || 'info').toLowerCase();
+  if (toastType === 'danger') toastType = 'error';
+
+  if (typeof toastr !== 'undefined') {
     toastr.options = {
-        "closeButton": true,
-        "debug": false,
-        "newestOnTop": false,
-        "progressBar": false,
-        "positionClass": "toast-top-right",
-        "preventDuplicates": false,
-        "onclick": null,
-        "showDuration": "300",
-        "hideDuration": "1000",
-        "timeOut": "3000",
-        "extendedTimeOut": "1000",
-        "showEasing": "swing",
-        "hideEasing": "linear",
-        "showMethod": "fadeIn",
-        "hideMethod": "fadeOut"
+      "closeButton": true,
+      "debug": false,
+      "newestOnTop": true,
+      "progressBar": true,
+      "positionClass": "toast-top-right",
+      "preventDuplicates": false,
+      "onclick": null,
+      "showDuration": "300",
+      "hideDuration": "300",
+      "timeOut": "2000",
+      "extendedTimeOut": "1000",
+      "showEasing": "swing",
+      "hideEasing": "linear",
+      "showMethod": "fadeIn",
+      "hideMethod": "fadeOut"
+    };
+    if (typeof toastr[toastType] === 'function') {
+      toastr[toastType](cleanMsg, title || '');
+    } else {
+      toastr.info(cleanMsg, title || '');
     }
+  } else if (typeof Toastify === 'function') {
+    var bgColors = {
+      success: '#28a745',
+      error: '#dc3545',
+      warning: '#ffc107',
+      info: '#17a2b8'
+    };
+    Toastify({
+      text: (title ? title + ': ' : '') + cleanMsg,
+      duration: 2000,
+      close: true,
+      gravity: "top",
+      position: "right",
+      backgroundColor: bgColors[toastType] || '#333'
+    }).showToast();
+  } else {
+    alert((title ? title + '\n' : '') + cleanMsg);
+  }
+}
+
+function NotifyToast(type, message) {
+  showTopToast(type, '', message);
 }
 
 
@@ -317,13 +348,7 @@ function extractDate(dateTimeString) {
 }
 
 function SuccessMessageCustom(Title, userdata, icon) {
-    Swal.fire({
-        title: Title,
-        html: userdata,
-        icon: icon,
-    });
-    $(".swal2-confirm").removeClass("btn-primary");
-    $(".swal2-confirm").addClass("btn-dark");
+    showTopToast(icon || 'success', Title, userdata);
 }
 
 
