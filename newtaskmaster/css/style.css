@@ -947,11 +947,26 @@ thead th {
 }
 
 /* Clickable Table Row Highlight */
-tbody tr.table-row-selected {
+tbody tr.table-row-selected,
+tbody tr.table-row-selected td {
   background-color: #dbeafe !important;
+}
+
+tbody tr.table-row-selected > td:first-child {
   border-left: 4px solid #1a68ff !important;
 }
 
+tbody tr.table-row-selected:hover,
+tbody tr.table-row-selected:hover td {
+  background-color: #bfdbfe !important;
+}
+
 tbody tr.table-row-selected td {
-  background-color: #dbeafe !important;
+  color: #1e293b !important;
+}
+
+tbody tr.table-row-selected td a.text-blue-600,
+tbody tr.table-row-selected td a.text-slate-900 {
+  color: #1d4ed8 !important;
+  font-weight: 700 !important;
 }

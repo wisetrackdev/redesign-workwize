@@ -19,17 +19,86 @@ function initTableRowHighlight() {
   document.addEventListener("click", function (e) {
     const row = e.target.closest("tbody tr");
     if (!row) return;
-    // Don't override if user clicked an interactive control directly
-    if (e.target.closest("a, button, input, select, textarea, .dropdown-menu, .row-checkbox")) return;
 
+    // Highlight row across entire table row, even if an icon, link, or button is clicked
     const tbody = row.closest("tbody");
     if (tbody) {
       tbody.querySelectorAll("tr").forEach(r => r.classList.remove("table-row-selected"));
     }
     row.classList.add("table-row-selected");
+
+    // Extract identifiers for persistence across page navigation / modal reopen
+    const jobId = row.getAttribute("data-job-id") ||
+                  row.querySelector("a[href*='job-details.html']")?.textContent?.trim() || "";
+    const displayId = row.getAttribute("data-display-id") || "";
+    const areaId = row.getAttribute("data-area-id") || "";
+    const rowId = row.getAttribute("data-row-id") || row.id || "";
+    const currentPage = window.location.pathname.split("/").pop() || "";
+
+    if (jobId) {
+      sessionStorage.setItem("ww_selected_job_id", jobId);
+      localStorage.setItem("ww_selected_job_id", jobId);
+      if (displayId) {
+        sessionStorage.setItem("ww_selected_job_display_id", displayId);
+      }
+    }
+    if (areaId) {
+      sessionStorage.setItem("ww_selected_area_id", areaId);
+      localStorage.setItem("ww_selected_area_id", areaId);
+    }
+    if (rowId) {
+      sessionStorage.setItem("ww_selected_row_id", rowId);
+    }
+    if (currentPage && !currentPage.includes("job-details")) {
+      sessionStorage.setItem("ww_selected_source_page", currentPage);
+    }
+  });
+
+  // Restore on browser back/forward navigation (bfcache) and page show
+  window.addEventListener("pageshow", function () {
+    setTimeout(restoreTableRowHighlight, 120);
   });
 }
 window.initTableRowHighlight = initTableRowHighlight;
+
+// Restore highlight on rows matching saved job / area / row IDs
+function restoreTableRowHighlight(targetTbody) {
+  const selectedJobId = sessionStorage.getItem("ww_selected_job_id") || localStorage.getItem("ww_selected_job_id");
+  const selectedAreaId = sessionStorage.getItem("ww_selected_area_id") || localStorage.getItem("ww_selected_area_id");
+  const selectedRowId = sessionStorage.getItem("ww_selected_row_id");
+
+  if (!selectedJobId && !selectedAreaId && !selectedRowId) return;
+
+  const bodies = targetTbody ? [targetTbody] : Array.from(document.querySelectorAll("tbody"));
+  bodies.forEach(tbody => {
+    const rows = tbody.querySelectorAll("tr");
+    rows.forEach(tr => {
+      const jId = tr.getAttribute("data-job-id");
+      const dId = tr.getAttribute("data-display-id");
+      const aId = tr.getAttribute("data-area-id");
+      const rId = tr.getAttribute("data-row-id") || tr.id;
+      const jobLink = tr.querySelector("a[href*='job-details.html']")?.textContent?.trim();
+
+      let matches = false;
+      if (selectedJobId && (jId === selectedJobId || dId === selectedJobId || jobLink === selectedJobId)) {
+        matches = true;
+      } else if (selectedAreaId && aId === selectedAreaId) {
+        matches = true;
+      } else if (selectedRowId && rId === selectedRowId) {
+        matches = true;
+      }
+
+      if (matches) {
+        tbody.querySelectorAll("tr").forEach(r => r.classList.remove("table-row-selected"));
+        tr.classList.add("table-row-selected");
+        try {
+          tr.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        } catch (e) {}
+      }
+    });
+  });
+}
+window.restoreTableRowHighlight = restoreTableRowHighlight;
 
 // Safe HTML escaping helper
 function escapeHtml(str) {

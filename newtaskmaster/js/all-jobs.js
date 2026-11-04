@@ -358,7 +358,14 @@ function normalizePriority(p) {
 
 function formatAssignee(job) {
   if (Array.isArray(job.data1) && job.data1.length > 0) {
-    return job.data1.map(t => t.teamName || t.name || t).join(", ");
+    const list = job.data1.map(t => {
+      if (typeof t === "string") return t;
+      if (typeof t === "object" && t !== null) {
+        return t.teamName || t.name || t.team_name || t.assignedTeam || t.team || t.title || "";
+      }
+      return String(t || "");
+    }).filter(Boolean);
+    if (list.length > 0) return list.join(", ");
   }
   if (job.firstname || job.lastname) {
     return `${job.firstname || ""} ${job.lastname || ""}`.trim();
@@ -505,6 +512,14 @@ function filterAndRenderJobs() {
   // Point 15: Save search state to sessionStorage
   saveAllJobsState();
 
+  const selectedJobId = sessionStorage.getItem("ww_selected_job_id") || localStorage.getItem("ww_selected_job_id");
+  if (selectedJobId) {
+    const jobIdx = filteredJobs.findIndex(j => (j.rawId || j.id) === selectedJobId || j.id === selectedJobId);
+    if (jobIdx !== -1) {
+      currentPage = Math.floor(jobIdx / pageSize) + 1;
+    }
+  }
+
   renderTableRows();
   renderPagination();
   updateCounterText();
@@ -564,7 +579,9 @@ function renderTableRows() {
 
   pageJobs.forEach(job => {
     const tr = document.createElement("tr");
-    tr.className = "hover:bg-blue-50/30 transition-colors";
+    tr.className = "hover:bg-blue-50/30 transition-colors cursor-pointer";
+    tr.setAttribute("data-job-id", job.rawId || job.id);
+    tr.setAttribute("data-display-id", job.id);
 
     let statusBadgeClass = "badge-in-progress";
     if (job.status === "Yet to Commence") statusBadgeClass = "badge-yet-to-commence";
@@ -664,6 +681,10 @@ function renderTableRows() {
     `;
     tbody.appendChild(tr);
   });
+
+  if (typeof restoreTableRowHighlight === "function") {
+    restoreTableRowHighlight(tbody);
+  }
 
   // Attach row checkbox change listeners
   document.querySelectorAll(".row-checkbox").forEach(cb => {
@@ -882,7 +903,7 @@ function exportJobsToCSV() {
   const rows = filteredJobs.map(j => [
     `"${j.id}"`,
     `"${j.villaNumber || "-"}"`,
-    `"${(j.details || "").replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`,
+    formatDetailForExport(j.details),
     `"${j.createdOn || "-"}"`,
     `"${(j.location || "-").replace(/"/g, '""')}"`,
     `"${j.priority}"`,
@@ -897,16 +918,45 @@ function exportJobsToCSV() {
     `"${j.expectedCompletion || "-"}"`
   ]);
 
-  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-  const encodedUri = encodeURI(csvContent);
+  const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
+  link.setAttribute("href", url);
   link.setAttribute("download", `WorkWize_Jobs_${new Date().toISOString().split("T")[0]}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 
   showToast(`Exported ${filteredJobs.length} jobs to CSV.`, "success");
+}
+
+function formatDetailForExport(val) {
+  if (val === null || val === undefined) return '""';
+  let s = String(val);
+  // Convert HTML line breaks and block elements to newlines
+  s = s.replace(/<br\s*[\/]?>/gi, "\n")
+       .replace(/<\/p>/gi, "\n")
+       .replace(/<p[^>]*>/gi, "")
+       .replace(/<\/div>/gi, "\n")
+       .replace(/<div[^>]*>/gi, "")
+       .replace(/<li[^>]*>/gi, "• ")
+       .replace(/<\/li>/gi, "\n")
+       .replace(/<[^>]+>/g, "");
+  // Decode common HTML entities
+  s = s.replace(/&nbsp;/gi, " ")
+       .replace(/&amp;/gi, "&")
+       .replace(/&lt;/gi, "<")
+       .replace(/&gt;/gi, ">")
+       .replace(/&quot;/gi, '"')
+       .replace(/&#39;/gi, "'");
+  // Normalize newlines to \r\n (standard Excel in-cell line break)
+  s = s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = s.split("\n").map(l => l.trimEnd());
+  s = lines.join("\r\n").trim();
+  // Standard RFC 4180: escape double quotes
+  return `"${s.replace(/"/g, '""')}"`;
 }
 
 function renderRichText(str) {

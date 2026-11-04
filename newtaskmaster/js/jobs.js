@@ -272,6 +272,31 @@ async function initJobsByArea() {
 
   updateAreaStats(areaOverviewData);
   renderJobsByAreaTable();
+
+  // Restore area modal if previously open (e.g. returning from job-details)
+  const lastModalStr = sessionStorage.getItem("ww_last_area_modal");
+  if (lastModalStr) {
+    try {
+      const lm = JSON.parse(lastModalStr);
+      if (lm.type === "area" && lm.areaId) {
+        showAreaJobsModal(lm.areaId, lm.areaName);
+      } else if (lm.type === "open" && lm.areaId) {
+        showAreaOpenJobsModal(lm.areaId, lm.areaName);
+      } else if (lm.type === "date" && lm.areaId) {
+        showAreaJobsByDateModal(lm.areaId, lm.areaName, lm.dateSpan);
+      } else if (lm.type === "safety" && lm.areaId) {
+        showAreaSafetyJobsModal(lm.areaId, lm.areaName);
+      } else if (lm.type === "propAll") {
+        showPropertyAllJobsModal();
+      } else if (lm.type === "propOpen") {
+        showPropertyOpenJobsModal();
+      } else if (lm.type === "propClosed") {
+        showPropertyClosedJobsModal();
+      } else if (lm.type === "propSafety") {
+        showPropertySafetyJobsModal();
+      }
+    } catch (e) {}
+  }
 }
 
 function updateAreaStats(areas) {
@@ -325,7 +350,9 @@ function renderJobsByAreaTable(filterQuery = "") {
 
   filtered.forEach((area, index) => {
     const tr = document.createElement("tr");
-    tr.className = "hover:bg-blue-50/20 transition-colors";
+    tr.className = "hover:bg-blue-50/20 transition-colors cursor-pointer";
+    tr.setAttribute("data-area-id", area.id);
+    tr.setAttribute("data-area-name", area.name);
 
     const totalNum = Number(area.total) || 0;
     const openNum = Number(area.open) || 0;
@@ -453,6 +480,9 @@ function renderJobsByAreaTable(filterQuery = "") {
     `;
     tbody.appendChild(tr);
   });
+  if (typeof restoreTableRowHighlight === "function") {
+    restoreTableRowHighlight(tbody);
+  }
 }
 
 function openCreateJobForArea(areaName, areaId) {
@@ -537,6 +567,14 @@ document.addEventListener("click", function (e) {
  */
 async function showAreaJobsModal(areaId, areaName) {
   currentAreaModalName = areaName;
+  sessionStorage.setItem("ww_selected_area_id", areaId);
+  sessionStorage.setItem("ww_last_area_modal", JSON.stringify({ type: "area", areaId, areaName }));
+  const mainTbody = document.getElementById("jobsByAreaTableBody");
+  if (mainTbody) {
+    mainTbody.querySelectorAll("tr").forEach(r => r.classList.remove("table-row-selected"));
+    const match = mainTbody.querySelector(`tr[data-area-id="${areaId}"]`);
+    if (match) match.classList.add("table-row-selected");
+  }
   const modal = document.getElementById("areaJobsModal");
   const titleArea = document.getElementById("areaModalAreaName");
   const titleProp = document.getElementById("areaModalPropName");
@@ -619,6 +657,14 @@ async function showAreaJobsModal(areaId, areaName) {
  */
 async function showAreaOpenJobsModal(areaId, areaName) {
   currentAreaModalName = `${areaName} Open`;
+  sessionStorage.setItem("ww_selected_area_id", areaId);
+  sessionStorage.setItem("ww_last_area_modal", JSON.stringify({ type: "open", areaId, areaName }));
+  const mainTbody = document.getElementById("jobsByAreaTableBody");
+  if (mainTbody) {
+    mainTbody.querySelectorAll("tr").forEach(r => r.classList.remove("table-row-selected"));
+    const match = mainTbody.querySelector(`tr[data-area-id="${areaId}"]`);
+    if (match) match.classList.add("table-row-selected");
+  }
   const modal = document.getElementById("areaJobsModal");
   const titleArea = document.getElementById("areaModalAreaName");
   const titleProp = document.getElementById("areaModalPropName");
@@ -707,6 +753,14 @@ async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
   else if (dateSpan === "d90") dateLabel = "90+ Days Ago";
 
   currentAreaModalName = `${areaName} (${dateLabel})`;
+  sessionStorage.setItem("ww_selected_area_id", areaId);
+  sessionStorage.setItem("ww_last_area_modal", JSON.stringify({ type: "date", areaId, areaName, dateSpan }));
+  const mainTbody = document.getElementById("jobsByAreaTableBody");
+  if (mainTbody) {
+    mainTbody.querySelectorAll("tr").forEach(r => r.classList.remove("table-row-selected"));
+    const match = mainTbody.querySelector(`tr[data-area-id="${areaId}"]`);
+    if (match) match.classList.add("table-row-selected");
+  }
   const modal = document.getElementById("areaJobsModal");
   const titleArea = document.getElementById("areaModalAreaName");
   const titleProp = document.getElementById("areaModalPropName");
@@ -786,6 +840,14 @@ async function showAreaJobsByDateModal(areaId, areaName, dateSpan) {
  */
 async function showAreaSafetyJobsModal(areaId, areaName) {
   currentAreaModalName = `${areaName} Safety`;
+  sessionStorage.setItem("ww_selected_area_id", areaId);
+  sessionStorage.setItem("ww_last_area_modal", JSON.stringify({ type: "safety", areaId, areaName }));
+  const mainTbody = document.getElementById("jobsByAreaTableBody");
+  if (mainTbody) {
+    mainTbody.querySelectorAll("tr").forEach(r => r.classList.remove("table-row-selected"));
+    const match = mainTbody.querySelector(`tr[data-area-id="${areaId}"]`);
+    if (match) match.classList.add("table-row-selected");
+  }
   const modal = document.getElementById("areaJobsModal");
   const titleArea = document.getElementById("areaModalAreaName");
   const titleProp = document.getElementById("areaModalPropName");
@@ -887,6 +949,7 @@ async function showPropertyAllJobsModal() {
  */
 async function showPropertyOpenJobsModal() {
   currentAreaModalName = "All Areas Open";
+  sessionStorage.setItem("ww_last_area_modal", JSON.stringify({ type: "propOpen" }));
   const modal = document.getElementById("areaJobsModal");
   const titleArea = document.getElementById("areaModalAreaName");
   const titleProp = document.getElementById("areaModalPropName");
@@ -936,6 +999,7 @@ async function showPropertyOpenJobsModal() {
  */
 async function showPropertyClosedJobsModal() {
   currentAreaModalName = "All Areas Closed";
+  sessionStorage.setItem("ww_last_area_modal", JSON.stringify({ type: "propClosed" }));
   const modal = document.getElementById("areaJobsModal");
   const titleArea = document.getElementById("areaModalAreaName");
   const titleProp = document.getElementById("areaModalPropName");
@@ -1131,7 +1195,7 @@ function renderAreaModalRows(jobs) {
     const detailText = j.jobDetail || j.details || j.title || "";
 
     return `
-      <tr class="hover:bg-blue-50/40 transition-colors">
+      <tr class="hover:bg-blue-50/40 transition-colors cursor-pointer" data-job-id="${escapeHtml(rawId)}" data-display-id="${escapeHtml(displayId)}" data-area-id="${escapeHtml(j.areaID || j.areaId || "")}">
         <!-- 1. ID -->
         <td>
           <a href="job-details.html?id=${encodeURIComponent(rawId)}" target="_blank" class="font-bold text-blue-600 hover:underline hover:text-blue-800" title="Open Job ${displayId}">
@@ -1209,6 +1273,9 @@ function renderAreaModalRows(jobs) {
       </tr>
     `;
   }).join("");
+  if (typeof restoreTableRowHighlight === "function") {
+    restoreTableRowHighlight(tbody);
+  }
 }
 
 function initAreaModalCloseListeners() {
@@ -1218,6 +1285,7 @@ function initAreaModalCloseListeners() {
 
   function closeAreaModal() {
     if (modal) modal.classList.remove("open");
+    sessionStorage.removeItem("ww_last_area_modal");
   }
 
   if (closeBtn) closeBtn.onclick = closeAreaModal;
@@ -1290,6 +1358,29 @@ function toggleAreaModalDateSort() {
 window.toggleAreaModalDateSort = toggleAreaModalDateSort;
 
 // Point 4: Export Area Jobs to CSV with Details
+function formatDetailForExport(val) {
+  if (val === null || val === undefined) return '""';
+  let s = String(val);
+  s = s.replace(/<br\s*[\/]?>/gi, "\n")
+       .replace(/<\/p>/gi, "\n")
+       .replace(/<p[^>]*>/gi, "")
+       .replace(/<\/div>/gi, "\n")
+       .replace(/<div[^>]*>/gi, "")
+       .replace(/<li[^>]*>/gi, "• ")
+       .replace(/<\/li>/gi, "\n")
+       .replace(/<[^>]+>/g, "");
+  s = s.replace(/&nbsp;/gi, " ")
+       .replace(/&amp;/gi, "&")
+       .replace(/&lt;/gi, "<")
+       .replace(/&gt;/gi, ">")
+       .replace(/&quot;/gi, '"')
+       .replace(/&#39;/gi, "'");
+  s = s.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const lines = s.split("\n").map(l => l.trimEnd());
+  s = lines.join("\r\n").trim();
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
 function exportAreaJobsToCSV() {
   if (!currentAreaModalJobs || currentAreaModalJobs.length === 0) {
     if (typeof showToast === "function") showToast("No jobs to export.", "error");
@@ -1318,10 +1409,16 @@ function exportAreaJobsToCSV() {
   const rows = currentAreaModalJobs.map(rawJob => {
     const j = normalizeJobObject(rawJob);
     const displayId = j.orgjobId || j.jobId;
-    const detailText = (j.jobDetail || j.details || "").replace(/"/g, '""').replace(/\r?\n/g, ' ');
+    const detailText = formatDetailForExport(j.jobDetail || j.details);
     let assigned = "Unassigned";
     if (Array.isArray(j.data1) && j.data1.length > 0) {
-      assigned = j.data1.map(t => t.teamName || t.name || t).join(", ");
+      assigned = j.data1.map(t => {
+        if (typeof t === "string") return t;
+        if (typeof t === "object" && t !== null) {
+          return t.teamName || t.name || t.team_name || t.assignedTeam || t.team || t.title || "";
+        }
+        return String(t || "");
+      }).filter(Boolean).join(", ") || "Unassigned";
     } else if (j.assignedTo) {
       assigned = j.assignedTo;
     }
@@ -1332,7 +1429,7 @@ function exportAreaJobsToCSV() {
     return [
       `"${displayId}"`,
       `"${j.villaNumber || "-"}"`,
-      `"${detailText}"`,
+      detailText,
       `"${j.jobCreatedOn || j.openedOn || "-"}"`,
       `"${(j.jobLocation || j.location || "-").replace(/"/g, '""')}"`,
       `"${j.priority || "MEDIUM"}"`,
@@ -1348,15 +1445,17 @@ function exportAreaJobsToCSV() {
     ].join(",");
   });
 
-  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows].join("\n");
-  const encodedUri = encodeURI(csvContent);
+  const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
+  link.setAttribute("href", url);
   const fileName = (currentAreaModalName ? currentAreaModalName.replace(/\s+/g, '_') : 'Area') + `_Jobs_${new Date().toISOString().split("T")[0]}.csv`;
   link.setAttribute("download", fileName);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 
   if (typeof showToast === "function") {
     showToast(`Exported ${currentAreaModalJobs.length} jobs to CSV.`, "success");
