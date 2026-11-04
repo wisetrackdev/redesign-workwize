@@ -1651,6 +1651,12 @@ function CheckEmployeeTeamAssignments(email) {
   var teams = Array.isArray(allTeamsCache) ? allTeamsCache : [];
 
   teams.forEach(function (team) {
+    // Only check ACTIVE teams! If the team is inactive, it doesn't block employee deactivation
+    var isTeamActive = team.isactive !== false && team.isactive !== 0;
+    if (!isTeamActive) {
+      return;
+    }
+
     var tName = team.teamName || team.teamId || 'Team';
     var matchedInTeam = false;
 
@@ -1665,10 +1671,10 @@ function CheckEmployeeTeamAssignments(email) {
       });
     }
     if (matchedInTeam) {
-      found.push('Team: ' + tName);
+      found.push('Active Team: ' + tName);
     }
 
-    // Check subteams
+    // Check subteams of this active team
     var subList = team.propsubteams || team.subteams || [];
     if (Array.isArray(subList)) {
       subList.forEach(function (st) {
@@ -1685,7 +1691,7 @@ function CheckEmployeeTeamAssignments(email) {
           });
         }
         if (matchedInSub) {
-          found.push('Sub-Team: ' + sName + ' (' + tName + ')');
+          found.push('Active Sub-Team: ' + sName + ' (' + tName + ')');
         }
       });
     }
@@ -1695,17 +1701,42 @@ function CheckEmployeeTeamAssignments(email) {
 }
 
 function ToggleTeamStatus(propId, teamId, isActive) {
+  var targetTeam = (allTeamsCache || []).find(function(t) {
+    return (t.teamId == teamId || t.teamID == teamId) && (t.propId == propId || t.propID == propId);
+  });
+
   if (isActive === false) {
-    var targetTeam = (allTeamsCache || []).find(function(t) {
-      return (t.teamId == teamId || t.teamID == teamId) && (t.propId == propId || t.propID == propId);
-    });
     var subteams = (targetTeam && (targetTeam.propsubteams || targetTeam.subteams)) || [];
     if (subteams.length > 0) {
       showTopToast('warning', 'Action Blocked', 'This team has ' + subteams.length + ' sub-team(s). Please deactivate or remove the sub-team(s) first.');
       return;
     }
+  } else if (isActive === true) {
+    // If activating team, manager must be active!
+    if (targetTeam && targetTeam.manager) {
+      var isMgrActive = targetTeam.manager.isActive !== false && targetTeam.manager.isActive !== 0 && targetTeam.manager.isactive !== false && targetTeam.manager.isactive !== 0;
+      if (!isMgrActive) {
+        var mgrName = ((targetTeam.manager.firstName || '') + ' ' + (targetTeam.manager.lastName || '')).trim() || targetTeam.manager.email || 'Manager';
+        showTopToast('warning', 'Cannot Activate Team', "Team's manager (" + mgrName + ") is inactive. Please activate the manager in the Employee List first or assign an active manager.");
+        return;
+      }
+    }
   }
 
+  // 1. Immediately update all matching teams in allTeamsCache (optimistic UI update in 0ms)
+  (allTeamsCache || []).forEach(function(t) {
+    var matchTeam = (t.teamId == teamId || t.teamID == teamId);
+    var matchProp = (!propId || t.propId == propId || t.propID == propId || t.propid == propId);
+    if (matchTeam && matchProp) {
+      t.isactive = isActive;
+      t.isActive = isActive;
+    }
+  });
+
+  // 2. Immediately re-render table without needing page refresh
+  FilterTeamsByStatus(currentTeamFilter);
+
+  // 3. Send API call in background
   var jwt = GetStoredJwt();
   var ep = applicationdomain + 'api/admin/toggleteamstatus';
   var formData = new FormData();
@@ -1713,7 +1744,6 @@ function ToggleTeamStatus(propId, teamId, isActive) {
   formData.append('teamId', teamId);
   formData.append('isActive', isActive);
 
-  blockUI('#section-block');
   $.ajax({
     url: ep,
     type: 'POST',
@@ -1724,24 +1754,48 @@ function ToggleTeamStatus(propId, teamId, isActive) {
       'Authorization': 'Bearer ' + jwt
     },
     success: function (res) {
-      unblockUI('#section-block');
-      if (res === true || res === "true") {
-        showTopToast('success', 'Team Status', isActive ? 'Team marked active successfully!' : 'Team marked inactive successfully!');
-        GetAllTeams();
+      var isSuccess = res === true || res === "true" || (res && (res.success === true || res.success === "true"));
+      if (isSuccess) {
+        var successMsg = (res && res.message) ? res.message : (isActive ? 'Team marked active successfully!' : 'Team marked inactive successfully!');
+        showTopToast('success', 'Team Status', successMsg);
+        // Silently sync cache from server in background
+        GetAllTeams(true);
       } else {
-        showTopToast('error', 'Cannot Deactivate Team', isActive ? 'Failed to activate team' : 'Cannot deactivate team. Please remove or deactivate sub-team(s) first.');
-        GetAllTeams();
+        // Rollback local state on rejection
+        (allTeamsCache || []).forEach(function(t) {
+          var matchTeam = (t.teamId == teamId || t.teamID == teamId);
+          var matchProp = (!propId || t.propId == propId || t.propID == propId || t.propid == propId);
+          if (matchTeam && matchProp) {
+            t.isactive = !isActive;
+            t.isActive = !isActive;
+          }
+        });
+        FilterTeamsByStatus(currentTeamFilter);
+        var errorMsg = (res && res.message) ? res.message : (isActive ? 'Cannot activate team. Please check manager status.' : 'Cannot deactivate team. Please remove or deactivate sub-team(s) first.');
+        showTopToast('error', isActive ? 'Cannot Activate Team' : 'Cannot Deactivate Team', errorMsg);
       }
     },
     error: function (xhr) {
-      unblockUI('#section-block');
-      showTopToast('error', 'Team Status', 'Failed to update team status');
+      // Rollback local state on error
+      (allTeamsCache || []).forEach(function(t) {
+        var matchTeam = (t.teamId == teamId || t.teamID == teamId);
+        var matchProp = (!propId || t.propId == propId || t.propID == propId || t.propid == propId);
+        if (matchTeam && matchProp) {
+          t.isactive = !isActive;
+          t.isActive = !isActive;
+        }
+      });
+      FilterTeamsByStatus(currentTeamFilter);
+      var errText = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to update team status';
+      showTopToast('error', 'Team Status', errText);
     }
   });
 }
 
-function GetAllTeams() {
-  blockUI('#section-block');
+function GetAllTeams(silent) {
+  if (!silent) {
+    blockUI('#section-block');
+  }
   var ep = applicationdomain + 'api/admin/getallteams';
   var jwt = GetStoredJwt();
 
@@ -1757,20 +1811,23 @@ function GetAllTeams() {
     success: function (Response) {
       allTeamsCache = Response || [];
       FilterTeamsByStatus(currentTeamFilter);
-      unblockUI('#section-block');
+      if (!silent) {
+        unblockUI('#section-block');
+      }
     },
     error: function (XMLHttpRequest, textStatus, errorThrown) {
+      if (!silent) {
+        unblockUI('#section-block');
+      }
       if (XMLHttpRequest.status === 401) {
         // Unauthorized error handling
-        LogoutUser()
+        LogoutUser();
       }
       else if (XMLHttpRequest.status === 400) {
         // Bad Request error handling
         var errorResponse = XMLHttpRequest.responseJSON;
-        //console.log("Bad Request error occurred.",errorResponse);
-        ErrorMessage()
+        ErrorMessage();
       } else {
-        // Other error handling
         console.log("An error occurred:", errorThrown);
       }
     }
@@ -1783,46 +1840,96 @@ function UpdateTeamsTable(datavalues) {
 }
 
 function RenderTeamsDataTable(datavalues) {
+  datavalues = datavalues || [];
+
+  // If table already exists, update data directly without destroying the DOM elements or search inputs
   if ($.fn.DataTable.isDataTable('#teamDataTable')) {
-    $('#teamDataTable').DataTable().destroy();
+    var dt = $('#teamDataTable').DataTable();
+    dt.clear();
+    dt.rows.add(datavalues);
+    dt.draw(false);
+    return;
   }
 
-  // Create Search Inputs
+  var columnTitles = [
+    'Property ID',
+    'Property Name',
+    'Team ID',
+    'Team Name',
+    'Manager',
+    'Total Members',
+    'Status',
+    'Action'
+  ];
+
+  // Create Search Inputs in headers once
   $('#teamDataTable thead th').each(function (i) {
-    var title = $('#teamDataTable thead th').eq($(this).index()).text();
-    $(this).html(
-        `<label class="header-label">${title}</label><br><input type="text" class="form-control form-control-sm" placeholder="Search..." data-index="${i}" />`
-    );
+    var title = columnTitles[i] || $(this).text().trim() || '';
+    if (i === 7 || title.toLowerCase() === 'action') {
+      $(this).html('<label class="header-label">' + title + '</label>');
+    } else {
+      $(this).html(
+        '<label class="header-label">' + title + '</label><br>' +
+        '<input type="text" class="form-control form-control-sm team-col-search" placeholder="Search ' + title + '..." data-index="' + i + '" />'
+      );
+    }
   });
 
- var table = $('#teamDataTable').DataTable({
+  var table = $('#teamDataTable').DataTable({
     data: datavalues,
-    stateSave: true,
-    stateDuration: -1,
+    stateSave: false,
     "columns": [
-      { data: "propID", name: "PROPERTY ID" },
-      { data: "propName", name: "PROPERTY NAME" },
-      { data: "teamId", name: "TEAM ID" },
-      { data: "teamName", name: "TEAM NAME" },
       {
-        data: "manager", name: "MANAGER", render: function (data, type, row, meta) {
+        data: function (row) { return row["propID"] || row["propId"] || "-"; },
+        name: "PROPERTY ID"
+      },
+      {
+        data: function (row) { return row["propName"] || row["propname"] || "-"; },
+        name: "PROPERTY NAME"
+      },
+      {
+        data: function (row) { return row["teamId"] || row["teamID"] || "-"; },
+        name: "TEAM ID"
+      },
+      {
+        data: function (row) { return row["teamName"] || row["teamname"] || "-"; },
+        name: "TEAM NAME"
+      },
+      {
+        data: "manager",
+        name: "MANAGER",
+        render: function (data, type, row, meta) {
           var rowid = row["manager"];
-          if (!rowid) return "-";
+          if (!rowid) return (type === 'filter' || type === 'sort') ? "" : "-";
           var tt = `${rowid.firstName || ""} ${rowid.lastName || ""}`.trim();
+          if (type === 'filter' || type === 'sort') {
+            return (tt + ' ' + (rowid.email || '')).trim();
+          }
           return tt || "-";
         }
       },
       {
-        data: "members", name: "TOTAL MEMBERS", render: function (data, type, row, meta) {
+        data: "members",
+        name: "TOTAL MEMBERS",
+        render: function (data, type, row, meta) {
           var rowid = row["members"];
-          var tt = Array.isArray(rowid) ? rowid.length : 0;
-          return tt;
+          var count = Array.isArray(rowid) ? rowid.length : 0;
+          if (type === 'filter' || type === 'sort') {
+            return count.toString();
+          }
+          return count;
         }
       },
       {
-        data: "isactive", name: "STATUS", render: function (data, type, row, meta) {
-          var status = row["isactive"];
-          if (status === false || status === 0) {
+        data: "isactive",
+        name: "STATUS",
+        render: function (data, type, row, meta) {
+          var status = row["isactive"] !== undefined ? row["isactive"] : row["isActive"];
+          var isActive = status !== false && status !== 0;
+          if (type === 'filter' || type === 'sort') {
+            return isActive ? "Active" : "Inactive";
+          }
+          if (!isActive) {
             return `<span class="badge bg-label-danger"> Inactive </span>`;
           } else {
             return `<span class="badge bg-label-success"> Active </span>`;
@@ -1830,10 +1937,16 @@ function RenderTeamsDataTable(datavalues) {
         }
       },
       {
-        data: "teamId", name: "ACTION", width: '220px', render: function (data, type, row, meta) {
-          var rowid = row["propID"];
-          var teamId = row["teamId"];
-          var isActive = row["isactive"] !== false && row["isactive"] !== 0;
+        data: "teamId",
+        name: "ACTION",
+        width: '220px',
+        searchable: false,
+        orderable: false,
+        render: function (data, type, row, meta) {
+          var rowid = row["propID"] || row["propId"];
+          var teamId = row["teamId"] || row["teamID"];
+          var status = row["isactive"] !== undefined ? row["isactive"] : row["isActive"];
+          var isActive = status !== false && status !== 0;
           var toggleBtn = isActive
             ? `<button class="btn btn-outline-danger btn-xs rounded-1 ms-1" onclick="ToggleTeamStatus('${rowid}','${teamId}',false)"><i class="bx bx-power-off me-1"></i>Deactivate</button>`
             : `<button class="btn btn-outline-success btn-xs rounded-1 ms-1" onclick="ToggleTeamStatus('${rowid}','${teamId}',true)"><i class="bx bx-check me-1"></i>Activate</button>`;
@@ -1868,36 +1981,33 @@ function RenderTeamsDataTable(datavalues) {
     ],
     autoWidth: true,
     responsive: true,
-    searching: true,
-    initComplete: function () {
-      var state = this.api().state.loaded();
-      if (state) {
-        this.api().columns().eq(0).each(function (colIdx) {
-          var colSearch = state.columns[colIdx].search;
-          if (colSearch && colSearch.search) {
-            $('#teamDataTable thead input[data-index="' + colIdx + '"]').val(colSearch.search);
-          }
-        });
-      }
-    }
+    searching: true
   });
-  $('#teamDataTable tbody').on('mouseover', 'tr', function () {
 
+  $('#teamDataTable tbody').on('mouseover', 'tr', function () {
     $('[data-toggle="tooltip"]').tooltip({
       trigger: 'hover',
       html: true
     });
   });
-  $('#teamDataTable_filter').css("margin-top", "0px")
-  $('#teamDataTable_filter').css("margin-bottom", "5px")
+  $('#teamDataTable_filter').css("margin-top", "0px");
+  $('#teamDataTable_filter').css("margin-bottom", "5px");
 
-        // Filter event handler
-        $(table.table().container()).on('keyup', 'thead input', function () {
-          table
-              .column($(this).data('index'))
-              .search(this.value)
-              .draw();
-      });
+  // Prevent column sorting when clicking or typing inside header search inputs
+  $('#teamDataTable thead').off('click keydown keypress', 'input.team-col-search').on('click keydown keypress', 'input.team-col-search', function (e) {
+    e.stopPropagation();
+  });
+
+  // Filter event handler across all data in table - updates pagination accordingly
+  $('#teamDataTable thead').off('keyup change input', 'input.team-col-search').on('keyup change input', 'input.team-col-search', function () {
+    var colIdx = parseInt($(this).attr('data-index'), 10);
+    if (!isNaN(colIdx) && table) {
+      table
+        .column(colIdx)
+        .search(this.value)
+        .draw();
+    }
+  });
 }
 
 function EditTeam(propID, teamID) {
@@ -1991,24 +2101,92 @@ function EditTeam(propID, teamID) {
           $('#team-prop-name1').text('[' + AllUsers.propName + ']')
           $('#collapsible-manager1').empty();
 
-          AllUsers.propManager.forEach(function (emp) {
-            $('#collapsible-manager1').append('<option value="' + emp.userName + '">' + emp.firstName + ' ' + emp.lastName + '</option>');
-          });
+          var managerFoundInList = false;
+          var currentManagerEmail = (ExistingData && ExistingData.manager && ExistingData.manager.email) ? ExistingData.manager.email.trim().toLowerCase() : '';
+
+          if (Array.isArray(AllUsers.propManager)) {
+            AllUsers.propManager.forEach(function (emp) {
+              var empEmail = (emp.userName || emp.email || '').trim().toLowerCase();
+              if (currentManagerEmail && empEmail === currentManagerEmail) {
+                managerFoundInList = true;
+              }
+              var label = ((emp.firstName || '') + ' ' + (emp.lastName || '')).trim() || emp.userName;
+              if (emp.isActive === false || emp.isActive === 0) {
+                label += ' (Inactive)';
+              }
+              $('#collapsible-manager1').append('<option value="' + emp.userName + '">' + label + '</option>');
+            });
+          }
+
+          // If the existing manager was inactive (not in AllUsers.propManager) or marked inactive
+          if (ExistingData && ExistingData.manager && ExistingData.manager.email) {
+            var mEmail = ExistingData.manager.email;
+            var isMgrInactive = ExistingData.manager.isActive === false || ExistingData.manager.isActive === 0;
+            if (!managerFoundInList) {
+              var mName = ((ExistingData.manager.firstName || '') + ' ' + (ExistingData.manager.lastName || '')).trim() || mEmail;
+              $('#collapsible-manager1').append('<option value="' + mEmail + '">' + mName + ' (Inactive)</option>');
+            } else if (isMgrInactive) {
+              var opt = $('#collapsible-manager1 option[value="' + mEmail + '"]');
+              if (opt.length && opt.text().indexOf('(Inactive)') === -1) {
+                opt.text(opt.text() + ' (Inactive)');
+              }
+            }
+          }
 
           $('#collapsible-member1').empty();
-          AllUsers.propEmp.forEach(function (emp) {
-            $('#collapsible-member1').append('<option value="' + emp.userName + '">' + emp.firstName + ' ' + emp.lastName + '</option>');
-          });
+          var existingMemberMap = {};
+          if (ExistingData && Array.isArray(ExistingData.members)) {
+            ExistingData.members.forEach(function (emp) {
+              if (emp && emp.email) {
+                existingMemberMap[emp.email.trim().toLowerCase()] = emp;
+              }
+            });
+          }
 
-          $('#updateteam-fullname').val(ExistingData.teamName)
+          var addedMemberEmails = {};
+          if (Array.isArray(AllUsers.propEmp)) {
+            AllUsers.propEmp.forEach(function (emp) {
+              var empEmail = (emp.userName || emp.email || '').trim().toLowerCase();
+              addedMemberEmails[empEmail] = true;
+              var label = ((emp.firstName || '') + ' ' + (emp.lastName || '')).trim() || emp.userName;
+              var isMemInactive = emp.isActive === false || emp.isActive === 0 || (existingMemberMap[empEmail] && (existingMemberMap[empEmail].isActive === false || existingMemberMap[empEmail].isActive === 0));
+              if (isMemInactive) {
+                label += ' (Inactive)';
+              }
+              $('#collapsible-member1').append('<option value="' + emp.userName + '">' + label + '</option>');
+            });
+          }
 
-          $('#collapsible-manager1').val(ExistingData.manager.email);
-          $('#collapsible-manager1').trigger('change');
+          if (ExistingData && Array.isArray(ExistingData.members)) {
+            ExistingData.members.forEach(function (mem) {
+              if (!mem || !mem.email) return;
+              var memEmail = mem.email.trim().toLowerCase();
+              if (!addedMemberEmails[memEmail]) {
+                var memName = ((mem.firstName || '') + ' ' + (mem.lastName || '')).trim() || mem.email;
+                $('#collapsible-member1').append('<option value="' + mem.email + '">' + memName + ' (Inactive)</option>');
+                addedMemberEmails[memEmail] = true;
+              } else if (mem.isActive === false || mem.isActive === 0) {
+                var mOpt = $('#collapsible-member1 option[value="' + mem.email + '"]');
+                if (mOpt.length && mOpt.text().indexOf('(Inactive)') === -1) {
+                  mOpt.text(mOpt.text() + ' (Inactive)');
+                }
+              }
+            });
+          }
+
+          $('#updateteam-fullname').val(ExistingData.teamName || '');
+
+          if (ExistingData && ExistingData.manager && ExistingData.manager.email) {
+            $('#collapsible-manager1').val(ExistingData.manager.email);
+            $('#collapsible-manager1').trigger('change');
+          }
 
           var selectedMembers = [];
-          ExistingData.members.forEach(function (emp) {
-            selectedMembers.push(emp.email);
-          });
+          if (ExistingData && Array.isArray(ExistingData.members)) {
+            ExistingData.members.forEach(function (emp) {
+              if (emp && emp.email) selectedMembers.push(emp.email);
+            });
+          }
 
           $('#collapsible-member1').val(selectedMembers);
           $('#collapsible-member1').trigger('change');
@@ -2094,6 +2272,13 @@ function UpdateTeams(teamID, propID) {
   var teamName = $('#updateteam-fullname').val();
   var teamManager = $('#collapsible-manager1').val();
   var teamMembers = $('#collapsible-member1').val();
+
+  var isTeamActive = ExistingData && ExistingData.isactive !== false && ExistingData.isactive !== 0;
+  var selectedMgrText = $('#collapsible-manager1 option:selected').text() || '';
+  if (isTeamActive && selectedMgrText.indexOf('(Inactive)') !== -1) {
+    showTopToast('warning', 'Action Blocked', 'Cannot assign an inactive employee as manager of an active team. Please activate the manager in the Employee List first or select an active manager.');
+    return;
+  }
 
   if (teamName !== '' && teamManager !== '' & teamMembers.length > 0) {
 
@@ -2494,17 +2679,57 @@ function EditSubTeamItem(subteamid, teamId, teamdetail,propId) {
       $('#teams2').html(htm)
       $('#team-prop-name1').text('[' + Response.propName + ']')
       $('#collapsible-manager1').empty();
-    
-      Response.propManager.forEach(function (emp) {
-        $('#collapsible-manager1').append('<option value="' + emp.userName + '">' + emp.firstName + ' ' + emp.lastName + '</option>');
-      });
-    
+
+      var subMgrFound = false;
+      var currentSubMgrEmail = (managerID || '').trim().toLowerCase();
+
+      if (Array.isArray(Response.propManager)) {
+        Response.propManager.forEach(function (emp) {
+          var empEmail = (emp.userName || emp.email || '').trim().toLowerCase();
+          if (currentSubMgrEmail && empEmail === currentSubMgrEmail) {
+            subMgrFound = true;
+          }
+          var label = ((emp.firstName || '') + ' ' + (emp.lastName || '')).trim() || emp.userName;
+          if (emp.isActive === false || emp.isActive === 0) {
+            label += ' (Inactive)';
+          }
+          $('#collapsible-manager1').append('<option value="' + emp.userName + '">' + label + '</option>');
+        });
+      }
+
+      if (managerID && !subMgrFound) {
+        var foundSubMgr = (currentTeam.subteams || []).find(function(m) {
+          return m && m.email && m.email.trim().toLowerCase() === currentSubMgrEmail;
+        });
+        var sName = foundSubMgr ? (((foundSubMgr.firstName || '') + ' ' + (foundSubMgr.lastName || '')).trim() || managerID) : managerID;
+        $('#collapsible-manager1').append('<option value="' + managerID + '">' + sName + ' (Inactive)</option>');
+      }
+
       $('#collapsible-member1').empty();
-      Response.propEmp.forEach(function (emp) {
-        $('#collapsible-member1').append('<option value="' + emp.userName + '">' + emp.firstName + ' ' + emp.lastName + '</option>');
+      var addedSubMem = {};
+      if (Array.isArray(Response.propEmp)) {
+        Response.propEmp.forEach(function (emp) {
+          var empEmail = (emp.userName || emp.email || '').trim().toLowerCase();
+          addedSubMem[empEmail] = true;
+          var label = ((emp.firstName || '') + ' ' + (emp.lastName || '')).trim() || emp.userName;
+          if (emp.isActive === false || emp.isActive === 0) {
+            label += ' (Inactive)';
+          }
+          $('#collapsible-member1').append('<option value="' + emp.userName + '">' + label + '</option>');
+        });
+      }
+
+      (membersList || []).forEach(function(memEmail) {
+        var lowMem = (memEmail || '').trim().toLowerCase();
+        if (!addedSubMem[lowMem]) {
+          var foundMem = (currentTeam.subteams || []).find(function(m) { return m && m.email && m.email.trim().toLowerCase() === lowMem; });
+          var mName = foundMem ? (((foundMem.firstName || '') + ' ' + (foundMem.lastName || '')).trim() || memEmail) : memEmail;
+          $('#collapsible-member1').append('<option value="' + memEmail + '">' + mName + ' (Inactive)</option>');
+          addedSubMem[lowMem] = true;
+        }
       });
-    
-      $('#updateteam-fullname').val(teamdetail)
+
+      $('#updateteam-fullname').val(teamdetail);
       $('#collapsible-manager1').val(managerID);
       $('#collapsible-manager1').trigger('change');
     
