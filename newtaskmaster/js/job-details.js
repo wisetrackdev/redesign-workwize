@@ -320,7 +320,7 @@ function renderJobDetails(data) {
   if (expectedEl) {
     const rawExpected = (data.expectedCompletion || data.expectedDate || "").trim();
     const isInvalid = !rawExpected || rawExpected === "TBD" || rawExpected === "-" || rawExpected === "null" || rawExpected.startsWith("0001-01-01") || rawExpected.startsWith("1970-01-01");
-    expectedEl.textContent = isInvalid ? "-" : formatDate(rawExpected);
+    expectedEl.textContent = isInvalid ? "dd-mm-yy" : formatDate(rawExpected);
   }
   if (refNumEl) { const r = (data.refNum || data.refNo || "").trim(); refNumEl.textContent = (r && r !== "null" && r !== "N/A" && r !== "-") ? r : "-"; }
 
@@ -531,10 +531,12 @@ function renderJobDetails(data) {
   const finalExpEl = document.getElementById("dynJobFinalExp");
 
   if (budgetEl) budgetEl.textContent = `$${Number(data.budget || 0).toLocaleString()}`;
-  const costCenterVal = data.ccf || data.costCenter || "POMEC";
+  const costCenterVal = (data.ccf || data.costCenter || "").trim();
   const deptVal = (data.ccf_dept || data.ccfdept || data.department || data.dept || "").trim();
   if (costCenterEl) {
-    if (deptVal && deptVal !== "undefined" && deptVal !== "null" && deptVal !== "-") {
+    if (!costCenterVal || costCenterVal === "-" || costCenterVal === "null" || costCenterVal === "undefined") {
+      costCenterEl.textContent = "-";
+    } else if (deptVal && deptVal !== "undefined" && deptVal !== "null" && deptVal !== "-") {
       costCenterEl.innerHTML = `<div class="font-extrabold text-slate-900">${escapeHtml(costCenterVal)}</div><div class="text-[11px] font-semibold text-blue-600 mt-0.5">Dept: ${escapeHtml(deptVal)}</div>`;
     } else {
       costCenterEl.textContent = costCenterVal;
@@ -893,21 +895,43 @@ function formatMaldivesDateTime(d) {
   if (!d || d === "-" || d === "null" || d === "undefined") return "-";
   try {
     let s = String(d).trim();
+    if (!s || s.startsWith("0001-01-01") || s.startsWith("0001")) return "-";
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
       const parts = s.split("-");
       const dt = new Date(parts[0], parts[1] - 1, parts[2]);
       return dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
     }
-    let utcMs;
+    let utcMs = null;
     if (d instanceof Date) {
-      utcMs = d.getTime();
+      utcMs = isNaN(d.getTime()) ? null : d.getTime();
     } else if (s.includes("Z") || /[+-]\d{2}:?\d{2}$/.test(s)) {
-      utcMs = new Date(s).getTime();
+      const dZ = new Date(s);
+      utcMs = isNaN(dZ.getTime()) ? null : dZ.getTime();
     } else {
-      const clean = s.replace(" ", "T");
-      utcMs = new Date(clean + "+05:30").getTime();
+      const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (isoMatch) {
+        const sec = isoMatch[6] || "00";
+        const utcIso = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T${isoMatch[4]}:${isoMatch[5]}:${sec}Z`;
+        const dIso = new Date(utcIso);
+        utcMs = isNaN(dIso.getTime()) ? null : dIso.getTime();
+      } else {
+        const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,?\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+        if (dmyMatch) {
+          const y = dmyMatch[3];
+          const m = String(dmyMatch[2]).padStart(2, "0");
+          const dd = String(dmyMatch[1]).padStart(2, "0");
+          const hr = String(dmyMatch[4] || 0).padStart(2, "0");
+          const min = String(dmyMatch[5] || 0).padStart(2, "0");
+          const sc = String(dmyMatch[6] || 0).padStart(2, "0");
+          const dDmy = new Date(`${y}-${m}-${dd}T${hr}:${min}:${sc}Z`);
+          utcMs = isNaN(dDmy.getTime()) ? null : dDmy.getTime();
+        } else {
+          const fb = new Date(s);
+          utcMs = isNaN(fb.getTime()) ? null : fb.getTime();
+        }
+      }
     }
-    if (isNaN(utcMs)) return s;
+    if (utcMs === null || isNaN(utcMs)) return s;
     const maldivesDate = new Date(utcMs + (5 * 60 * 60 * 1000));
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const month = months[maldivesDate.getUTCMonth()];
@@ -926,13 +950,13 @@ function formatMaldivesDateTime(d) {
 }
 
 function formatDate(d) {
-  if (!d || d === "-" || d === "null") return "-";
+  if (!d || d === "-" || d === "null" || String(d).startsWith("0001-01-01") || String(d).startsWith("1970-01-01")) return "dd-mm-yy";
   try {
     const dt = new Date(d);
-    if (isNaN(dt.getTime())) return d;
+    if (isNaN(dt.getTime())) return "dd-mm-yy";
     return dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
   } catch (e) {
-    return d;
+    return "dd-mm-yy";
   }
 }
 

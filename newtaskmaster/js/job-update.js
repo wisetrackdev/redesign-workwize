@@ -406,21 +406,43 @@ function formatMaldivesDateTime(d) {
   if (!d || d === "-" || d === "null" || d === "undefined") return "-";
   try {
     let s = String(d).trim();
+    if (!s || s.startsWith("0001-01-01") || s.startsWith("0001")) return "-";
     if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
       const parts = s.split("-");
       const dt = new Date(parts[0], parts[1] - 1, parts[2]);
       return dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
     }
-    let utcMs;
+    let utcMs = null;
     if (d instanceof Date) {
-      utcMs = d.getTime();
+      utcMs = isNaN(d.getTime()) ? null : d.getTime();
     } else if (s.includes("Z") || /[+-]\d{2}:?\d{2}$/.test(s)) {
-      utcMs = new Date(s).getTime();
+      const dZ = new Date(s);
+      utcMs = isNaN(dZ.getTime()) ? null : dZ.getTime();
     } else {
-      const clean = s.replace(" ", "T");
-      utcMs = new Date(clean + "+05:30").getTime();
+      const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+      if (isoMatch) {
+        const sec = isoMatch[6] || "00";
+        const utcIso = `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}T${isoMatch[4]}:${isoMatch[5]}:${sec}Z`;
+        const dIso = new Date(utcIso);
+        utcMs = isNaN(dIso.getTime()) ? null : dIso.getTime();
+      } else {
+        const dmyMatch = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})(?:,?\s*(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+        if (dmyMatch) {
+          const y = dmyMatch[3];
+          const m = String(dmyMatch[2]).padStart(2, "0");
+          const dd = String(dmyMatch[1]).padStart(2, "0");
+          const hr = String(dmyMatch[4] || 0).padStart(2, "0");
+          const min = String(dmyMatch[5] || 0).padStart(2, "0");
+          const sc = String(dmyMatch[6] || 0).padStart(2, "0");
+          const dDmy = new Date(`${y}-${m}-${dd}T${hr}:${min}:${sc}Z`);
+          utcMs = isNaN(dDmy.getTime()) ? null : dDmy.getTime();
+        } else {
+          const fb = new Date(s);
+          utcMs = isNaN(fb.getTime()) ? null : fb.getTime();
+        }
+      }
     }
-    if (isNaN(utcMs)) return s;
+    if (utcMs === null || isNaN(utcMs)) return s;
     const maldivesDate = new Date(utcMs + (5 * 60 * 60 * 1000));
     const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const month = months[maldivesDate.getUTCMonth()];
@@ -746,8 +768,18 @@ function populateEditForm(data) {
   else if (upperCcf.includes("DEPT") || upperCcf.includes("OPERATIONAL") || upperCcf.includes("BUDGET")) targetCcf = "Department Operational Budget";
   else targetCcf = ccfVal;
 
-  if (targetCcf) setSelectValue("editCostCenter", targetCcf);
+  const costCenterSelect = document.getElementById("editCostCenter");
+  if (costCenterSelect) {
+    if (targetCcf) {
+      setSelectValue("editCostCenter", targetCcf);
+    } else {
+      costCenterSelect.value = "";
+    }
+  }
   handleEditCcfChange();
+  if (ccfDeptVal) {
+    setInputValue("editCcfDept", ccfDeptVal);
+  }
   if (targetCcf === "Department Operational Budget" && ccfDeptVal) {
     const editDeptInput = document.getElementById("editCcfDept");
     if (editDeptInput) editDeptInput.value = ccfDeptVal;
@@ -787,8 +819,11 @@ async function handleJobUpdateSubmit(e) {
     const remarks = document.getElementById("editRemarks").value;
     const budget = document.getElementById("editBudget").value;
     const finalExp = document.getElementById("editFinalExp").value;
-    const costCenter = document.getElementById("editCostCenter")?.value || "";
-    const ccfDept = document.getElementById("editCcfDept")?.value?.trim() || "";
+    const selectedCostCenter = document.getElementById("editCostCenter")?.value || "";
+    const selectedCcfDept = document.getElementById("editCcfDept")?.value?.trim() || "";
+    // If user selected a Cost Center, use it. If left unchanged/blank, preserve existing Cost Center from currentJobData.
+    const costCenter = selectedCostCenter || (currentJobData ? (currentJobData.ccf || currentJobData.costCenter || "") : "");
+    const ccfDept = selectedCcfDept || (currentJobData ? (currentJobData.ccf_dept || currentJobData.ccfdept || "") : "");
     const ownerCommentVal = document.getElementById("editOwnerComment")?.value.trim() || "";
     const newComment = document.getElementById("editNewComment").value;
     const photoFileInput = document.getElementById("editPhotoFile");
@@ -913,6 +948,10 @@ async function handleJobUpdateSubmit(e) {
         currentJobData.budget = Number(budget || 0);
         currentJobData.finalExp = Number(finalExp || 0);
         currentJobData.owner_comment = ownerCommentVal;
+        currentJobData.ccf = costCenter;
+        currentJobData.costCenter = costCenter;
+        currentJobData.ccf_dept = ccfDept;
+        currentJobData.ccfdept = ccfDept;
         currentJobData.expectedCompletion = expectedCompletion;
         currentJobData.expectedDate = expectedCompletion;
         currentJobData.teams = selectedAssignees.map(a => ({ teamID: a.id, teamName: a.name }));
@@ -931,6 +970,9 @@ async function handleJobUpdateSubmit(e) {
           assignedTo: assignedText,
           teams: selectedAssignees.map(a => ({ teamID: a.id, teamName: a.name })),
           owner_comment: ownerCommentVal,
+          ccf: costCenter,
+          costCenter: costCenter,
+          ccf_dept: ccfDept,
           expectedDate: expectedCompletion,
           refNo: refNum,
           area: areaName,
