@@ -308,17 +308,17 @@ function renderJobDetails(data) {
 
   const villaDisplay = document.getElementById("dynJobVillaDisplay");
   if (villaDisplay) {
-    if (data.villaNumber && data.villaNumber !== "-" && data.villaNumber !== "null") {
+    if (data.villaNumber && data.villaNumber !== "-" && data.villaNumber !== "null" && data.villaNumber !== "N/A") {
       villaDisplay.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-bold border border-blue-200">Villa ${escapeHtml(data.villaNumber)}</span>`;
     } else {
-      villaDisplay.textContent = "N/A (General Facility)";
+      villaDisplay.textContent = "-";
     }
   }
 
   if (locationEl) locationEl.textContent = data.jobLocation || data.location || "-";
   if (createdOnEl) createdOnEl.textContent = formatDate(data.jobCreatedOn || data.createdOn);
   if (expectedEl) expectedEl.textContent = formatDate(data.expectedCompletion || data.expectedDate);
-  if (refNumEl) refNumEl.textContent = (data.refNum && data.refNum !== "null") ? data.refNum : "-";
+  if (refNumEl) { const r = (data.refNum || data.refNo || "").trim(); refNumEl.textContent = (r && r !== "null" && r !== "N/A" && r !== "-") ? r : "-"; }
 
   // Created By Reference (Ensure a valid creator name or Admin is always displayed)
   let creator = "";
@@ -457,10 +457,10 @@ function renderJobDetails(data) {
           <div class="flex items-center justify-between text-[10px] text-purple-600 font-semibold mb-1 pb-1 border-b border-purple-100/80">
             <span class="flex items-center gap-1 font-medium text-purple-700">
               <i class="fa-solid fa-clock-rotate-left text-[9px]"></i>
-              <span>Comment #${allOwnerComments.length - idx}</span>
+              <span>Comment #${allOwnerComments.length - idx}</span><span class="text-slate-400 text-[10px] font-normal ml-1">by ${escapeHtml(c.author || 'Owner')}</span>
               ${idx === 0 ? '<span class="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 text-[9px] font-bold ml-1">Latest</span>' : ''}
             </span>
-            <span class="font-mono text-slate-400 text-[10px]">${formatDate(c.commentDate)}</span>
+            <span class="text-slate-500 font-semibold text-[10px] flex items-center gap-1"><i class="fa-regular fa-clock text-purple-500 text-[9px]"></i>${formatMaldivesDateTime(c.commentDate)}</span>
           </div>
           <div class="whitespace-pre-wrap leading-relaxed text-slate-800 pt-0.5">${escapeHtml(c.commentDetail)}</div>
         </div>
@@ -527,12 +527,13 @@ function renderJobDetails(data) {
   const finalExpEl = document.getElementById("dynJobFinalExp");
 
   if (budgetEl) budgetEl.textContent = `$${Number(data.budget || 0).toLocaleString()}`;
-  if (costCenterEl) costCenterEl.textContent = data.ccf || "POMEC";
-  if (ccfDeptEl) {
-    if (data.ccf_dept && data.ccf_dept !== "undefined" && data.ccf_dept !== "null") {
-      ccfDeptEl.textContent = `Dept: ${data.ccf_dept}`;
+  const costCenterVal = data.ccf || data.costCenter || "POMEC";
+  const deptVal = (data.ccf_dept || data.ccfdept || data.department || data.dept || "").trim();
+  if (costCenterEl) {
+    if (deptVal && deptVal !== "undefined" && deptVal !== "null" && deptVal !== "-") {
+      costCenterEl.innerHTML = `<div class="font-extrabold text-slate-900">${escapeHtml(costCenterVal)}</div><div class="text-[11px] font-semibold text-blue-600 mt-0.5">Dept: ${escapeHtml(deptVal)}</div>`;
     } else {
-      ccfDeptEl.textContent = "";
+      costCenterEl.textContent = costCenterVal;
     }
   }
   if (finalExpEl) finalExpEl.textContent = `$${Number(data.finalExp || data.expense || 0).toLocaleString()}`;
@@ -738,7 +739,7 @@ function renderCommentsTimeline(comments, adminComment, closeOn, closeBy) {
 
   container.innerHTML = timeline.map(c => {
     const author = `${c.firstName || c.firstname || "User"} ${c.lastName || c.lastname || ""}`.trim();
-    const dateStr = formatDate(c.commentDate || c.createdOn || new Date());
+    const dateStr = formatMaldivesDateTime(c.commentDate || c.createdOn || new Date());
     const detail = c.commentDetail || c.comment || c.text || "-";
     const isAdmin = c.isAdminNote;
 
@@ -882,6 +883,28 @@ function normalizePriorityString(p) {
   if (s.includes("LOW")) return "Low";
   if (s.includes("SAFETY")) return "Safety";
   return "Medium";
+}
+
+function formatMaldivesDateTime(d) {
+  if (!d || d === "-" || d === "null" || d === "undefined") return "-";
+  try {
+    let dt = new Date(d);
+    if (isNaN(dt.getTime())) {
+      dt = new Date(String(d).replace(" ", "T"));
+    }
+    if (isNaN(dt.getTime())) return String(d);
+    return dt.toLocaleString("en-US", {
+      timeZone: "Indian/Maldives",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  } catch (e) {
+    return String(d);
+  }
 }
 
 function formatDate(d) {

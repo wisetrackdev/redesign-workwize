@@ -727,6 +727,19 @@ function openModal() {
   if (!modal) return;
   modal.classList.add("open");
 
+  // Ensure Reference No. and Expected Date are clean / empty unless entered
+  const modalRefEl = document.getElementById("modalReferenceNo");
+  if (modalRefEl) modalRefEl.value = "";
+  const modalExpEl = document.getElementById("modalExpectedDate");
+  if (modalExpEl) modalExpEl.value = "";
+
+  // Highlight Create New Job button in blue while modal is open
+  const createJobBtn = document.getElementById("headerNavCreateJob");
+  if (createJobBtn) {
+    document.querySelectorAll(".sidebar-tab, .tab, .sidebar-nav-item").forEach(item => item.classList.remove("on", "active"));
+    createJobBtn.classList.add("on", "active");
+  }
+
   // Pre-fill Created By from logged-in session user
   const createdByInput = document.getElementById("modalCreatedBy");
   if (createdByInput) {
@@ -767,6 +780,15 @@ function closeModal() {
   const modal = document.getElementById("addJobModal");
   if (!modal) return;
   modal.classList.remove("open");
+
+  // Remove highlight from Create New Job button and restore current page active tab
+  const createJobBtn = document.getElementById("headerNavCreateJob");
+  if (createJobBtn) {
+    createJobBtn.classList.remove("on", "active");
+  }
+  if (typeof initHeaderNavAndBadges === "function") {
+    initHeaderNavAndBadges();
+  }
 }
 
 function setStep(stepNum) {
@@ -879,7 +901,7 @@ async function submitJobForm() {
     const location = document.getElementById("modalLocation")?.value?.trim() || "";
     const creationDate = document.getElementById("modalJobCreationDate")?.value || new Date().toISOString().split("T")[0];
     const completionDate = document.getElementById("modalExpectedDate")?.value || "";
-    const refNo = document.getElementById("modalReferenceNo")?.value?.trim() || `REF-${Math.floor(10000 + Math.random() * 90000)}`;
+    const refNo = document.getElementById("modalReferenceNo")?.value?.trim() || "";
 
     const createdBy = document.getElementById("modalCreatedBy")?.value?.trim() ||
       (typeof UserSession !== "undefined" && UserSession.getUserName ? UserSession.getUserName() : "") ||
@@ -1256,7 +1278,8 @@ function initHeaderNavAndBadges() {
   const teamsTab = document.getElementById("headerNavTeams");
   const oproTab = document.getElementById("headerNavOproDashboard");
 
-  const tabs = [dashboardTab, jobByAreaTab, allJobsTab, closedJobsTab, teamsTab, oproTab].filter(Boolean);
+  const createJobBtn = document.getElementById("headerNavCreateJob");
+  const tabs = [dashboardTab, jobByAreaTab, allJobsTab, closedJobsTab, teamsTab, oproTab, createJobBtn].filter(Boolean);
   tabs.forEach(t => t.classList.remove("on", "active"));
 
   // Check if job is closed or comes from job-by-area (for job-details.html or job-update.html)

@@ -133,15 +133,19 @@ function setupNavigationLinks(jobId) {
   if (cancelBtn) cancelBtn.href = detailsUrl;
 }
 
-function toggleVillaField(areaVal) {
+function toggleVillaField(areaVal, preserveValue = false) {
   const villaInput = document.getElementById("editVillaNumber");
   if (!villaInput) return;
   const isGuestVilla = String(areaVal || "").toUpperCase().includes("VILLA");
   if (isGuestVilla) {
+    villaInput.disabled = false;
     villaInput.placeholder = "Villa Number required (e.g. 104)";
-    villaInput.parentElement.classList.remove("opacity-50");
+    villaInput.classList.remove("opacity-60", "cursor-not-allowed", "bg-slate-100");
   } else {
-    villaInput.placeholder = "Not required for general areas";
+    villaInput.disabled = true;
+    if (!preserveValue) villaInput.value = "";
+    villaInput.placeholder = "Disabled (Select Villa Area)";
+    villaInput.classList.add("opacity-60", "cursor-not-allowed", "bg-slate-100");
   }
 }
 
@@ -374,6 +378,237 @@ async function populateEditAssignees(data) {
   updateEditAssigneeButtonText();
 }
 
+
+// Strip HTML tags and format cleanly for textarea (no <div>, <br>, or <p> tags)
+function stripHtmlToPlainText(str) {
+  if (str === null || str === undefined) return "";
+  let s = String(str);
+  s = s.replace(/<br\s*[\/]?>/gi, "\n")
+       .replace(/<\/p>/gi, "\n")
+       .replace(/<\/div>/gi, "\n")
+       .replace(/<div\b[^>]*>/gi, "")
+       .replace(/<p\b[^>]*>/gi, "");
+  s = s.replace(/<[^>]+>/g, "");
+  const txt = document.createElement("textarea");
+  txt.innerHTML = s;
+  return txt.value.trim();
+}
+
+// Maldives Standard Time (UTC+5) Formatter
+function formatMaldivesDateTime(d) {
+  if (!d || d === "-" || d === "null" || d === "undefined") return "-";
+  try {
+    let dt = new Date(d);
+    if (isNaN(dt.getTime())) {
+      dt = new Date(String(d).replace(" ", "T"));
+    }
+    if (isNaN(dt.getTime())) return String(d);
+    return dt.toLocaleString("en-US", {
+      timeZone: "Indian/Maldives",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  } catch (e) {
+    return String(d);
+  }
+}
+
+// Cost Center Dropdown Condition Handler
+function handleEditCcfChange() {
+  const ccfSelect = document.getElementById("editCostCenter");
+  const deptContainer = document.getElementById("editCcfDeptContainer");
+  const deptInput = document.getElementById("editCcfDept");
+  if (!ccfSelect || !deptContainer) return;
+  if (ccfSelect.value === "Department Operational Budget") {
+    deptContainer.classList.remove("hidden");
+  } else {
+    deptContainer.classList.add("hidden");
+    if (deptInput) deptInput.value = "";
+  }
+}
+window.handleEditCcfChange = handleEditCcfChange;
+
+// Helper to extract image/attachment URL from comment objects
+function extractAttachmentFromComment(c) {
+  if (!c) return null;
+  const findUrl = (item) => {
+    if (!item) return null;
+    if (typeof item === "string") {
+      let u = item.trim();
+      if (u.startsWith("http://") || u.startsWith("https://") || u.startsWith("data:") || u.startsWith("blob:") || u.startsWith("assets/")) return u;
+      if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.BASE_URL) return `${WorkWizeAPI.BASE_URL.replace(/\/+$/, "")}/uploads/${u.replace(/^\/+/, "")}`;
+      return u;
+    }
+    const val = item.url || item.path || item.fileName || item.mediaPath || item.src || "";
+    return val ? findUrl(val) : null;
+  };
+
+  if (Array.isArray(c.imageUploads) && c.imageUploads.length > 0) return findUrl(c.imageUploads[0]);
+  if (Array.isArray(c.uploads) && c.uploads.length > 0) return findUrl(c.uploads[0]);
+  if (Array.isArray(c.attachments) && c.attachments.length > 0) return findUrl(c.attachments[0]);
+  if (c.photo) return findUrl(c.photo);
+  if (c.attachment) return findUrl(c.attachment);
+  if (c.mediaPath) return findUrl(c.mediaPath);
+  if (c.fileName && /\.(jpg|jpeg|png|gif|webp|svg|pdf)$/i.test(c.fileName)) return findUrl(c.fileName);
+  return null;
+}
+
+// Render Owner Comments History in job-update page
+function renderOwnerCommentsHistory(data) {
+  const container = document.getElementById("ownerCommentHistorySection");
+  const listEl = document.getElementById("ownerCommentHistoryList");
+  const badge = document.getElementById("ownerHistoryCountBadge");
+  if (!container || !listEl) return;
+
+  const allOwner = [];
+  if (Array.isArray(data.owner_comments_history)) {
+    data.owner_comments_history.forEach(h => {
+      const text = (h.commentDetail || h.commentText || h.comment || "").trim();
+      if (text && !allOwner.some(x => x.text === text && x.date === h.commentDate)) {
+        allOwner.push({
+          text,
+          date: h.commentDate || "",
+          author: h.firstName ? `${h.firstName} ${h.lastName || ""}`.trim() : (h.createdBy || "Owner"),
+          att: extractAttachmentFromComment(h)
+        });
+      }
+    });
+  }
+
+  if (Array.isArray(data.comments)) {
+    data.comments.forEach(c => {
+      if (c && c.commentId && String(c.commentId).startsWith("OWNERCOMMENT")) {
+        const text = (c.commentDetail || c.commentText || c.comment || "").trim();
+        if (text && !allOwner.some(x => x.text === text && x.date === c.commentDate)) {
+          allOwner.push({
+            text,
+            date: c.commentDate || "",
+            author: c.firstName ? `${c.firstName} ${c.lastName || ""}`.trim() : (c.createdBy || "Owner"),
+            att: extractAttachmentFromComment(c)
+          });
+        }
+      }
+    });
+  }
+
+  const direct = (data.owner_comment || "").trim();
+  if (direct && !allOwner.some(x => x.text === direct)) {
+    allOwner.unshift({
+      text: direct,
+      date: data.jobDate || data.jobCreatedOn || new Date().toISOString(),
+      author: data.createdBy || "Owner",
+      att: null
+    });
+  }
+
+  // Sort newest first
+  allOwner.sort((a, b) => {
+    const tA = a.date ? new Date(a.date).getTime() : 0;
+    const tB = b.date ? new Date(b.date).getTime() : 0;
+    return tB - tA;
+  });
+
+  if (badge) badge.textContent = allOwner.length;
+
+  if (allOwner.length === 0) {
+    container.classList.add("hidden");
+    listEl.innerHTML = "";
+    return;
+  }
+
+  container.classList.remove("hidden");
+  listEl.innerHTML = allOwner.map((c, idx) => `
+    <div class="p-3 rounded-xl bg-white border border-purple-200/80 text-xs shadow-2xs">
+      <div class="flex items-center justify-between text-[10px] text-purple-700 font-semibold mb-1 pb-1 border-b border-purple-100">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-user-pen text-purple-600"></i>
+          <span class="font-bold text-purple-900">${escapeHtml(c.author)}</span>
+          ${idx === 0 ? '<span class="px-1.5 py-0.2 rounded bg-purple-100 text-purple-700 text-[9px] font-bold">Latest</span>' : ''}
+        </span>
+        <span class="text-slate-500 font-semibold flex items-center gap-1"><i class="fa-regular fa-clock text-[9px] text-purple-400"></i>${formatMaldivesDateTime(c.date)}</span>
+      </div>
+      <div class="whitespace-pre-wrap text-slate-800 leading-relaxed pt-0.5">${escapeHtml(c.text)}</div>
+      ${c.att ? `
+        <div class="mt-2 pt-1.5 border-t border-purple-100/70">
+          <a href="${escapeHtml(c.att)}" target="_blank" class="inline-flex items-center gap-1.5 px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-[10px] font-bold hover:bg-purple-100 transition-all">
+            <i class="fa-solid fa-paperclip"></i>
+            <span>View Attachment</span>
+          </a>
+        </div>
+      ` : ''}
+    </div>
+  `).join("");
+}
+
+// Render Progress Notes History in job-update page
+function renderProgressNotesHistory(data) {
+  const container = document.getElementById("progressNotesHistorySection");
+  const listEl = document.getElementById("progressNotesHistoryList");
+  const badge = document.getElementById("progressHistoryCountBadge");
+  if (!container || !listEl) return;
+
+  const notes = [];
+  if (Array.isArray(data.comments)) {
+    data.comments.forEach(c => {
+      // Exclude OWNERCOMMENT
+      if (c && (!c.commentId || !String(c.commentId).startsWith("OWNERCOMMENT"))) {
+        const text = (c.commentDetail || c.commentText || c.comment || c.text || "").trim();
+        const att = extractAttachmentFromComment(c);
+        if (text || att) {
+          const author = `${c.firstName || c.firstname || "User"} ${c.lastName || c.lastname || ""}`.trim();
+          notes.push({
+            text: text || "Attachment uploaded",
+            date: c.commentDate || c.createdOn || "",
+            author: author || "Team Member",
+            att
+          });
+        }
+      }
+    });
+  }
+
+  // Sort newest first
+  notes.sort((a, b) => {
+    const tA = a.date ? new Date(a.date).getTime() : 0;
+    const tB = b.date ? new Date(b.date).getTime() : 0;
+    return tB - tA;
+  });
+
+  if (badge) badge.textContent = `${notes.length} ${notes.length === 1 ? 'Note' : 'Notes'}`;
+
+  if (notes.length === 0) {
+    container.classList.add("hidden");
+    listEl.innerHTML = "";
+    return;
+  }
+
+  container.classList.remove("hidden");
+  listEl.innerHTML = notes.map(n => `
+    <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+      <div class="flex items-center justify-between text-[10px] text-slate-600 font-semibold mb-1 pb-1 border-b border-slate-100 flex-wrap gap-1">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-circle-user text-blue-600 text-xs"></i>
+          <span class="font-bold text-slate-900">${escapeHtml(n.author)}</span>
+        </span>
+        <span class="text-slate-500 font-semibold flex items-center gap-1"><i class="fa-regular fa-clock text-[9px] text-slate-400"></i>${formatMaldivesDateTime(n.date)}</span>
+      </div>
+      <p class="text-slate-700 leading-relaxed pt-0.5 whitespace-pre-wrap">${escapeHtml(n.text)}</p>
+      ${n.att ? `
+        <div class="mt-2 pt-1.5 border-t border-slate-200">
+          <a href="${escapeHtml(n.att)}" target="_blank" class="inline-flex items-center gap-1.5 px-2 py-1 bg-white text-blue-600 border border-slate-200 rounded-lg text-[10px] font-bold hover:bg-blue-50 transition-all">
+            <i class="fa-solid fa-paperclip text-slate-400"></i>
+            <span>View Attachment</span>
+          </a>
+        </div>
+      ` : ''}
+    </div>
+  `).join("");
+}
+
 function populateEditForm(data) {
   if (!data) return;
 
@@ -446,21 +681,46 @@ function populateEditForm(data) {
     setSelectValue("editAreaName", data.areaName || data.area || "Development/Project");
   }
 
-  // Populate Owner Comment with the last comment ready for editing
-  setInputValue("editOwnerComment", extractLatestOwnerComment(data));
+  // Owner Comment textarea remains BLANK ready for a new comment
+  setInputValue("editOwnerComment", "");
+  renderOwnerCommentsHistory(data);
 
-  // Dates & strings
-  setInputValue("editExpectedCompletion", formatDateForInput(data.expectedCompletion || data.expectedDate));
+  // Render Progress Notes History
+  renderProgressNotesHistory(data);
+
+  // Expected Completion Date: only populate if a real date exists, otherwise clear
+  const rawExpected = (data.expectedCompletion || data.expectedDate || "").trim();
+  const isAutoOrInvalid = !rawExpected || rawExpected === "TBD" || rawExpected === "-" || rawExpected === "null" || rawExpected.startsWith("0001-01-01");
+  setInputValue("editExpectedCompletion", isAutoOrInvalid ? "" : formatDateForInput(rawExpected));
+
   setInputValue("editRefNum", data.refNum || "");
   setInputValue("editJobLocation", data.jobLocation || data.location || "");
-  setInputValue("editVillaNumber", data.villaNumber && data.villaNumber !== "-" ? data.villaNumber : "");
-  setInputValue("editJobDetail", data.jobDetail || data.details || data.description || "");
-  setInputValue("editRemarks", data.remarks && data.remarks !== "null" ? data.remarks : "");
-  setInputValue("editBudget", data.budget || 0);
-  setInputValue("editCostCenter", data.ccf || "POMEC");
-  setInputValue("editFinalExp", data.finalExp || data.expense || 0);
 
-  toggleVillaField(data.areaName || data.area);
+  // Villa Number & Area Toggle
+  const hasVillaNumber = data.villaNumber && data.villaNumber !== "-" && data.villaNumber !== "null" && data.villaNumber !== "N/A";
+  setInputValue("editVillaNumber", hasVillaNumber ? data.villaNumber : "");
+  toggleVillaField(data.areaName || data.area, true);
+
+  // Clean Job Detail & Remarks from raw HTML tags like <div>, <p>, <br>
+  setInputValue("editJobDetail", stripHtmlToPlainText(data.jobDetail || data.details || data.description || ""));
+  setInputValue("editRemarks", stripHtmlToPlainText(data.remarks && data.remarks !== "null" ? data.remarks : ""));
+  setInputValue("editBudget", data.budget || 0);
+
+  // Cost Center & Department Dropdown
+  const ccfVal = data.ccf || data.costCenter || "";
+  const ccfDeptVal = (data.ccf_dept || data.ccfdept || data.department || data.dept || "").trim();
+  setSelectValue("editCostCenter", ccfVal || "POMEC");
+  const editDeptContainer = document.getElementById("editCcfDeptContainer");
+  const editDeptInput = document.getElementById("editCcfDept");
+  if (ccfVal === "Department Operational Budget") {
+    if (editDeptContainer) editDeptContainer.classList.remove("hidden");
+    if (editDeptInput) editDeptInput.value = ccfDeptVal;
+  } else {
+    if (editDeptContainer) editDeptContainer.classList.add("hidden");
+    if (editDeptInput) editDeptInput.value = "";
+  }
+
+  setInputValue("editFinalExp", data.finalExp || data.expense || 0);
 }
 
 async function handleJobUpdateSubmit(e) {
@@ -494,6 +754,8 @@ async function handleJobUpdateSubmit(e) {
     const remarks = document.getElementById("editRemarks").value;
     const budget = document.getElementById("editBudget").value;
     const finalExp = document.getElementById("editFinalExp").value;
+    const costCenter = document.getElementById("editCostCenter")?.value || "";
+    const ccfDept = document.getElementById("editCcfDept")?.value?.trim() || "";
     const ownerCommentVal = document.getElementById("editOwnerComment")?.value.trim() || "";
     const newComment = document.getElementById("editNewComment").value;
     const photoFileInput = document.getElementById("editPhotoFile");
@@ -514,6 +776,10 @@ async function handleJobUpdateSubmit(e) {
     formData.append("jobDetail", jobDetail);
     formData.append("budget", budget || "0");
     formData.append("expense", finalExp || "0");
+    formData.append("ccf", costCenter);
+    formData.append("ccfdept", ccfDept);
+    formData.append("remarks", remarks);
+    formData.append("jobremark", remarks);
     formData.append("jobActive", isClosed ? "0" : "1");
     selectedAssignees.forEach(a => {
       formData.append("assignedTo", a.id);
