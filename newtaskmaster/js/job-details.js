@@ -317,7 +317,11 @@ function renderJobDetails(data) {
 
   if (locationEl) locationEl.textContent = data.jobLocation || data.location || "-";
   if (createdOnEl) createdOnEl.textContent = formatDate(data.jobCreatedOn || data.createdOn);
-  if (expectedEl) expectedEl.textContent = formatDate(data.expectedCompletion || data.expectedDate);
+  if (expectedEl) {
+    const rawExpected = (data.expectedCompletion || data.expectedDate || "").trim();
+    const isInvalid = !rawExpected || rawExpected === "TBD" || rawExpected === "-" || rawExpected === "null" || rawExpected.startsWith("0001-01-01") || rawExpected.startsWith("1970-01-01");
+    expectedEl.textContent = isInvalid ? "-" : formatDate(rawExpected);
+  }
   if (refNumEl) { const r = (data.refNum || data.refNo || "").trim(); refNumEl.textContent = (r && r !== "null" && r !== "N/A" && r !== "-") ? r : "-"; }
 
   // Created By Reference (Ensure a valid creator name or Admin is always displayed)
@@ -888,20 +892,34 @@ function normalizePriorityString(p) {
 function formatMaldivesDateTime(d) {
   if (!d || d === "-" || d === "null" || d === "undefined") return "-";
   try {
-    let dt = new Date(d);
-    if (isNaN(dt.getTime())) {
-      dt = new Date(String(d).replace(" ", "T"));
+    let s = String(d).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const parts = s.split("-");
+      const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+      return dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
     }
-    if (isNaN(dt.getTime())) return String(d);
-    return dt.toLocaleString("en-US", {
-      timeZone: "Indian/Maldives",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
+    let utcMs;
+    if (d instanceof Date) {
+      utcMs = d.getTime();
+    } else if (s.includes("Z") || /[+-]\d{2}:?\d{2}$/.test(s)) {
+      utcMs = new Date(s).getTime();
+    } else {
+      const clean = s.replace(" ", "T");
+      utcMs = new Date(clean + "+05:30").getTime();
+    }
+    if (isNaN(utcMs)) return s;
+    const maldivesDate = new Date(utcMs + (5 * 60 * 60 * 1000));
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const month = months[maldivesDate.getUTCMonth()];
+    const day = maldivesDate.getUTCDate();
+    const year = maldivesDate.getUTCFullYear();
+    let hours = maldivesDate.getUTCHours();
+    const minutes = String(maldivesDate.getUTCMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, "0");
+    return `${month} ${day}, ${year}, ${hoursStr}:${minutes} ${ampm}`;
   } catch (e) {
     return String(d);
   }

@@ -111,7 +111,8 @@ document.addEventListener("DOMContentLoaded", async function () {
   const areaSelect = document.getElementById("editAreaName");
   if (areaSelect) {
     areaSelect.addEventListener("change", function () {
-      toggleVillaField(this.value);
+      const optText = this.options[this.selectedIndex]?.text || "";
+      toggleVillaField(`${this.value} ${optText}`, false);
     });
   }
 
@@ -136,10 +137,16 @@ function setupNavigationLinks(jobId) {
 function toggleVillaField(areaVal, preserveValue = false) {
   const villaInput = document.getElementById("editVillaNumber");
   if (!villaInput) return;
-  const isGuestVilla = String(areaVal || "").toUpperCase().includes("VILLA");
+  const areaSelect = document.getElementById("editAreaName");
+  const selectedText = (areaSelect && areaSelect.selectedIndex >= 0 && areaSelect.options[areaSelect.selectedIndex]) 
+    ? areaSelect.options[areaSelect.selectedIndex].text 
+    : "";
+  const combined = `${areaVal || ""} ${selectedText}`.toUpperCase();
+  const isGuestVilla = combined.includes("VILLA");
+
   if (isGuestVilla) {
     villaInput.disabled = false;
-    villaInput.placeholder = "Villa Number required (e.g. 104)";
+    villaInput.placeholder = "e.g. 104";
     villaInput.classList.remove("opacity-60", "cursor-not-allowed", "bg-slate-100");
   } else {
     villaInput.disabled = true;
@@ -398,20 +405,34 @@ function stripHtmlToPlainText(str) {
 function formatMaldivesDateTime(d) {
   if (!d || d === "-" || d === "null" || d === "undefined") return "-";
   try {
-    let dt = new Date(d);
-    if (isNaN(dt.getTime())) {
-      dt = new Date(String(d).replace(" ", "T"));
+    let s = String(d).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+      const parts = s.split("-");
+      const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+      return dt.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
     }
-    if (isNaN(dt.getTime())) return String(d);
-    return dt.toLocaleString("en-US", {
-      timeZone: "Indian/Maldives",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
+    let utcMs;
+    if (d instanceof Date) {
+      utcMs = d.getTime();
+    } else if (s.includes("Z") || /[+-]\d{2}:?\d{2}$/.test(s)) {
+      utcMs = new Date(s).getTime();
+    } else {
+      const clean = s.replace(" ", "T");
+      utcMs = new Date(clean + "+05:30").getTime();
+    }
+    if (isNaN(utcMs)) return s;
+    const maldivesDate = new Date(utcMs + (5 * 60 * 60 * 1000));
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const month = months[maldivesDate.getUTCMonth()];
+    const day = maldivesDate.getUTCDate();
+    const year = maldivesDate.getUTCFullYear();
+    let hours = maldivesDate.getUTCHours();
+    const minutes = String(maldivesDate.getUTCMinutes()).padStart(2, "0");
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const hoursStr = String(hours).padStart(2, "0");
+    return `${month} ${day}, ${year}, ${hoursStr}:${minutes} ${ampm}`;
   } catch (e) {
     return String(d);
   }
@@ -699,7 +720,15 @@ function populateEditForm(data) {
   // Villa Number & Area Toggle
   const hasVillaNumber = data.villaNumber && data.villaNumber !== "-" && data.villaNumber !== "null" && data.villaNumber !== "N/A";
   setInputValue("editVillaNumber", hasVillaNumber ? data.villaNumber : "");
-  toggleVillaField(data.areaName || data.area, true);
+  if (hasVillaNumber) {
+    const villaInput = document.getElementById("editVillaNumber");
+    if (villaInput) {
+      villaInput.disabled = false;
+      villaInput.classList.remove("opacity-60", "cursor-not-allowed", "bg-slate-100");
+    }
+  } else {
+    toggleVillaField(data.areaName || data.area || (areaSelect ? areaSelect.value : ""), true);
+  }
 
   // Clean Job Detail & Remarks from raw HTML tags like <div>, <p>, <br>
   setInputValue("editJobDetail", stripHtmlToPlainText(data.jobDetail || data.details || data.description || ""));
@@ -707,17 +736,21 @@ function populateEditForm(data) {
   setInputValue("editBudget", data.budget || 0);
 
   // Cost Center & Department Dropdown
-  const ccfVal = data.ccf || data.costCenter || "";
+  const ccfVal = (data.ccf || data.costCenter || "").trim();
   const ccfDeptVal = (data.ccf_dept || data.ccfdept || data.department || data.dept || "").trim();
-  setSelectValue("editCostCenter", ccfVal || "POMEC");
-  const editDeptContainer = document.getElementById("editCcfDeptContainer");
-  const editDeptInput = document.getElementById("editCcfDept");
-  if (ccfVal === "Department Operational Budget") {
-    if (editDeptContainer) editDeptContainer.classList.remove("hidden");
+  
+  let targetCcf = "";
+  const upperCcf = ccfVal.toUpperCase();
+  if (upperCcf.includes("POMEC")) targetCcf = "POMEC";
+  else if (upperCcf.includes("CAPEX")) targetCcf = "CAPEX";
+  else if (upperCcf.includes("DEPT") || upperCcf.includes("OPERATIONAL") || upperCcf.includes("BUDGET")) targetCcf = "Department Operational Budget";
+  else targetCcf = ccfVal;
+
+  if (targetCcf) setSelectValue("editCostCenter", targetCcf);
+  handleEditCcfChange();
+  if (targetCcf === "Department Operational Budget" && ccfDeptVal) {
+    const editDeptInput = document.getElementById("editCcfDept");
     if (editDeptInput) editDeptInput.value = ccfDeptVal;
-  } else {
-    if (editDeptContainer) editDeptContainer.classList.add("hidden");
-    if (editDeptInput) editDeptInput.value = "";
   }
 
   setInputValue("editFinalExp", data.finalExp || data.expense || 0);
