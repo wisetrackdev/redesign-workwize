@@ -727,6 +727,12 @@ function openModal() {
   if (!modal) return;
   modal.classList.add("open");
 
+  // Ensure Reference No. and Expected Date are clean / empty unless entered
+  const modalRefEl = document.getElementById("modalReferenceNo");
+  if (modalRefEl) modalRefEl.value = "";
+  const modalExpEl = document.getElementById("modalExpectedDate");
+  if (modalExpEl) modalExpEl.value = "";
+
   // Highlight Create New Job button in blue while modal is open
   const createJobBtn = document.getElementById("headerNavCreateJob");
   if (createJobBtn) {
@@ -895,7 +901,7 @@ async function submitJobForm() {
     const location = document.getElementById("modalLocation")?.value?.trim() || "";
     const creationDate = document.getElementById("modalJobCreationDate")?.value || new Date().toISOString().split("T")[0];
     const completionDate = document.getElementById("modalExpectedDate")?.value || "";
-    const refNo = document.getElementById("modalReferenceNo")?.value?.trim() || `REF-${Math.floor(10000 + Math.random() * 90000)}`;
+    const refNo = document.getElementById("modalReferenceNo")?.value?.trim() || "";
 
     const createdBy = document.getElementById("modalCreatedBy")?.value?.trim() ||
       (typeof UserSession !== "undefined" && UserSession.getUserName ? UserSession.getUserName() : "") ||
