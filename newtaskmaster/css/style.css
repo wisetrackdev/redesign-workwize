@@ -73,7 +73,7 @@ body {
   display: none !important;
 }
 
-/* Sidebar Collapsed State */
+/* Sidebar Collapsed Stated */
 .workwize-sidebar.collapsed {
   width: 76px;
   min-width: 76px;
