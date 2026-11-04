@@ -619,7 +619,7 @@ function renderTableRows() {
       <td class="text-slate-600 font-mono text-[10px]">${job.refNum || '<span class="text-slate-300">-</span>'}</td>
       <td class="text-slate-700 font-medium whitespace-nowrap">
         <div class="flex items-center gap-1.5">
-          <span class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[10px] font-bold">
+          <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
             ${(job.assignedTo || "IT").slice(0, 2).toUpperCase()}
           </span>
           <span>${job.assignedTo}</span>
@@ -639,7 +639,7 @@ function renderTableRows() {
       <td class="text-slate-500 whitespace-nowrap">${formatDate(job.expectedCompletion)}</td>
       <td class="text-right">
         <div class="relative inline-block text-left dropdown-group">
-          <button class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" onclick="toggleJobActionMenu(this)">
+          <button class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" onclick="toggleJobActionMenu(this)">
             <i class="fa-solid fa-ellipsis"></i>
           </button>
           <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-30 text-xs text-slate-700 dropdown-menu">
@@ -711,79 +711,90 @@ function updateBulkActionBar() {
 }
 
 function renderPagination() {
-  const container = document.getElementById("jobsPagination");
+  const container = document.getElementById("jobsPagination") || document.getElementById("paginationContainer");
   if (!container) return;
 
-  container.innerHTML = "";
   const totalPages = Math.ceil(filteredJobs.length / pageSize) || 1;
+  container.innerHTML = "";
 
-  if (totalPages <= 1) return;
-
-  // Previous button
+  // Prev Button
   const prevBtn = document.createElement("button");
   prevBtn.type = "button";
-  prevBtn.className = `pagination-btn ${currentPage === 1 ? "disabled opacity-40 cursor-not-allowed" : "hover:bg-slate-100 text-slate-700"}`;
-  prevBtn.innerHTML = `<i class="fa-solid fa-chevron-left text-[10px]"></i>`;
+  prevBtn.className = `btn-pagination ${currentPage === 1 ? "disabled" : ""}`;
+  prevBtn.innerHTML = '<i class="fa-solid fa-chevron-left text-[10px]"></i>';
   prevBtn.disabled = currentPage === 1;
-  prevBtn.addEventListener("click", () => {
+  prevBtn.onclick = () => {
     if (currentPage > 1) {
       currentPage--;
       renderTableRows();
       renderPagination();
       updateCounterText();
     }
-  });
+  };
   container.appendChild(prevBtn);
 
   // Page Numbers
-  let pagesToShow = [];
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) pagesToShow.push(i);
-  } else {
-    pagesToShow = [1];
-    if (currentPage > 3) pagesToShow.push("...");
-    const start = Math.max(2, currentPage - 1);
-    const end = Math.min(totalPages - 1, currentPage + 1);
-    for (let i = start; i <= end; i++) pagesToShow.push(i);
-    if (currentPage < totalPages - 2) pagesToShow.push("...");
-    pagesToShow.push(totalPages);
+  let startPage = Math.max(1, currentPage - 2);
+  let endPage = Math.min(totalPages, currentPage + 2);
+
+  if (startPage > 1) {
+    const p1 = document.createElement("button");
+    p1.type = "button";
+    p1.className = "btn-pagination";
+    p1.textContent = "1";
+    p1.onclick = () => { currentPage = 1; renderTableRows(); renderPagination(); updateCounterText(); };
+    container.appendChild(p1);
+    if (startPage > 2) {
+      const dots = document.createElement("span");
+      dots.className = "text-slate-400 text-xs px-1 select-none";
+      dots.textContent = "...";
+      container.appendChild(dots);
+    }
   }
 
-  pagesToShow.forEach(p => {
-    if (p === "...") {
-      const span = document.createElement("span");
-      span.className = "px-2 text-slate-400 text-xs";
-      span.textContent = "...";
-      container.appendChild(span);
-    } else {
-      const pageBtn = document.createElement("button");
-      pageBtn.type = "button";
-      pageBtn.className = `pagination-btn ${currentPage === p ? "active font-bold bg-blue-600 text-white" : "hover:bg-slate-100 text-slate-700"}`;
-      pageBtn.textContent = p;
-      pageBtn.addEventListener("click", () => {
-        currentPage = p;
-        renderTableRows();
-        renderPagination();
-        updateCounterText();
-      });
-      container.appendChild(pageBtn);
-    }
-  });
+  for (let i = startPage; i <= endPage; i++) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `btn-pagination ${i === currentPage ? "active" : ""}`;
+    btn.textContent = i;
+    btn.onclick = () => {
+      currentPage = i;
+      renderTableRows();
+      renderPagination();
+      updateCounterText();
+    };
+    container.appendChild(btn);
+  }
 
-  // Next button
+  if (endPage < totalPages) {
+    if (endPage < totalPages - 1) {
+      const dots = document.createElement("span");
+      dots.className = "text-slate-400 text-xs px-1 select-none";
+      dots.textContent = "...";
+      container.appendChild(dots);
+    }
+    const lastBtn = document.createElement("button");
+    lastBtn.type = "button";
+    lastBtn.className = "btn-pagination";
+    lastBtn.textContent = totalPages;
+    lastBtn.onclick = () => { currentPage = totalPages; renderTableRows(); renderPagination(); updateCounterText(); };
+    container.appendChild(lastBtn);
+  }
+
+  // Next Button
   const nextBtn = document.createElement("button");
   nextBtn.type = "button";
-  nextBtn.className = `pagination-btn ${currentPage === totalPages ? "disabled opacity-40 cursor-not-allowed" : "hover:bg-slate-100 text-slate-700"}`;
-  nextBtn.innerHTML = `<i class="fa-solid fa-chevron-right text-[10px]"></i>`;
+  nextBtn.className = `btn-pagination ${currentPage === totalPages ? "disabled" : ""}`;
+  nextBtn.innerHTML = '<i class="fa-solid fa-chevron-right text-[10px]"></i>';
   nextBtn.disabled = currentPage === totalPages;
-  nextBtn.addEventListener("click", () => {
+  nextBtn.onclick = () => {
     if (currentPage < totalPages) {
       currentPage++;
       renderTableRows();
       renderPagination();
       updateCounterText();
     }
-  });
+  };
   container.appendChild(nextBtn);
 }
 
