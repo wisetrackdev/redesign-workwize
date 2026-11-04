@@ -392,7 +392,7 @@ function renderJobsByAreaTable(filterQuery = "") {
       <td>
         <a href="javascript:void(0);" onclick="showAreaJobsModal('${escapeHtml(area.id)}', '${escapeHtml(area.name)}')" class="font-extrabold text-slate-900 hover:text-blue-600 transition-colors inline-flex items-center gap-1.5 text-xs" title="View all ${area.total} jobs in ${area.name}">
           <span>${area.total}</span>
-          <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-slate-300 hover:text-blue-500"></i>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-blue-600 font-bold hover:text-blue-700"></i>
         </a>
       </td>
       <td>
