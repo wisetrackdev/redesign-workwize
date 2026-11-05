@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
-  ["filterProperty", "filterArea", "filterStatus", "filterPriority", "filterAssignedTo", "filterCreatedBy", "filterFromDate", "filterToDate", "filterSortOrder"].forEach(id => {
+  ["filterProperty", "filterArea", "filterStatus", "filterPriority", "filterCreatedBy", "filterFromDate", "filterToDate", "filterSortOrder"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener("change", () => {
@@ -431,8 +431,7 @@ function formatDate(dateStr) {
 async function populateFilterDropdowns() {
   const propSelect = document.getElementById("filterProperty");
   const areaSelect = document.getElementById("filterArea");
-  const assignedSelect = document.getElementById("filterAssignedTo");
-
+  
   // Populate Properties
   if (propSelect && typeof WorkWizeAPI !== "undefined") {
     try {
@@ -515,8 +514,7 @@ function filterAndRenderJobs() {
   const areaFilter = document.getElementById("filterArea")?.value || "";
   const statusFilter = document.getElementById("filterStatus")?.value || "";
   const priorityFilter = document.getElementById("filterPriority")?.value || "";
-  const assignedFilter = document.getElementById("filterAssignedTo")?.value || "";
-  const locationFilter = document.getElementById("filterLocation")?.value || "";
+    const locationFilter = document.getElementById("filterLocation")?.value || "";
   const dateSpanFilter = document.getElementById("filterDateSpan")?.value || "";
 
   // Ensure All Jobs tab is active
@@ -546,8 +544,7 @@ function filterAndRenderJobs() {
     const matchArea = !areaFilter || job.area.toLowerCase() === areaFilter.toLowerCase();
     const matchStatus = !statusFilter || job.status.toLowerCase() === statusFilter.toLowerCase();
     const matchPriority = !priorityFilter || job.priority.toLowerCase() === priorityFilter.toLowerCase();
-    const matchAssigned = !assignedFilter || job.assignedTo.toLowerCase() === assignedFilter.toLowerCase();
-    const matchLocation = !locationFilter || (job.location && job.location.toLowerCase() === locationFilter.toLowerCase());
+        const matchLocation = !locationFilter || (job.location && job.location.toLowerCase() === locationFilter.toLowerCase());
 
     let matchDateSpan = true;
     if (dateSpanFilter && job.createdOn) {
@@ -560,7 +557,7 @@ function filterAndRenderJobs() {
       }
     }
 
-    return matchSearch && matchProp && matchArea && matchStatus && matchPriority && matchAssigned && matchDateSpan && matchLocation;
+    return matchSearch && matchProp && matchArea && matchStatus && matchPriority && matchDateSpan && matchLocation;
   });
 
   // Apply current sorting
@@ -587,10 +584,9 @@ function updateActiveFilterBadge() {
   let count = 0;
   if (document.getElementById("filterStatus")?.value) count++;
   if (document.getElementById("filterPriority")?.value) count++;
-  if (document.getElementById("filterAssignedTo")?.value) count++;
-  if (document.getElementById("filterDateSpan")?.value) count++;
+  if (document.getElementById("filterCreatedBy")?.value) count++;
   if (document.getElementById("filterArea")?.value) count++;
-  if (document.getElementById("filterLocation")?.value) count++;
+  if (document.getElementById("filterFromDate")?.value || document.getElementById("filterToDate")?.value) count++;
 
   const badge = document.getElementById("activeFilterBadge");
   const btn = document.getElementById("filterToggleBtn");
@@ -892,18 +888,18 @@ function resetAllFilters() {
   const areaSelect = document.getElementById("filterArea");
   const statusSelect = document.getElementById("filterStatus");
   const prioritySelect = document.getElementById("filterPriority");
-  const assignedSelect = document.getElementById("filterAssignedTo");
-  const locationSelect = document.getElementById("filterLocation");
-  const dateSpanSelect = document.getElementById("filterDateSpan");
+  const createdBySelect = document.getElementById("filterCreatedBy");
+  const fromDate = document.getElementById("filterFromDate");
+  const toDate = document.getElementById("filterToDate");
 
   if (searchInput) searchInput.value = "";
   if (propSelect) propSelect.value = "";
   if (areaSelect) areaSelect.value = "";
-  if (locationSelect) locationSelect.value = "";
   if (statusSelect) statusSelect.value = "";
   if (prioritySelect) prioritySelect.value = "";
-  if (assignedSelect) assignedSelect.value = "";
-  if (dateSpanSelect) dateSpanSelect.value = "";
+  if (createdBySelect) createdBySelect.value = "";
+  if (fromDate) fromDate.value = "";
+  if (toDate) toDate.value = "";
 
   currentPage = 1;
   filterAndRenderJobs();
@@ -1159,8 +1155,7 @@ function saveAllJobsState() {
     location: document.getElementById("filterLocation")?.value || "",
     status: document.getElementById("filterStatus")?.value || "",
     priority: document.getElementById("filterPriority")?.value || "",
-    assignedTo: document.getElementById("filterAssignedTo")?.value || "",
-    dateSpan: document.getElementById("filterDateSpan")?.value || "",
+        dateSpan: document.getElementById("filterDateSpan")?.value || "",
     sortField: currentSortField,
     sortOrder: currentSortOrder,
     page: currentPage
@@ -1179,8 +1174,7 @@ function restoreAllJobsState() {
     const areaSelect = document.getElementById("filterArea");
     const statusSelect = document.getElementById("filterStatus");
     const prioritySelect = document.getElementById("filterPriority");
-    const assignedSelect = document.getElementById("filterAssignedTo");
-    const dateSpanSelect = document.getElementById("filterDateSpan");
+        const dateSpanSelect = document.getElementById("filterDateSpan");
     const sortSelect = document.getElementById("filterSortOrder");
 
     if (state.search && searchInput) searchInput.value = state.search;

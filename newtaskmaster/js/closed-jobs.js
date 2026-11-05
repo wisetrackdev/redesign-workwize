@@ -170,7 +170,7 @@ async function loadClosedJobsFromAPI() {
   if (tbody) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="17" class="py-12 text-center text-slate-400">
+        <td colspan="15" class="py-12 text-center text-slate-400">
           <i class="fa-solid fa-circle-notch fa-spin text-2xl text-emerald-600 mb-2"></i>
           <p class="text-xs">Fetching closed jobs from server...</p>
         </td>
@@ -296,7 +296,7 @@ function toggleSort(field) {
   if (sortSelect) sortSelect.value = currentSortOrder;
 
   // Update header icons
-  ["createdOn", "expectedCompletion", "closeDate"].forEach(f => {
+  ["createdOn", "closeDate"].forEach(f => {
     const icon = document.getElementById(`sortIcon_${f}`);
     if (icon) {
       if (f === currentSortField) {
@@ -689,8 +689,6 @@ function renderTableRows() {
         <span class="inline-flex items-center gap-1"><i class="fa-regular fa-comment text-slate-400"></i> ${job.commentCount}</span>
       </td>
       <td class="text-slate-600 whitespace-nowrap">${job.createdBy}</td>
-      <td class="text-slate-500 whitespace-nowrap">${job.propName}</td>
-      <td class="text-slate-500 whitespace-nowrap">${formatDate(job.expectedCompletion)}</td>
       <td class="text-right">
         <div class="relative inline-block text-left dropdown-group">
           <button class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" onclick="toggleJobActionMenu(this)">
@@ -992,9 +990,7 @@ function exportJobsToCSV() {
     "Closed By",
     "Attachments",
     "Comments",
-    "Created By",
-    "Property",
-    "Expected Completion"
+    "Created By"
   ];
 
   const rows = jobsToExport.map(j => [
@@ -1011,9 +1007,7 @@ function exportJobsToCSV() {
     `"${(formatClosedByUser(j.closedBy) || "-").replace(/"/g, '""')}"`,
     `"${j.uploadCount || 0}"`,
     `"${j.commentCount || 0}"`,
-    `"${(j.createdBy || "-").replace(/"/g, '""')}"`,
-    `"${(j.propName || "-").replace(/"/g, '""')}"`,
-    `"${j.expectedCompletion || "-"}"`
+    `"${(j.createdBy || "-").replace(/"/g, '""')}"`
   ]);
 
   const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");

@@ -6959,7 +6959,7 @@ function attachModalSearchListener() {
     };
   }
 
-  ["areaFilterStatus", "areaFilterPriority", "areaFilterAssignedTo", "areaFilterCreatedBy", "areaFilterFromDate", "areaFilterToDate"].forEach(id => {
+  ["areaFilterStatus", "areaFilterPriority", "areaFilterArea", "areaFilterCreatedBy", "areaFilterFromDate", "areaFilterToDate"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.onchange = function () {
@@ -6975,7 +6975,7 @@ function filterAreaModalJobs() {
 
   const statusVal = (document.getElementById("areaFilterStatus")?.value || "").toLowerCase().trim();
   const priorityVal = (document.getElementById("areaFilterPriority")?.value || "").toLowerCase().trim();
-  const assignedVal = (document.getElementById("areaFilterAssignedTo")?.value || "").toLowerCase().trim();
+  const areaVal = (document.getElementById("areaFilterArea")?.value || "").toLowerCase().trim();
   const createdByVal = (document.getElementById("areaFilterCreatedBy")?.value || "").toLowerCase().trim();
   const fromDate = document.getElementById("areaFilterFromDate")?.value || "";
   const toDate = document.getElementById("areaFilterToDate")?.value || "";
@@ -6983,7 +6983,7 @@ function filterAreaModalJobs() {
   let activeCount = 0;
   if (statusVal) activeCount++;
   if (priorityVal) activeCount++;
-  if (assignedVal) activeCount++;
+  if (areaVal) activeCount++;
   if (createdByVal) activeCount++;
   if (fromDate || toDate) activeCount++;
 
@@ -7021,10 +7021,10 @@ function filterAreaModalJobs() {
       if (!normPr.includes(priorityVal)) return false;
     }
 
-    // 4. Assigned To
-    if (assignedVal) {
-      const assigned = String(j.assignedTo || (Array.isArray(j.data1) ? j.data1.map(d => (typeof d === "object" ? d.name || d.teamName : d)).join(", ") : "") || j.firstname || "").toLowerCase();
-      if (!assigned.includes(assignedVal)) return false;
+    // 4. Area
+    if (areaVal) {
+      const jobArea = String(j.areaName || j.AreaName || j.area || j.Area || j.jobLocation || j.location || "").toLowerCase();
+      if (!jobArea.includes(areaVal)) return false;
     }
 
     // 5. Created By
@@ -7088,22 +7088,18 @@ function resetAreaModalFilters() {
 
 function populateAreaModalFilterDropdowns(jobs) {
   const list = jobs || currentAreaModalJobs || [];
-  const assignedSelect = document.getElementById("areaFilterAssignedTo");
-  if (assignedSelect) {
-    const curVal = assignedSelect.value;
-    const assignees = [...new Set(list.map(j => {
-      if (j.assignedTo) return j.assignedTo;
-      if (Array.isArray(j.data1)) return j.data1.map(d => (typeof d === "object" ? d.name || d.teamName : d)).join(", ");
-      return "";
-    }))].filter(Boolean).sort();
-    assignedSelect.innerHTML = '<option value="">Assigned: All</option>';
-    assignees.forEach(name => {
+  const areaSelect = document.getElementById("areaFilterArea");
+  if (areaSelect) {
+    const curVal = areaSelect.value;
+    const areas = [...new Set(list.map(j => j.areaName || j.AreaName || j.area || j.Area || j.jobLocation || j.location))].filter(Boolean).sort();
+    areaSelect.innerHTML = '<option value="">Area: All</option>';
+    areas.forEach(name => {
       const opt = document.createElement("option");
       opt.value = name;
       opt.textContent = name;
-      assignedSelect.appendChild(opt);
+      areaSelect.appendChild(opt);
     });
-    if (curVal) assignedSelect.value = curVal;
+    if (curVal) areaSelect.value = curVal;
   }
 
   const createdBySelect = document.getElementById("areaFilterCreatedBy");
