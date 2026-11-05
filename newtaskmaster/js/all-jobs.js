@@ -194,6 +194,30 @@ async function loadAllJobsFromAPI() {
       }
     }
 
+    // 3. Process newly created jobs from sessionStorage or WorkWizeDB so newly added job is always present at top
+    try {
+      const newJobRaw = sessionStorage.getItem("workwize_newly_created_job");
+      if (newJobRaw) {
+        const newJobData = JSON.parse(newJobRaw);
+        const key = newJobData.rawId || newJobData.id || newJobData.jobId;
+        if (key && !combinedMap.has(key)) {
+          combinedMap.set(key, mapApiJobToModel(newJobData));
+        }
+      }
+    } catch (_) {}
+
+    if (typeof WorkWizeDB !== "undefined" && typeof WorkWizeDB.getJobs === "function") {
+      const localJobs = WorkWizeDB.getJobs();
+      if (Array.isArray(localJobs)) {
+        localJobs.forEach(lj => {
+          const key = lj.rawId || lj.id || lj.jobId;
+          if (key && !combinedMap.has(key)) {
+            combinedMap.set(key, mapApiJobToModel(lj));
+          }
+        });
+      }
+    }
+
     if (combinedMap.size > 0) {
       allJobsStore = Array.from(combinedMap.values());
       sortJobsDescending(allJobsStore);
@@ -233,18 +257,33 @@ async function loadAllJobsFromAPI() {
  */
 function sortJobsByField(jobs, field = currentSortField, order = currentSortOrder) {
   if (!Array.isArray(jobs)) return jobs;
+  const newlyCreatedId = sessionStorage.getItem("workwize_newly_created_job_id") || localStorage.getItem("workwize_newly_created_job_id") || "";
+
   return jobs.sort((a, b) => {
+    const idA = String(a.rawId || a.id || a.orgjobId || "");
+    const idB = String(b.rawId || b.id || b.orgjobId || "");
+
+    // If one of the jobs was just created, prioritize it to the very top!
+    if (newlyCreatedId) {
+      if (idA === newlyCreatedId && idB !== newlyCreatedId) return -1;
+      if (idB === newlyCreatedId && idA !== newlyCreatedId) return 1;
+    }
+
     let valA = a[field];
     let valB = b[field];
 
     const timeA = (valA && !String(valA).startsWith("0001")) ? new Date(valA).getTime() : 0;
     const timeB = (valB && !String(valB).startsWith("0001")) ? new Date(valB).getTime() : 0;
 
-    if (isNaN(timeA) && isNaN(timeB)) return 0;
-    if (isNaN(timeA)) return 1;
-    if (isNaN(timeB)) return -1;
+    if (timeA !== timeB) {
+      if (isNaN(timeA) && isNaN(timeB)) return 0;
+      if (isNaN(timeA)) return 1;
+      if (isNaN(timeB)) return -1;
+      return order === "asc" ? timeA - timeB : timeB - timeA;
+    }
 
-    return order === "asc" ? timeA - timeB : timeB - timeA;
+    // Secondary tie-breaker: Newest Job ID descending (matches OPRO-FRONTEND order: [0, 'desc'])
+    return idB.localeCompare(idA, undefined, { numeric: true, sensitivity: 'base' });
   });
 }
 
@@ -289,13 +328,14 @@ window.toggleSort = toggleSort;
 function isClosedStatus(j) {
   if (!j) return false;
   if (typeof j === "object") {
-    if (j.isActive === false || j.isActive === 0) return true;
-    if (j.jobCloseOn && !String(j.jobCloseOn).startsWith("0001") && String(j.jobCloseOn) !== "1970-01-01T00:00:00") return true;
     const s = String(j.jobStatus || j.status || "").toLowerCase();
-    return s.includes("close") || s.includes("complet");
+    if (s === "closed" || s.includes("close")) return true;
+    const hasCloseDate = j.jobCloseOn && !String(j.jobCloseOn).startsWith("0001") && String(j.jobCloseOn) !== "1970-01-01T00:00:00" && String(j.jobCloseOn) !== "null";
+    if ((j.isActive === false || j.isActive === 0) && hasCloseDate) return true;
+    return false;
   }
   const s = String(j).toLowerCase();
-  return s.includes("close") || s.includes("complet");
+  return s === "closed" || s.includes("close");
 }
 
 function mapApiJobToModel(job, forceClosed = false) {
@@ -338,7 +378,8 @@ function mapApiJobToModel(job, forceClosed = false) {
 function normalizeStatus(st) {
   if (!st) return "Yet to Commence";
   const s = String(st).toUpperCase();
-  if (s.includes("CLOSE") || s.includes("COMPLET")) return "Closed";
+  if (s.includes("CLOSE")) return "Closed";
+  if (s.includes("COMPLET")) return "Completed";
   if (s.includes("YET") || s.includes("COMMENCE")) return "Yet to Commence";
   if (s.includes("PROGRESS")) return "In Progress";
   if (s.includes("DISCUSSION")) return "Under Discussion";
@@ -578,15 +619,21 @@ function renderTableRows() {
   const pageJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
 
   pageJobs.forEach(job => {
+    const newlyCreatedId = sessionStorage.getItem("workwize_newly_created_job_id") || localStorage.getItem("workwize_newly_created_job_id") || "";
+    const isNew = Boolean(newlyCreatedId && (job.rawId === newlyCreatedId || job.id === newlyCreatedId || job.orgjobId === newlyCreatedId));
+
     const tr = document.createElement("tr");
-    tr.className = "hover:bg-blue-50/30 transition-colors cursor-pointer";
+    tr.className = isNew
+      ? "bg-emerald-50/40 hover:bg-emerald-50/70 border-l-4 border-l-emerald-500 transition-colors cursor-pointer shadow-2xs"
+      : "hover:bg-blue-50/30 transition-colors cursor-pointer";
     tr.setAttribute("data-job-id", job.rawId || job.id);
     tr.setAttribute("data-display-id", job.id);
 
     let statusBadgeClass = "badge-in-progress";
     if (job.status === "Yet to Commence") statusBadgeClass = "badge-yet-to-commence";
     else if (job.status === "Under Discussion") statusBadgeClass = "badge-under-discussion";
-    else if (job.status === "Closed" || job.status === "Completed") statusBadgeClass = "badge-closed";
+    else if (job.status === "Closed") statusBadgeClass = "badge-closed";
+    else if (job.status === "Completed") statusBadgeClass = "badge-completed bg-emerald-100 text-emerald-800 border border-emerald-300";
     else if (job.status === "Fixed") statusBadgeClass = "badge-open";
 
     let priorityBadgeClass = "badge-priority-low";
@@ -601,9 +648,12 @@ function renderTableRows() {
         <input type="checkbox" data-id="${job.id}" class="row-checkbox rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer" ${isChecked ? "checked" : ""}>
       </td>
       <td>
-        <a href="job-details.html?id=${encodeURIComponent(job.rawId || job.id)}" target="_blank" class="font-bold text-blue-600 hover:underline hover:text-blue-800 transition-colors">
-          ${job.id}
-        </a>
+        <div class="inline-flex items-center gap-1.5">
+          <a href="job-details.html?id=${encodeURIComponent(job.rawId || job.id)}" target="_blank" class="font-bold text-blue-600 hover:underline hover:text-blue-800 transition-colors">
+            ${job.id}
+          </a>
+          ${isNew ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs animate-pulse">NEW</span>' : ''}
+        </div>
       </td>
       <td class="font-semibold text-slate-800">
         ${job.villaNumber && job.villaNumber !== '-' ? job.villaNumber : '<span class="text-slate-300">-</span>'}

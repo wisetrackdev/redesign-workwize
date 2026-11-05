@@ -1115,7 +1115,7 @@ async function handleJobUpdateSubmit(e) {
     const newComment = document.getElementById("editNewComment").value;
     const photoFileInput = document.getElementById("editPhotoFile");
 
-    const isClosed = (jobStatus === "COMPLETED" || jobStatus === "CLOSED");
+    const isClosed = (jobStatus === "CLOSED");
 
     // Prepare FormData for api/jobtracker/updatejob
     const formData = new FormData();
@@ -1220,7 +1220,8 @@ async function handleJobUpdateSubmit(e) {
     try {
       if (currentJobData) {
         currentJobData.jobStatus = jobStatus;
-        currentJobData.status = jobStatus;
+        currentJobData.status = (jobStatus === "COMPLETED") ? "Completed" : jobStatus;
+        currentJobData.isActive = (jobStatus !== "CLOSED");
         currentJobData.priority = priority;
         currentJobData.areaName = areaName;
         currentJobData.area = areaName;
@@ -1366,7 +1367,8 @@ function normalizeStatusString(st) {
   if (s.includes("DISCUSSION")) return "Under Discussion";
   if (s.includes("SPARES") || s.includes("ORDER")) return "Spares on Order";
   if (s.includes("FIX")) return "Fixed";
-  if (s.includes("CLOSE") || s.includes("COMPLET")) return "Closed";
+  if (s.includes("CLOSE")) return "Closed";
+  if (s.includes("COMPLET")) return "Completed";
   return st;
 }
 

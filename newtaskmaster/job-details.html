@@ -197,6 +197,10 @@
           <button id="detailDeleteJobBtn" type="button" onclick="deleteCurrentJob()" class="btn-outline !text-rose-600 !border-rose-200 hover:!bg-rose-50 text-xs !py-2 !px-3 font-semibold hidden" title="Super Admin Job Deletion">
             <i class="fa-solid fa-trash-can mr-1.5 text-rose-500"></i> Delete Job
           </button>
+          <!-- Close Job Button (Only for SuperAdmin, OproAdmin, Admin when status is Completed) -->
+          <button id="detailCloseJobBtn" type="button" onclick="openCloseJobModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 inline-flex items-center gap-2 transition-all hidden" title="Close this completed job order">
+            <i class="fa-solid fa-circle-check text-xs"></i> Close Job
+          </button>
           <button type="button" onclick="window.print()" class="btn-outline text-xs !py-2 !px-3 font-semibold text-slate-700 hover:bg-slate-50">
             <i class="fa-solid fa-print mr-1.5 text-slate-400"></i> Print
           </button>
@@ -493,6 +497,9 @@
           <i class="fa-solid fa-arrow-left mr-1.5"></i> Back to All Jobs
         </a>
         <div class="flex items-center gap-3">
+          <button id="bottomCloseJobBtn" type="button" onclick="openCloseJobModal()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 inline-flex items-center gap-2 transition-all hidden" title="Close this completed job order">
+            <i class="fa-solid fa-circle-check text-xs"></i> Close Job
+          </button>
           <button type="button" onclick="window.print()" class="px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold inline-flex items-center gap-2 shadow-xs transition-all">
             <i class="fa-solid fa-print text-slate-400"></i> Print
           </button>
@@ -777,6 +784,62 @@
   <script src="js/data.js"></script>
   <script src="js/main.js"></script>
   <script src="js/job-details.js"></script>
+    <!-- Close Job Modal (Admin, SuperAdmin, OproAdmin Only) -->
+  <div id="closeJobModal" class="modal-backdrop">
+    <div class="modal-container !max-w-lg">
+      <div class="modal-header border-b border-emerald-100 bg-emerald-50/70 p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-sm shadow-xs">
+            <i class="fa-solid fa-lock"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-emerald-950 text-sm">Close This Job</h3>
+            <p class="text-[11px] text-emerald-700">Authorized: SuperAdmin, OproAdmin & Admin</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeCloseJobModal()" class="w-8 h-8 rounded-full hover:bg-emerald-100/80 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <div class="p-3 bg-emerald-50/50 rounded-xl border border-emerald-200/60 text-xs text-emerald-900 flex items-start gap-2.5">
+          <i class="fa-solid fa-circle-info text-emerald-600 mt-0.5 text-sm shrink-0"></i>
+          <p class="leading-relaxed">
+            This job status is <span class="font-bold text-emerald-800">Completed</span>. Closing this job will move it to <span class="font-semibold text-emerald-800">Closed Jobs</span>. Please enter official closure comments / remarks to proceed.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">
+            Closure Comments / Remarks <span class="text-rose-500">*</span>
+          </label>
+          <textarea id="modalCloseJobRemarks" rows="5" placeholder="Enter closure comments / sign-off remarks..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-emerald-500 focus:bg-white outline-none resize-none leading-relaxed"></textarea>
+          <p class="text-[11px] text-slate-400 mt-1">Remarks will be saved in admin comment history & email notification will be sent.</p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1.5">
+            Closure Photos <span class="text-slate-400 font-normal text-[11px]">(Optional)</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <label class="btn-outline !py-1.5 !px-3 text-xs cursor-pointer hover:bg-slate-50 inline-flex items-center gap-1.5 font-semibold text-slate-700">
+              <i class="fa-solid fa-paperclip text-slate-400"></i> Attach Photos
+              <input type="file" id="modalCloseJobFiles" multiple accept="image/*" class="hidden" onchange="handleCloseJobFilesChange(this)">
+            </label>
+            <span id="modalCloseJobFilesCount" class="text-[11px] text-slate-500">No photos selected</span>
+          </div>
+          <div id="modalCloseJobFilesPreview" class="flex flex-wrap gap-1.5 mt-2"></div>
+        </div>
+      </div>
+      <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2">
+        <button type="button" onclick="closeCloseJobModal()" class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold transition-all">Cancel</button>
+        <button type="button" id="btnConfirmCloseJob" onclick="submitCloseJob()" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-500/20 inline-flex items-center gap-1.5 transition-all">
+          <i class="fa-solid fa-circle-check text-xs"></i> Close Job
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Add Owner Comment Modal -->
   <div id="addOwnerCommentModal" class="modal-backdrop">
     <div class="modal-container !max-w-lg">

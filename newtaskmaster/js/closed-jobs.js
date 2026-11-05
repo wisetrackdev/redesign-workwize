@@ -248,11 +248,16 @@ function sortJobsByField(jobs, field = currentSortField, order = currentSortOrde
     const timeA = (valA && !String(valA).startsWith("0001")) ? new Date(valA).getTime() : 0;
     const timeB = (valB && !String(valB).startsWith("0001")) ? new Date(valB).getTime() : 0;
 
-    if (isNaN(timeA) && isNaN(timeB)) return 0;
-    if (isNaN(timeA)) return 1;
-    if (isNaN(timeB)) return -1;
+    if (timeA !== timeB) {
+      if (isNaN(timeA) && isNaN(timeB)) return 0;
+      if (isNaN(timeA)) return 1;
+      if (isNaN(timeB)) return -1;
+      return order === "asc" ? timeA - timeB : timeB - timeA;
+    }
 
-    return order === "asc" ? timeA - timeB : timeB - timeA;
+    const idA = String(a.rawId || a.id || a.orgjobId || "");
+    const idB = String(b.rawId || b.id || b.orgjobId || "");
+    return idB.localeCompare(idA, undefined, { numeric: true, sensitivity: 'base' });
   });
 }
 
@@ -293,13 +298,14 @@ window.toggleSort = toggleSort;
 function isClosedStatus(j) {
   if (!j) return false;
   if (typeof j === "object") {
-    if (j.isActive === false || j.isActive === 0) return true;
-    if (j.jobCloseOn && !String(j.jobCloseOn).startsWith("0001") && String(j.jobCloseOn) !== "1970-01-01T00:00:00") return true;
     const s = String(j.jobStatus || j.status || "").toLowerCase();
-    return s.includes("close") || s.includes("complet");
+    if (s === "closed" || s.includes("close")) return true;
+    const hasCloseDate = j.jobCloseOn && !String(j.jobCloseOn).startsWith("0001") && String(j.jobCloseOn) !== "1970-01-01T00:00:00" && String(j.jobCloseOn) !== "null";
+    if ((j.isActive === false || j.isActive === 0) && hasCloseDate) return true;
+    return false;
   }
   const s = String(j).toLowerCase();
-  return s.includes("close") || s.includes("complet");
+  return s === "closed" || s.includes("close");
 }
 
 function mapApiJobToModel(job, forceClosed = true) {
