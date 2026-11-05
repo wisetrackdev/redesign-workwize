@@ -2970,6 +2970,55 @@ function getAreaIcon(name) {
 
 
 
+
+function getFirstLinePreview(val, maxChars = 38) {
+  if (val === null || val === undefined) return '<span class="text-slate-400">No description</span>';
+  let s = String(val);
+  s = s.replace(/<br\s*[\/]?>/gi, "\n")
+       .replace(/<\/p>/gi, "\n")
+       .replace(/<p[^>]*>/gi, "")
+       .replace(/<\/div>/gi, "\n")
+       .replace(/<div[^>]*>/gi, "")
+       .replace(/<li[^>]*>/gi, "")
+       .replace(/<\/li>/gi, "\n")
+       .replace(/<[^>]+>/g, "");
+  s = s.replace(/&nbsp;/gi, " ")
+       .replace(/&amp;/gi, "&")
+       .replace(/&lt;/gi, "<")
+       .replace(/&gt;/gi, ">")
+       .replace(/&quot;/gi, '"')
+       .replace(/&#39;/gi, "'");
+  
+  const lines = s.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) return '<span class="text-slate-400">No description</span>';
+
+  let firstLine = lines[0];
+  let hasMore = lines.length > 1;
+  if (firstLine.length > maxChars) {
+    firstLine = firstLine.substring(0, maxChars).trim();
+    hasMore = true;
+  }
+  return escapeHtml(firstLine) + (hasMore ? "..." : "");
+}
+
+function stripHtmlToPlain(val) {
+  if (val === null || val === undefined) return "";
+  let s = String(val)
+    .replace(/<br\s*[\/]?>/gi, " ")
+    .replace(/<\/p>/gi, " ")
+    .replace(/<p[^>]*>/gi, "")
+    .replace(/<\/div>/gi, " ")
+    .replace(/<div[^>]*>/gi, "")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+  return s.replace(/\s+/g, " ").trim();
+}
+
 function renderRichText(str) {
 
 
@@ -7222,18 +7271,18 @@ function renderAreaModalRows(jobs) {
         </td>
 
         <!-- 2. Job Details (Interactive Hover Preview Card) -->
-        <td class="max-w-[260px] relative group text-slate-700 font-medium">
-          <div class="truncate cursor-help flex items-center gap-1.5" title="${escapeHtml(detailText)}">
-            <span class="truncate">${escapeHtml(detailText) || '<span class="text-slate-400">No details provided</span>'}</span>
+        <td class="max-w-[260px] relative group text-slate-700 font-medium whitespace-nowrap">
+          <div class="cursor-help flex items-center gap-1.5 overflow-hidden whitespace-nowrap min-w-0" title="${escapeHtml(stripHtmlToPlain(detailText))}">
+            <span class="truncate block max-w-[210px] whitespace-nowrap overflow-hidden">${getFirstLinePreview(detailText, 38)}</span>
             <i class="fa-solid fa-circle-info text-[10px] text-slate-400 group-hover:text-blue-500 shrink-0"></i>
           </div>
           <!-- Hover Details Card -->
-          <div class="hidden group-hover:block absolute left-4 top-full mt-1 w-80 max-w-sm p-3.5 bg-slate-900/95 backdrop-blur text-white text-xs rounded-xl shadow-2xl z-50 pointer-events-none transition-all duration-200 border border-slate-700">
+          <div class="hidden group-hover:block absolute left-4 top-full mt-1 w-80 sm:w-96 max-w-sm p-3.5 bg-slate-900/95 backdrop-blur text-white text-xs rounded-xl shadow-2xl z-50 pointer-events-none transition-all duration-200 border border-slate-700 whitespace-normal break-words overflow-hidden">
             <div class="flex items-center justify-between border-b border-slate-700/80 pb-1.5 mb-2">
               <span class="font-bold text-blue-400 flex items-center gap-1.5 text-[11px]"><i class="fa-solid fa-file-lines"></i> Job Details Preview</span>
               <span class="text-[10px] text-slate-400">${displayId}</span>
             </div>
-            <p class="whitespace-pre-wrap leading-relaxed text-slate-200 text-xs">${renderRichText(detailText)}</p>
+            <p class="whitespace-pre-wrap break-words [overflow-wrap:anywhere] [word-break:break-word] [&_*]:break-words [&_*]:[overflow-wrap:anywhere] leading-relaxed text-slate-200 text-xs">${renderRichText(detailText)}</p>
             <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
               <span>Area: <b class="text-slate-200">${escapeHtml(displayAreaName)}</b></span>
               <span>Location: <b class="text-slate-200">${escapeHtml(j.jobLocation || j.location || 'N/A')}</b></span>
