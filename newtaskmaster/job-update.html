@@ -191,7 +191,7 @@
 
         <div>
           <a id="viewJobDetailsLink" href="#" class="btn-outline text-xs !py-2 !px-3 font-semibold text-slate-700 hover:text-blue-600">
-            <i class="fa-regular fa-eye mr-1.5 text-blue-600"></i> View Only Page
+            <i class="fa-solid fa-eye mr-1.5 text-blue-600 font-bold"></i> View Details
           </a>
         </div>
       </div>
@@ -211,9 +211,10 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                   Area <span class="text-rose-500">*</span>
+              <div id="editAreaGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                   <span>Area <span class="text-rose-500">*</span></span>
+                   <span id="permBadge_Area"></span>
                 </label>
                 <select id="editAreaName" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
                   <option value="Development/Project">Development/Project</option>
@@ -237,8 +238,9 @@
               </div>
 
               <div id="villaFieldGroup">
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                  Villa Number (If Villa)
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                  <span>Villa Number (If Villa)</span>
+                  <span id="permBadge_Villa"></span>
                 </label>
                 <input type="text" id="editVillaNumber" placeholder="Disabled (Select Villa Area)" disabled class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-slate-100">
               </div>
@@ -255,9 +257,10 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                  Job Status <span class="text-rose-500">*</span>
+              <div id="editStatusGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                  <span>Job Status <span class="text-rose-500">*</span></span>
+                  <span id="permBadge_Status"></span>
                 </label>
                 <select id="editJobStatus" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
                   <option value="YET_TO_COMMENCE">Yet to Commence</option>
@@ -270,9 +273,10 @@
                 <p class="text-[11px] text-slate-400 mt-1">Select "Completed" if all repairs have been completed.</p>
               </div>
 
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                  Priority Level <span class="text-rose-500">*</span>
+              <div id="editPriorityGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                  <span>Priority Level <span class="text-rose-500">*</span></span>
+                  <span id="permBadge_Priority"></span>
                 </label>
                 <select id="editJobPriority" required class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
                   <option value="LOW">Low Priority</option>
@@ -298,9 +302,10 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                  Assign To <span class="text-rose-500">*</span>
+              <div id="editAssignedGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                  <span>Assign To <span class="text-rose-500">*</span></span>
+                  <span id="permBadge_Assigned"></span>
                 </label>
                 <div class="relative" id="editAssignedToDropdown">
                   <button type="button" id="editAssignedToBtn" onclick="toggleAssigneeDropdown(event, 'editAssignedToMenu')" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 text-left flex items-center justify-between focus:border-blue-500 focus:bg-white outline-none">
@@ -328,16 +333,18 @@
                 </div>
               </div>
 
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                  Expected Completion Date
+              <div id="editExpectedGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                  <span>Expected Completion Date</span>
+                  <span id="permBadge_ExpectedDate"></span>
                 </label>
                 <input type="date" id="editExpectedCompletion" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
               </div>
 
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                  Reference / Work Order #
+              <div id="editRefNumGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                  <span>Reference / Work Order #</span>
+                  <span id="permBadge_RefNum"></span>
                 </label>
                 <input type="text" id="editRefNum" placeholder="e.g. WO-9081" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
               </div>
@@ -345,7 +352,7 @@
           </div>
 
           <!-- 4. Financial Allocation -->
-          <div class="ww-card space-y-4 flex flex-col justify-between">
+          <div class="ww-card space-y-4 flex flex-col justify-between" id="editFinancialCard">
             <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
                 <i class="fa-solid fa-dollar-sign"></i>
@@ -354,13 +361,13 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Budget Allocated ($)</label>
+              <div id="editBudgetGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5"><span>Budget Allocated ($)</span><span id="permBadge_Budget"></span></label>
                 <input type="number" id="editBudget" min="0" step="any" placeholder="0" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
               </div>
 
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Cost Center</label>
+              <div id="editCostCenterGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5"><span>Cost Center</span><span id="permBadge_CostCenter"></span></label>
                 <select id="editCostCenter" class="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none" onchange="handleEditCcfChange()">
                   <option value="">Select Cost Center</option>
                   <option value="POMEC">POMEC</option>
@@ -369,8 +376,8 @@
                 </select>
               </div>
 
-              <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1.5">Final Expense ($)</label>
+              <div id="editFinalExpGroup">
+                <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5"><span>Final Expense ($)</span><span id="permBadge_FinalExp"></span></label>
                 <input type="number" id="editFinalExp" min="0" step="any" placeholder="0" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
               </div>
             </div>
@@ -392,9 +399,10 @@
           </div>
 
           <div class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1.5">
-                Job Detail <span class="text-rose-500">*</span>
+            <div id="editDetailGroup">
+              <label class="flex items-center justify-between text-xs font-bold text-slate-700 mb-1.5">
+                <span>Job Detail <span class="text-rose-500">*</span></span>
+                <span id="permBadge_JobDetail"></span>
               </label>
               <textarea id="editJobDetail" rows="4" required placeholder="Describe the operational task or repair..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none resize-y"></textarea>
             </div>
@@ -409,7 +417,7 @@
         </div>
 
         <!-- 6. Owner's Comment (Separate Dedicated Card Above Progress Note/Updates) -->
-        <div class="ww-card space-y-4 border-purple-200 bg-purple-50/30">
+        <div class="ww-card space-y-4 border-purple-200 bg-purple-50/30" id="editOwnerCard">
           <div class="border-b border-purple-200/80 pb-3 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">
@@ -417,7 +425,10 @@
               </div>
               <h3 class="font-bold text-purple-950 text-sm">Owner's Comment</h3>
             </div>
-            <span id="ownerHistoryCountBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">0</span>
+            <div class="flex items-center gap-2">
+              <span id="permBadge_OwnerComment"></span>
+              <span id="ownerHistoryCountBadge" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">0</span>
+            </div>
           </div>
 
           <div>
@@ -715,6 +726,41 @@
   </div>
 
   
+    <!-- Image Preview Lightbox Modal -->
+  <div id="imagePreviewModal" class="modal-backdrop">
+    <div class="modal-container !max-w-4xl !p-0 overflow-hidden bg-slate-950 border border-slate-800 shadow-2xl">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between p-3.5 px-5 border-b border-slate-800/80 bg-slate-900/90 text-white">
+        <div class="flex items-center gap-2.5 min-w-0 pr-3">
+          <i class="fa-regular fa-image text-blue-400 text-sm shrink-0"></i>
+          <span class="text-xs font-semibold truncate" id="previewModalTitle">Photo Preview</span>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <a id="previewModalDownloadBtn" href="#" target="_blank" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs transition-colors inline-flex items-center gap-1.5" title="Open full image in new tab">
+            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            <span class="hidden sm:inline">Open in new tab</span>
+          </a>
+          <button type="button" onclick="closeImagePreview()" class="w-8 h-8 rounded-full hover:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-colors" title="Close Preview">
+            <i class="fa-solid fa-xmark text-base"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Image Container) -->
+      <div class="p-4 sm:p-6 flex items-center justify-center bg-black/90 max-h-[75vh] overflow-auto">
+        <img id="previewModalImg" src="" alt="Comment Preview Photo" class="max-h-[70vh] max-w-full object-contain rounded-lg shadow-2xl">
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 px-5 border-t border-slate-800/80 bg-slate-900/90 flex items-center justify-between text-xs text-slate-400">
+        <span id="previewModalCaption">WorkWize Attachment</span>
+        <button type="button" onclick="closeImagePreview()" class="px-3.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white text-xs font-medium transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="js/api.js"></script>
   <script src="js/data.js"></script>

@@ -463,6 +463,91 @@ const UserSession = {
     if (email.includes("manager")) return "Manager";
     return "Staff";
   },
+  getUserRoles: function () {
+    const u = this.getUser();
+    if (!u) return ["STAFF"];
+    let roles = u.role || [];
+    if (!Array.isArray(roles)) roles = [roles];
+    return roles.map(r => String(r).toUpperCase().trim());
+  },
+  isSuperAdminOrAdmin: function () {
+    const roles = this.getUserRoles();
+    const desg = (this.getUser()?.desg || "").toUpperCase();
+    const email = this.getUserEmail().toLowerCase();
+    const adminKeywords = ["SUPERADMIN", "SUPER ADMIN", "ADMIN", "OPROADMIN", "OPRO ADMIN", "SYSTEM ADMIN"];
+    return roles.some(r => adminKeywords.includes(r.replace(/\s+/g, ""))) ||
+           adminKeywords.some(k => desg.includes(k)) ||
+           email.includes("admin") || email.includes("oproadmin");
+  },
+  getUserAccess: function () {
+    const u = this.getUser();
+    return (u && u.access && typeof u.access === "object") ? u.access : {};
+  },
+  canEditOwnerComment: function (jobData) {
+    if (jobData && jobData.isActive === false) return false;
+    // OPRO condition: Owner comments restricted strictly to OproAdmin, SuperAdmin, Admin
+    if (!this.isSuperAdminOrAdmin()) return false;
+    const access = this.getUserAccess();
+    if (access && access["F02"] && access["F02"].write === false) return false;
+    return true;
+  },
+  isFieldReadable: function (fieldCode, jobData) {
+    const access = this.getUserAccess();
+    if (access && fieldCode in access) {
+      return access[fieldCode].read !== false;
+    }
+    return true;
+  },
+  isFieldWritable: function (fieldCode, jobData) {
+    if (jobData && jobData.isActive === false) return false;
+    const isAtmosphere = (this.getUserRole() || "").toUpperCase().includes("ATMOSPHERE");
+    if (isAtmosphere) return false;
+
+    // F02: Owner Comment
+    if (fieldCode === "F02") {
+      return this.canEditOwnerComment(jobData);
+    }
+
+    const access = this.getUserAccess();
+    const isAdmin = this.isSuperAdminOrAdmin();
+
+    // Check specific field code in UserAccess dictionary
+    if (access && fieldCode in access) {
+      if (access[fieldCode].write === true && access[fieldCode].read !== false) {
+        return true;
+      }
+      return false;
+    }
+
+    // Default permissions when field code not in access dictionary:
+    if (isAdmin) return true;
+
+    if (fieldCode === "F04") {
+      // Status: non-admin can edit if assigned to job
+      if (!jobData) return false;
+      const user = this.getUser();
+      const userEmail = (user?.email || user?.userName || "").toLowerCase();
+      if (Array.isArray(jobData.data1) && jobData.data1.some(m => (m.userid || m.userId || m.email || "").toLowerCase() === userEmail)) return true;
+      if (Array.isArray(jobData.teams) && jobData.teams.some(m => (m.userid || m.userId || m.email || "").toLowerCase() === userEmail)) return true;
+      return false;
+    }
+
+    // F03 Budget/CCF, F05 Assigned To, F06 Priority, F07 Final Expense: restricted to Admin unless granted
+    if (["F03", "F05", "F06", "F07"].includes(fieldCode)) {
+      return false;
+    }
+
+    // Core fields: location, area, villa, refNum, expectedDate, jobDetail
+    if (fieldCode === "CORE") {
+      return isAdmin;
+    }
+
+    if (fieldCode === "REMARKS") {
+      return (jobData && jobData.isActive !== false);
+    }
+
+    return isAdmin;
+  },
   getUserName: function () {
     const u = this.getUser();
     if (u && u.name) return u.name;

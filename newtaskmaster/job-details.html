@@ -332,7 +332,7 @@
         </div>
 
         <!-- 4. Financial Allocation -->
-        <div class="ww-card space-y-4 flex flex-col justify-between">
+        <div class="ww-card space-y-4 flex flex-col justify-between" id="financialCard">
           <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
             <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
               <i class="fa-solid fa-dollar-sign"></i>
@@ -418,7 +418,12 @@
             </div>
             <h3 class="font-bold text-purple-950 text-sm">Owner's Comment</h3>
           </div>
-          <span id="dynOwnerCommentsCount" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">0</span>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btnOpenAddOwnerModal" onclick="openAddOwnerCommentModal()" class="hidden px-3 py-1 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs inline-flex items-center gap-1.5 transition-all">
+              <i class="fa-solid fa-plus text-[10px]"></i> Add Comment
+            </button>
+            <span id="dynOwnerCommentsCount" class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">0</span>
+          </div>
         </div>
 
         <div class="space-y-3">
@@ -451,6 +456,34 @@
 
         <div id="dynJobComments" class="space-y-3 max-h-96 overflow-y-auto pr-1">
           <!-- Populated dynamically -->
+        </div>
+
+        <!-- Add Progress Comment & Upload Photos Form -->
+        <div id="detailsAddCommentContainer" class="pt-4 border-t border-slate-100">
+          <div class="bg-slate-50 border border-slate-200/90 rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-comment-dots text-blue-600"></i> Add Progress Note / Comment
+              </span>
+              <span class="text-[11px] text-slate-400">Post updates and upload photos</span>
+            </div>
+            <textarea id="detailNewCommentText" rows="3" placeholder="Write a comment, directive, or progress report..." class="w-full text-xs bg-white border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:outline-none resize-y"></textarea>
+
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-2 flex-wrap">
+                <label for="detailCommentFile" class="cursor-pointer px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium inline-flex items-center gap-1.5 shadow-2xs transition-colors">
+                  <i class="fa-solid fa-camera text-blue-600 text-xs"></i>
+                  <span>Attach Photos</span>
+                  <input type="file" id="detailCommentFile" multiple accept="image/*,application/pdf" class="hidden" onchange="handleDetailCommentFilesChange(this)">
+                </label>
+                <div id="detailCommentFilesPreviewList" class="flex items-center gap-1.5 flex-wrap"></div>
+              </div>
+
+              <button type="button" id="btnSubmitDetailComment" onclick="submitDetailComment()" class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm shadow-blue-500/20 inline-flex items-center justify-center gap-1.5 transition-all">
+                <i class="fa-solid fa-paper-plane text-[11px]"></i> Post Comment
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -744,5 +777,33 @@
   <script src="js/data.js"></script>
   <script src="js/main.js"></script>
   <script src="js/job-details.js"></script>
+  <!-- Add Owner Comment Modal -->
+  <div id="addOwnerCommentModal" class="modal-backdrop">
+    <div class="modal-container !max-w-lg">
+      <div class="modal-header border-b border-purple-100 bg-purple-50/50 p-4 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">
+            <i class="fa-solid fa-crown"></i>
+          </div>
+          <h3 class="font-bold text-purple-950 text-sm">Add Owner's Comment</h3>
+        </div>
+        <button type="button" onclick="closeAddOwnerCommentModal()" class="w-8 h-8 rounded-full hover:bg-purple-100/80 flex items-center justify-center text-slate-400 hover:text-slate-700">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-3">
+        <label class="block text-xs font-bold text-slate-700">New Directive / Comment by Job Owner</label>
+        <textarea id="modalOwnerCommentText" rows="5" placeholder="Enter owner directives, instructions, or notes..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-purple-500 focus:bg-white outline-none resize-y"></textarea>
+        <p class="text-[11px] text-slate-400 flex items-center gap-1">
+          <i class="fa-regular fa-clock text-purple-500 text-[10px]"></i> Comment will be tracked in Maldives time.
+        </p>
+      </div>
+      <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-2">
+        <button type="button" onclick="closeAddOwnerCommentModal()" class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold">Cancel</button>
+        <button type="button" id="btnSaveOwnerCommentModal" onclick="submitAddOwnerComment()" class="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-xs">Post Directive</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

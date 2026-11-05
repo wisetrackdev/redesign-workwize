@@ -1,4 +1,12 @@
 
+function isImageAttachment(url) {
+  if (!url || typeof url !== "string") return false;
+  const clean = url.split("?")[0].split("#")[0].toLowerCase();
+  if (clean.startsWith("data:image/")) return true;
+  return /\.(jpg|jpeg|png|webp|gif|svg|avif|bmp)$/i.test(clean) || (!/\.(pdf|doc|docx|xls|xlsx|zip|rar|txt|csv)$/i.test(clean));
+}
+
+
 function toggleAssigneeDropdown(eventOrId, optionalMenuId) {
   if (eventOrId && typeof eventOrId.stopPropagation === "function") {
     eventOrId.stopPropagation();
@@ -117,6 +125,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   // Load / refresh existing job details into form in background
+  initImagePreviewModal();
   await loadJobForEditing(currentJobId);
 });
 
@@ -475,29 +484,50 @@ function handleEditCcfChange() {
 }
 window.handleEditCcfChange = handleEditCcfChange;
 
-// Helper to extract image/attachment URL from comment objects
-function extractAttachmentFromComment(c) {
-  if (!c) return null;
-  const findUrl = (item) => {
+// Helper to extract all image/attachment URLs from comment objects
+function extractAllAttachmentsFromComment(c) {
+  if (!c) return [];
+  const list = [];
+  const normalize = (item) => {
     if (!item) return null;
     if (typeof item === "string") {
       let u = item.trim();
+      if (!u) return null;
       if (u.startsWith("http://") || u.startsWith("https://") || u.startsWith("data:") || u.startsWith("blob:") || u.startsWith("assets/")) return u;
-      if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.BASE_URL) return `${WorkWizeAPI.BASE_URL.replace(/\/+$/, "")}/uploads/${u.replace(/^\/+/, "")}`;
-      return u;
+      const base = (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.getBaseUrl) ? WorkWizeAPI.getBaseUrl().replace(/\/+$/, "") : "";
+      if (u.toLowerCase().includes("tempdata/") || u.toLowerCase().includes("uploads/")) {
+        return `${base}/${u.replace(/^\/+/, "")}`;
+      }
+      return `${base}/tempdata/uploads/${u.replace(/^\/+/, "")}`;
     }
     const val = item.url || item.path || item.fileName || item.mediaPath || item.src || "";
-    return val ? findUrl(val) : null;
+    return val ? normalize(val) : null;
   };
 
-  if (Array.isArray(c.imageUploads) && c.imageUploads.length > 0) return findUrl(c.imageUploads[0]);
-  if (Array.isArray(c.uploads) && c.uploads.length > 0) return findUrl(c.uploads[0]);
-  if (Array.isArray(c.attachments) && c.attachments.length > 0) return findUrl(c.attachments[0]);
-  if (c.photo) return findUrl(c.photo);
-  if (c.attachment) return findUrl(c.attachment);
-  if (c.mediaPath) return findUrl(c.mediaPath);
-  if (c.fileName && /\.(jpg|jpeg|png|gif|webp|svg|pdf)$/i.test(c.fileName)) return findUrl(c.fileName);
-  return null;
+  const checkArray = (arr) => {
+    if (!arr) return;
+    if (Array.isArray(arr)) {
+      arr.forEach(x => { const u = normalize(x); if (u && !list.includes(u)) list.push(u); });
+    } else {
+      const u = normalize(arr);
+      if (u && !list.includes(u)) list.push(u);
+    }
+  };
+
+  checkArray(c.uploads);
+  checkArray(c.imageUploads);
+  checkArray(c.commentMedia);
+  checkArray(c.data1);
+  checkArray(c.attachments);
+  checkArray(c.medias);
+  if (c.photo) checkArray(c.photo);
+  if (c.attachment) checkArray(c.attachment);
+  return list;
+}
+
+function extractAttachmentFromComment(c) {
+  const all = extractAllAttachmentsFromComment(c);
+  return all.length > 0 ? all[0] : null;
 }
 
 // Render Owner Comments History in job-update page
@@ -516,7 +546,8 @@ function renderOwnerCommentsHistory(data) {
           text,
           date: h.commentDate || "",
           author: h.firstName ? `${h.firstName} ${h.lastName || ""}`.trim() : (h.createdBy || "Owner"),
-          att: extractAttachmentFromComment(h)
+          att: extractAttachmentFromComment(h),
+          attachments: extractAllAttachmentsFromComment(h)
         });
       }
     });
@@ -531,7 +562,8 @@ function renderOwnerCommentsHistory(data) {
             text,
             date: c.commentDate || "",
             author: c.firstName ? `${c.firstName} ${c.lastName || ""}`.trim() : (c.createdBy || "Owner"),
-            att: extractAttachmentFromComment(c)
+            att: extractAttachmentFromComment(c),
+            attachments: extractAllAttachmentsFromComment(c)
           });
         }
       }
@@ -575,14 +607,47 @@ function renderOwnerCommentsHistory(data) {
         <span class="text-slate-500 font-semibold flex items-center gap-1"><i class="fa-regular fa-clock text-[9px] text-purple-400"></i>${formatMaldivesDateTime(c.date)}</span>
       </div>
       <div class="whitespace-pre-wrap text-slate-800 leading-relaxed pt-0.5">${escapeHtml(c.text)}</div>
-      ${c.att ? `
+      ${(c.attachments && c.attachments.length > 0) ? `
+        <div class="mt-2.5 pt-2 border-t border-purple-100/70">
+          <div class="flex items-center gap-2 flex-wrap">
+            ${c.attachments.map((attUrl, aIdx) => isImageAttachment(attUrl) ? `
+              <div class="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-purple-200 bg-slate-900 shadow-2xs cursor-pointer comment-photo-trigger hover:border-purple-500 hover:shadow-md transition-all shrink-0"
+                   data-url="${escapeHtml(attUrl)}"
+                   data-title="Owner Directive Photo ${aIdx + 1}">
+                <img src="${escapeHtml(attUrl)}" alt="Owner directive photo" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'flex flex-col items-center justify-center text-slate-400 h-full p-1 text-center\'><i class=\'fa-regular fa-image text-xs text-slate-400 mb-0.5\'></i><span class=\'text-[8px] text-slate-400 font-semibold truncate w-full\'>Photo</span></div>';">
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                  <i class="fa-solid fa-magnifying-glass text-white text-xs"></i>
+                </div>
+              </div>
+            ` : `
+              <a href="${escapeHtml(attUrl)}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-[10px] font-bold hover:bg-purple-100 transition-all">
+                <i class="fa-solid fa-paperclip text-purple-500"></i>
+                <span>Attachment ${aIdx + 1}</span>
+              </a>
+            `).join("")}
+          </div>
+        </div>
+      ` : (c.att ? (isImageAttachment(c.att) ? `
+        <div class="mt-2.5 pt-2 border-t border-purple-100/70">
+          <div class="flex items-center gap-2 flex-wrap">
+            <div class="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-purple-200 bg-slate-900 shadow-2xs cursor-pointer comment-photo-trigger hover:border-purple-500 hover:shadow-md transition-all shrink-0"
+                 data-url="${escapeHtml(c.att)}"
+                 data-title="Owner Attachment">
+              <img src="${escapeHtml(c.att)}" alt="Owner Attachment" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'flex flex-col items-center justify-center text-slate-400 h-full p-1 text-center\'><i class=\'fa-regular fa-image text-xs text-slate-400 mb-0.5\'></i><span class=\'text-[8px] text-slate-400 font-semibold truncate w-full\'>Photo</span></div>';">
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                <i class="fa-solid fa-magnifying-glass text-white text-xs"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      ` : `
         <div class="mt-2 pt-1.5 border-t border-purple-100/70">
           <a href="${escapeHtml(c.att)}" target="_blank" class="inline-flex items-center gap-1.5 px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-[10px] font-bold hover:bg-purple-100 transition-all">
             <i class="fa-solid fa-paperclip"></i>
             <span>View Attachment</span>
           </a>
         </div>
-      ` : ''}
+      `) : '')}
     </div>
   `).join("");
 }
@@ -603,11 +668,13 @@ function renderProgressNotesHistory(data) {
         const att = extractAttachmentFromComment(c);
         if (text || att) {
           const author = `${c.firstName || c.firstname || "User"} ${c.lastName || c.lastname || ""}`.trim();
+          const attachments = extractAllAttachmentsFromComment(c);
           notes.push({
             text: text || "Attachment uploaded",
             date: c.commentDate || c.createdOn || "",
             author: author || "Team Member",
-            att
+            att,
+            attachments
           });
         }
       }
@@ -640,16 +707,229 @@ function renderProgressNotesHistory(data) {
         <span class="text-slate-500 font-semibold flex items-center gap-1"><i class="fa-regular fa-clock text-[9px] text-slate-400"></i>${formatMaldivesDateTime(n.date)}</span>
       </div>
       <p class="text-slate-700 leading-relaxed pt-0.5 whitespace-pre-wrap">${escapeHtml(n.text)}</p>
-      ${n.att ? `
-        <div class="mt-2 pt-1.5 border-t border-slate-200">
+      ${(n.attachments && n.attachments.length > 0) ? `
+        <div class="mt-2.5 pt-2 border-t border-slate-200/80">
+          <div class="flex items-center gap-2 flex-wrap">
+            ${n.attachments.map((attUrl, aIdx) => isImageAttachment(attUrl) ? `
+              <div class="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-200 bg-slate-900 shadow-2xs cursor-pointer comment-photo-trigger hover:border-blue-500 hover:shadow-md transition-all shrink-0"
+                   data-url="${escapeHtml(attUrl)}"
+                   data-title="Progress Photo ${aIdx + 1}">
+                <img src="${escapeHtml(attUrl)}" alt="Comment photo" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'flex flex-col items-center justify-center text-slate-400 h-full p-1 text-center\'><i class=\'fa-regular fa-image text-xs text-slate-400 mb-0.5\'></i><span class=\'text-[8px] text-slate-400 font-semibold truncate w-full\'>Photo</span></div>';">
+                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                  <i class="fa-solid fa-magnifying-glass text-white text-xs"></i>
+                </div>
+              </div>
+            ` : `
+              <a href="${escapeHtml(attUrl)}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-blue-50 text-blue-600 border border-slate-200 rounded-lg text-[10px] font-bold shadow-2xs transition-all">
+                <i class="fa-solid fa-paperclip text-slate-400"></i>
+                <span>Attachment ${aIdx + 1}</span>
+              </a>
+            `).join("")}
+          </div>
+        </div>
+      ` : (n.att ? (isImageAttachment(n.att) ? `
+        <div class="mt-2.5 pt-2 border-t border-slate-200/80">
+          <div class="flex items-center gap-2 flex-wrap">
+            <div class="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-200 bg-slate-900 shadow-2xs cursor-pointer comment-photo-trigger hover:border-blue-500 hover:shadow-md transition-all shrink-0"
+                 data-url="${escapeHtml(n.att)}"
+                 data-title="Progress Attachment">
+              <img src="${escapeHtml(n.att)}" alt="Attachment" class="w-full h-full object-cover group-hover:scale-105 transition-transform" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'flex flex-col items-center justify-center text-slate-400 h-full p-1 text-center\'><i class=\'fa-regular fa-image text-xs text-slate-400 mb-0.5\'></i><span class=\'text-[8px] text-slate-400 font-semibold truncate w-full\'>Photo</span></div>';">
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                <i class="fa-solid fa-magnifying-glass text-white text-xs"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      ` : `
+        <div class="mt-2 pt-1.5 border-t border-slate-200/80">
           <a href="${escapeHtml(n.att)}" target="_blank" class="inline-flex items-center gap-1.5 px-2 py-1 bg-white text-blue-600 border border-slate-200 rounded-lg text-[10px] font-bold hover:bg-blue-50 transition-all">
             <i class="fa-solid fa-paperclip text-slate-400"></i>
             <span>View Attachment</span>
           </a>
         </div>
-      ` : ''}
+      `) : '')}
     </div>
   `).join("");
+}
+
+
+// ==========================================
+// Field Permission & Icon Badge Management
+// ==========================================
+function setPermBadge(badgeId, isWritable, tooltip) {
+  const el = document.getElementById(badgeId);
+  if (!el) return;
+  if (isWritable) {
+    el.innerHTML = `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200/80 shadow-2xs" title="${tooltip || 'Editable (Read & Write Permission)'}"><i class="fa-solid fa-pen-to-square text-[9px]"></i> Edit</span>`;
+  } else {
+    el.innerHTML = `<span class="inline-flex items-center justify-center p-1 rounded-md text-blue-600 hover:text-blue-700 bg-blue-50/70 border border-blue-200/70 shadow-2xs" title="${tooltip || 'View Permission Only'}"><i class="fa-solid fa-eye text-xs font-bold text-blue-600"></i></span>`;
+  }
+}
+
+function setElementWritable(elementId, isWritable) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  if (isWritable) {
+    el.removeAttribute("disabled");
+    el.removeAttribute("readonly");
+    el.classList.remove("bg-slate-100", "cursor-not-allowed", "opacity-80");
+  } else {
+    if (el.tagName === "SELECT") {
+      el.setAttribute("disabled", "disabled");
+    } else {
+      el.setAttribute("readonly", "readonly");
+      el.setAttribute("disabled", "disabled");
+    }
+    el.classList.add("bg-slate-100", "cursor-not-allowed", "opacity-80");
+  }
+}
+
+function applyFieldPermissions(data) {
+  if (!data) return;
+  const isJobActive = (data.isActive !== false);
+
+  // 1. Core Fields: Area, Location, Villa, Expected Date, Reference Number, Job Detail
+  // In OPRO-FRONTEND: only Admin, SuperAdmin, OproAdmin can edit core job fields
+  const canWriteCore = (typeof UserSession !== "undefined") ? UserSession.isFieldWritable("CORE", data) : true;
+  setPermBadge("permBadge_Area", canWriteCore);
+  setElementWritable("editAreaName", canWriteCore);
+
+  setPermBadge("permBadge_Location", canWriteCore);
+  setElementWritable("editJobLocation", canWriteCore);
+
+  setPermBadge("permBadge_Villa", canWriteCore);
+  const villaInput = document.getElementById("editVillaNumber");
+  if (villaInput && !canWriteCore) {
+    villaInput.setAttribute("disabled", "disabled");
+    villaInput.classList.add("bg-slate-100", "cursor-not-allowed", "opacity-80");
+  }
+
+  setPermBadge("permBadge_ExpectedDate", canWriteCore);
+  setElementWritable("editExpectedCompletion", canWriteCore);
+
+  setPermBadge("permBadge_RefNum", canWriteCore);
+  setElementWritable("editRefNum", canWriteCore);
+
+  setPermBadge("permBadge_JobDetail", canWriteCore);
+  setElementWritable("editJobDetail", canWriteCore);
+
+  // 2. Remarks (REMARKS):
+  const canWriteRemarks = (typeof UserSession !== "undefined") ? UserSession.isFieldWritable("REMARKS", data) : true;
+  setPermBadge("permBadge_Remarks", canWriteRemarks);
+  setElementWritable("editRemarks", canWriteRemarks);
+
+  // 3. Status (F04):
+  const canReadStatus = (typeof UserSession !== "undefined") ? UserSession.isFieldReadable("F04", data) : true;
+  const canWriteStatus = (typeof UserSession !== "undefined") ? UserSession.isFieldWritable("F04", data) : true;
+  const statusGroup = document.getElementById("editStatusGroup");
+  if (!canReadStatus) {
+    if (statusGroup) statusGroup.classList.add("hidden");
+  } else {
+    if (statusGroup) statusGroup.classList.remove("hidden");
+    setPermBadge("permBadge_Status", canWriteStatus);
+    setElementWritable("editJobStatus", canWriteStatus);
+  }
+
+  // 4. Priority (F06):
+  const canReadPriority = (typeof UserSession !== "undefined") ? UserSession.isFieldReadable("F06", data) : true;
+  const canWritePriority = (typeof UserSession !== "undefined") ? UserSession.isFieldWritable("F06", data) : false;
+  const priorityGroup = document.getElementById("editPriorityGroup");
+  if (!canReadPriority) {
+    if (priorityGroup) priorityGroup.classList.add("hidden");
+  } else {
+    if (priorityGroup) priorityGroup.classList.remove("hidden");
+    setPermBadge("permBadge_Priority", canWritePriority);
+    setElementWritable("editJobPriority", canWritePriority);
+  }
+
+  // 5. Assigned To (F05):
+  const canReadAssigned = (typeof UserSession !== "undefined") ? UserSession.isFieldReadable("F05", data) : true;
+  const canWriteAssigned = (typeof UserSession !== "undefined") ? UserSession.isFieldWritable("F05", data) : false;
+  const assignedGroup = document.getElementById("editAssignedGroup");
+  const assignedBtn = document.getElementById("editAssignedToBtn");
+  if (!canReadAssigned) {
+    if (assignedGroup) assignedGroup.classList.add("hidden");
+  } else {
+    if (assignedGroup) assignedGroup.classList.remove("hidden");
+    setPermBadge("permBadge_Assigned", canWriteAssigned);
+    if (assignedBtn) {
+      if (canWriteAssigned) {
+        assignedBtn.removeAttribute("disabled");
+        assignedBtn.classList.remove("bg-slate-100", "cursor-not-allowed", "pointer-events-none", "opacity-80");
+      } else {
+        assignedBtn.setAttribute("disabled", "disabled");
+        assignedBtn.classList.add("bg-slate-100", "cursor-not-allowed", "pointer-events-none", "opacity-80");
+      }
+    }
+  }
+
+  // 6. Budget & Cost Center (F03):
+  const canReadBudget = (typeof UserSession !== "undefined") ? UserSession.isFieldReadable("F03", data) : true;
+  const canWriteBudget = (typeof UserSession !== "undefined") ? UserSession.isFieldWritable("F03", data) : false;
+  const budgetGroup = document.getElementById("editBudgetGroup");
+  const costCenterGroup = document.getElementById("editCostCenterGroup");
+  if (!canReadBudget) {
+    if (budgetGroup) budgetGroup.classList.add("hidden");
+    if (costCenterGroup) costCenterGroup.classList.add("hidden");
+    document.getElementById("editCcfDeptContainer")?.classList.add("hidden");
+  } else {
+    if (budgetGroup) budgetGroup.classList.remove("hidden");
+    if (costCenterGroup) costCenterGroup.classList.remove("hidden");
+    setPermBadge("permBadge_Budget", canWriteBudget);
+    setElementWritable("editBudget", canWriteBudget);
+    setPermBadge("permBadge_CostCenter", canWriteBudget);
+    setElementWritable("editCostCenter", canWriteBudget);
+    setElementWritable("editCcfDept", canWriteBudget);
+  }
+
+  // 7. Final Expense (F07):
+  const canReadFinalExp = (typeof UserSession !== "undefined") ? UserSession.isFieldReadable("F07", data) : true;
+  const canWriteFinalExp = (typeof UserSession !== "undefined") ? UserSession.isFieldWritable("F07", data) : false;
+  const finalExpGroup = document.getElementById("editFinalExpGroup");
+  if (!canReadFinalExp) {
+    if (finalExpGroup) finalExpGroup.classList.add("hidden");
+  } else {
+    if (finalExpGroup) finalExpGroup.classList.remove("hidden");
+    setPermBadge("permBadge_FinalExp", canWriteFinalExp);
+    setElementWritable("editFinalExp", canWriteFinalExp);
+  }
+
+  // Hide Financial Card if both Budget and Final Expense are not readable
+  const financialCard = document.getElementById("editFinancialCard");
+  if (financialCard) {
+    if (!canReadBudget && !canReadFinalExp) financialCard.classList.add("hidden");
+    else financialCard.classList.remove("hidden");
+  }
+
+  // 8. Owner Comment (F02):
+  // User condition: owner commewnt only oproadmin and superadmin kr sakta admin kr sakta hai
+  const canReadOwner = (typeof UserSession !== "undefined") ? UserSession.isFieldReadable("F02", data) : true;
+  const canWriteOwner = (typeof UserSession !== "undefined") ? UserSession.canEditOwnerComment(data) : false;
+  const ownerCard = document.getElementById("editOwnerCard");
+  const ownerInput = document.getElementById("editOwnerComment");
+  if (!canReadOwner) {
+    if (ownerCard) ownerCard.classList.add("hidden");
+  } else {
+    if (ownerCard) ownerCard.classList.remove("hidden");
+    setPermBadge("permBadge_OwnerComment", canWriteOwner, canWriteOwner ? "Owner Directives (Editable by Admin/SuperAdmin/OproAdmin)" : "Restricted to Admin / SuperAdmin / OproAdmin (View Only)");
+    setElementWritable("editOwnerComment", canWriteOwner);
+    if (!canWriteOwner && ownerInput) {
+      ownerInput.placeholder = "Owner comments are restricted to Admin, SuperAdmin & OproAdmin.";
+    }
+  }
+
+  // If Job is closed (isActive === false)
+  if (!isJobActive) {
+    const saveBtn = document.getElementById("saveJobUpdateBtn");
+    const saveBtnText = document.getElementById("saveBtnText");
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.classList.add("opacity-60", "cursor-not-allowed");
+    }
+    if (saveBtnText) {
+      saveBtnText.textContent = "Job Closed (Read Only)";
+    }
+  }
 }
 
 function populateEditForm(data) {
@@ -708,16 +988,20 @@ function populateEditForm(data) {
     console.warn("Assignee populate error:", err);
   }
 
-  // Populate dynamic areas if available
+  // Populate dynamic areas (Only active areas shown, preserving current job area)
   const areaSelect = document.getElementById("editAreaName");
   if (areaSelect && Array.isArray(data.allareas) && data.allareas.length > 0) {
     const curArea = data.areaName || data.area || data.areaID || areaSelect.value;
     areaSelect.innerHTML = `<option value="">Select Area</option>`;
     data.allareas.forEach(a => {
-      const opt = document.createElement("option");
-      opt.value = a.areaid || a.areaId || a.areaName;
-      opt.textContent = a.areaName;
-      areaSelect.appendChild(opt);
+      const isCur = (a.areaid === data.areaID || a.areaName === data.areaName || a.areaName === curArea);
+      const isActive = (a.isactive !== false && a.isactive !== 0 && a.isActive !== false && a.isActive !== 0 && a.status !== false && a.status !== 0);
+      if (isActive || isCur) {
+        const opt = document.createElement("option");
+        opt.value = a.areaid || a.areaId || a.areaName;
+        opt.textContent = a.areaName + (!isActive ? " (Inactive)" : "");
+        areaSelect.appendChild(opt);
+      }
     });
     setSelectValue("editAreaName", curArea);
   } else {
@@ -786,6 +1070,9 @@ function populateEditForm(data) {
   }
 
   setInputValue("editFinalExp", data.finalExp || data.expense || 0);
+
+  // Apply Read & Write field permissions and edit/view icon badges
+  applyFieldPermissions(data);
 }
 
 async function handleJobUpdateSubmit(e) {
@@ -921,8 +1208,8 @@ async function handleJobUpdateSubmit(e) {
       // 2. If user entered a progress note or attached a file, send comment API
       if (newComment.trim() || (photoFileInput && photoFileInput.files && photoFileInput.files.length > 0)) {
         try {
-          const fileToUpload = (photoFileInput && photoFileInput.files && photoFileInput.files.length > 0) ? photoFileInput.files[0] : null;
-          await WorkWizeAPI.addComment(rawJobId, newComment, fileToUpload);
+          const filesToUpload = (photoFileInput && photoFileInput.files && photoFileInput.files.length > 0) ? photoFileInput.files : null;
+          await WorkWizeAPI.addComment(rawJobId, newComment, filesToUpload);
         } catch (commentErr) {
           console.warn("addComment error:", commentErr);
         }
@@ -1091,3 +1378,70 @@ function normalizePriorityString(p) {
   if (s.includes("SAFETY")) return "Safety";
   return "Medium";
 }
+
+
+// ==========================================
+// Image Preview Lightbox Logic
+// ==========================================
+function openImagePreview(url, title) {
+  const modal = document.getElementById("imagePreviewModal");
+  const imgEl = document.getElementById("previewModalImg");
+  const titleEl = document.getElementById("previewModalTitle");
+  const captionEl = document.getElementById("previewModalCaption");
+  const downloadBtn = document.getElementById("previewModalDownloadBtn");
+
+  if (!modal || !imgEl) return;
+
+  imgEl.src = url;
+  imgEl.onerror = function() {
+    this.onerror = null;
+    this.style.display = "none";
+    if (captionEl) captionEl.textContent = "Unable to load image preview. Click 'Open in new tab' to view.";
+  };
+  imgEl.onload = function() {
+    this.style.display = "block";
+  };
+
+  if (titleEl) titleEl.textContent = title || "Comment Photo Preview";
+  if (captionEl) captionEl.textContent = title || "Comment Attachment";
+  if (downloadBtn) downloadBtn.href = url;
+
+  modal.classList.add("open", "active");
+  document.body.style.overflow = "hidden";
+}
+
+function closeImagePreview() {
+  const modal = document.getElementById("imagePreviewModal");
+  if (!modal) return;
+  modal.classList.remove("open", "active");
+  document.body.style.overflow = "";
+}
+
+function initImagePreviewModal() {
+  const modal = document.getElementById("imagePreviewModal");
+  if (!modal) return;
+
+  modal.addEventListener("click", function(e) {
+    if (e.target === modal) {
+      closeImagePreview();
+    }
+  });
+
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape" && modal.classList.contains("open")) {
+      closeImagePreview();
+    }
+  });
+
+  document.addEventListener("click", function(e) {
+    const trigger = e.target.closest(".comment-photo-trigger");
+    if (trigger) {
+      const url = trigger.getAttribute("data-url");
+      const title = trigger.getAttribute("data-title") || "Photo Preview";
+      if (url) openImagePreview(url, title);
+    }
+  });
+}
+
+window.openImagePreview = openImagePreview;
+window.closeImagePreview = closeImagePreview;
