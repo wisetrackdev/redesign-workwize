@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkWize | Bulk Import Jobs - CSV</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen flex bg-[#F2F5FB]">
+
+  <!-- Mobile Sidebar Backdrop -->
+  <div id="sidebarBackdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 lg:hidden hidden"></div>
+
+  <!-- Sidebar Navigation -->
+  <aside id="appSidebar" class="app-sidebar fixed lg:sticky top-0 left-0 bottom-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col h-screen flex-shrink-0 transition-transform duration-300 -translate-x-full lg:translate-x-0 shadow-lg lg:shadow-none">
+    
+    <!-- Sidebar Brand Logo Header -->
+    <div class="h-16 px-5 flex items-center justify-between border-b border-slate-100 shrink-0">
+      <a href="job-by-area.html" class="flex items-center gap-2.5">
+        <img src="assets/logo.png" alt="WorkWize Logo" class="h-8 w-auto object-contain">
+      </a>
+      <button type="button" id="closeSidebarBtn" class="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
+        <i class="fa-solid fa-xmark text-base"></i>
+      </button>
+    </div>
+
+    <!-- Property Selector Dropdown Card -->
+    <div class="p-3 border-b border-slate-100 shrink-0">
+      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1 flex items-center justify-between">
+        <span>Current Property</span>
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+      </div>
+      <div class="relative header-property-selector" id="headerPropertyDropdownContainer">
+        <button id="headerPropertyDropdownBtn" type="button" class="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-all shadow-2xs">
+          <div class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-hotel text-blue-600 text-xs shrink-0"></i>
+            <span id="headerCurrentPropertyName" class="truncate font-bold text-slate-800">Loading Property...</span>
+          </div>
+          <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 shrink-0 ml-1"></i>
+        </button>
+        <div id="headerPropertyMenu" class="hidden absolute left-0 right-0 top-full mt-1.5 w-full bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs text-slate-700 max-h-72 overflow-y-auto">
+          <div class="px-3 py-2 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+            <span>Select Property</span>
+            <i class="fa-solid fa-building-circle-check text-blue-500"></i>
+          </div>
+          <div id="headerPropertyList" class="p-1 space-y-1">
+            <!-- Dynamically populated property options -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Menu Items -->
+    <div class="flex-1 overflow-y-auto py-3 px-3 space-y-1" id="tabs">
+      <div class="px-2 pt-1 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Main Navigation</div>
+
+      <!-- Create New Job Button -->
+      <button type="button" class="tab sidebar-tab btn-open-job-modal text-left justify-start cursor-pointer" id="headerNavCreateJob" data-tab="create-job">
+        <i class="fa-solid fa-plus text-xs w-4 text-center"></i>
+        <span class="truncate">Create New Job</span>
+      </button>
+
+      <a href="job-by-area.html" class="tab sidebar-tab" id="headerNavJobByArea" data-tab="job-by-area">
+        <i class="fa-solid fa-layer-group text-xs w-4 text-center"></i>
+        <span class="truncate">Jobs by Area</span>
+      </a>
+
+      <a href="all-jobs.html" class="tab sidebar-tab" id="headerNavAllJobs" data-tab="all-jobs">
+        <i class="fa-solid fa-list-check text-xs w-4 text-center"></i>
+        <span class="truncate">All Jobs</span>
+        <span id="headerOpenBadge" class="badge ml-auto">0</span>
+      </a>
+
+      <a href="closed-jobs.html" class="tab sidebar-tab" id="headerNavClosedJobs" data-tab="closed-jobs">
+        <i class="fa-regular fa-circle-check text-xs w-4 text-center"></i>
+        <span class="truncate">Closed Jobs</span>
+        <span id="headerClosedBadge" class="badge ml-auto">0</span>
+      </a>
+
+      <!-- Bulk Import Page Link (Active) -->
+      <a href="bulk-import.html" class="tab sidebar-tab on" id="headerNavBulkImport" data-tab="bulk-import">
+        <i class="fa-solid fa-cloud-arrow-up text-xs w-4 text-center text-blue-600"></i>
+        <span class="truncate font-bold">Bulk Import</span>
+        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 ml-auto">CSV</span>
+      </a>
+
+      <a href="dashboard.html" class="tab sidebar-tab" id="headerNavDashboard" data-tab="dashboard">
+        <i class="fa-solid fa-house text-xs w-4 text-center"></i>
+        <span class="truncate">Dashboard</span>
+      </a>
+
+      <div class="pt-3 pb-1.5 px-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Analytics</div>
+
+      <a href="opro-dashboard.html" class="tab sidebar-tab" id="headerNavOproDashboard" data-tab="opro-dashboard">
+        <i class="fa-solid fa-chart-pie text-xs w-4 text-center text-indigo-500"></i>
+        <span class="truncate">OPRO Dashboard</span>
+      </a>
+    </div>
+
+    <!-- Sidebar Bottom / User Profile & Logout -->
+    <div class="p-3 border-t border-slate-100 shrink-0 bg-slate-50/60">
+      <div class="relative">
+        <button id="userProfileBtn" type="button" class="w-full flex items-center gap-2.5 p-2 rounded-xl hover:bg-white hover:shadow-xs transition-all text-left">
+          <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-xs uppercase shrink-0" id="headerUserAvatar">
+            <i class="fa-regular fa-user"></i>
+          </div>
+          <div class="text-left leading-tight min-w-0 flex-1">
+            <span class="text-xs font-bold text-slate-800 block truncate header-user-display-name">IT [App admin]</span>
+            <span class="text-[10px] text-slate-400 font-medium block truncate header-user-display-role">it@workwise.in</span>
+          </div>
+          <i class="fa-solid fa-chevron-up text-[10px] text-slate-400 shrink-0"></i>
+        </button>
+
+        <div id="userProfileMenu" class="hidden absolute left-0 right-0 bottom-full mb-2 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-50 text-xs text-slate-700 animate-fade-in">
+          <div class="px-3.5 py-2 border-b border-slate-100 font-medium">
+            <p class="text-slate-800 font-semibold header-menu-user-name">IT [App admin]</p>
+            <p class="text-slate-400 text-[11px] truncate header-menu-user-email">it@workwise.in</p>
+          </div>
+          <div class="p-1">
+            <a href="login.html" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-rose-50 text-rose-600 font-medium transition-colors">
+              <i class="fa-solid fa-arrow-right-from-bracket text-xs"></i> Log Out
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 flex flex-col min-w-0 min-h-screen">
+
+    <!-- Mobile-Only Top Bar with Hamburger -->
+    <div class="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
+      <div class="flex items-center gap-3">
+        <button id="openSidebarBtn" type="button" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
+          <i class="fa-solid fa-bars text-base"></i>
+        </button>
+        <img src="assets/logo.png" alt="WorkWize Logo" class="h-7 w-auto object-contain">
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-slate-700 truncate max-w-[130px]" id="mobileHeaderPropertyName">Loading Property...</span>
+      </div>
+    </div>
+
+    <!-- Page Body -->
+    <main class="p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+
+      <!-- Header Section -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg font-bold shadow-xs">
+              <i class="fa-solid fa-cloud-arrow-up"></i>
+            </div>
+            <div>
+              <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Bulk Import Jobs</h1>
+              <p class="text-xs text-slate-500 mt-0.5">Upload maintenance jobs via CSV spreadsheet with automated validation & property mapping</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target Property Indicator Badge -->
+        <div class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-medium self-start sm:self-auto">
+          <i class="fa-solid fa-hotel text-blue-600"></i>
+          <span class="text-slate-500">Target Property:</span>
+          <span id="bulkImportPropName" class="font-bold text-slate-900">Loading...</span>
+          <span id="bulkImportPropId" class="hidden">PROP001</span>
+        </div>
+      </div>
+
+      <!-- Top Action & Template Card -->
+      <div class="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-2xl p-6 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 border border-slate-700">
+        <div class="space-y-2 max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30">
+            <i class="fa-solid fa-file-csv"></i> Standard CSV Template
+          </div>
+          <h2 class="text-lg sm:text-xl font-bold tracking-tight text-white">Need the template format? Download Sample CSV</h2>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            The template comes pre-filled with your active property name (<span class="text-blue-300 font-semibold" id="samplePropNameEcho">Current Property</span>) and working sample jobs covering <b>Guest Villa</b> (with Villa #), <b>Public Area</b>, and <b>Utility</b>. Simply open it, edit or add your rows, and upload.
+          </p>
+        </div>
+
+        <div class="shrink-0">
+          <button type="button" id="btnDownloadSampleCsv" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-900/50 hover:shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer">
+            <i class="fa-solid fa-download text-sm"></i>
+            <span>Download Sample CSV Template</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Instruction Pills Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-1">
+          <div class="font-bold text-slate-800 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-[10px] font-black">1</span>
+            <span>Property Name</span>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-relaxed">Auto-mapped to the selected property. You can also specify other property names.</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-1">
+          <div class="font-bold text-slate-800 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-[10px] font-black">2</span>
+            <span>Guest Villa Rule</span>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-relaxed">If <b>Area</b> is "Guest Villa", the <b>Villa Number</b> field is strictly required.</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-1">
+          <div class="font-bold text-slate-800 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">3</span>
+            <span>Priority & Status</span>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-relaxed">Priority: High, Medium, Low, Safety. Status defaults to "Yet to Commence".</p>
+        </div>
+
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 shadow-2xs space-y-1">
+          <div class="font-bold text-slate-800 flex items-center gap-1.5">
+            <span class="w-5 h-5 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-[10px] font-black">4</span>
+            <span>Job Details</span>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-relaxed">Maintenance issue description. Required for each job order row.</p>
+        </div>
+      </div>
+
+      <!-- Drag & Drop Upload Zone Card -->
+      <div class="ww-card bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-sm text-center">
+        <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+
+        <!-- Initial Drop Box -->
+        <div id="csvDropZone" class="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer bg-slate-50/50 hover:bg-blue-50/30 flex flex-col items-center justify-center space-y-3">
+          <div class="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center text-2xl shadow-xs">
+            <i class="fa-solid fa-file-csv"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-slate-800">Drag and drop your CSV file here</h3>
+            <p class="text-xs text-slate-400 mt-1">or click anywhere in this box to browse files from your computer</p>
+          </div>
+          <button type="button" id="btnBrowseFile" class="btn-outline text-xs !py-2 !px-4 mt-2">
+            <i class="fa-regular fa-folder-open mr-1.5"></i> Select CSV File
+          </button>
+          <span class="text-[10px] text-slate-400">Supported format: .csv (UTF-8 formatted)</span>
+        </div>
+
+        <!-- Selected File Info Pill (Appears when file is loaded) -->
+        <div id="selectedFileInfo" class="hidden p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in text-left">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-lg shrink-0">
+              <i class="fa-solid fa-file-lines"></i>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-slate-800" id="selectedFileName">filename.csv</p>
+              <p class="text-[11px] text-slate-400" id="selectedFileSize">0 KB</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="document.getElementById('csvFileInput').click()" class="btn-outline text-xs !py-1.5 !px-3">
+              <i class="fa-solid fa-arrow-rotate-right mr-1"></i> Change File
+            </button>
+            <button type="button" id="btnRemoveFile" class="px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors font-medium">
+              <i class="fa-regular fa-trash-can mr-1"></i> Remove
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Preview Table & Validation Card -->
+      <div id="previewCard" class="hidden space-y-4">
+
+        <!-- Stat Row above Table -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Rows</p>
+              <p class="text-2xl font-extrabold text-slate-900 mt-0.5" id="statTotalRows">0</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center text-base">
+              <i class="fa-solid fa-table-list"></i>
+            </div>
+          </div>
+
+          <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Ready to Import</p>
+              <p class="text-2xl font-extrabold text-emerald-700 mt-0.5" id="statValidRows">0</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-base">
+              <i class="fa-solid fa-circle-check"></i>
+            </div>
+          </div>
+
+          <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-semibold text-rose-500 uppercase tracking-wider">Rows with Errors</p>
+              <p class="text-2xl font-extrabold text-rose-600 mt-0.5" id="statErrorRows">0</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-base">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Table Card -->
+        <div class="ww-card overflow-hidden !p-0 border border-slate-200/80 rounded-2xl bg-white shadow-sm flex flex-col">
+          <!-- Table Header Controls -->
+          <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/60">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Parsed Jobs Preview</h3>
+              <p class="text-xs text-slate-400">Review jobs before confirming import into database</p>
+            </div>
+
+            <!-- Filter Tabs & Action -->
+            <div class="flex items-center gap-2 flex-wrap">
+              <div class="flex items-center p-1 bg-slate-200/60 rounded-xl text-xs">
+                <button type="button" class="preview-filter-tab active px-3 py-1 rounded-lg bg-white shadow-xs text-blue-600 font-bold transition-all" data-filter="all">All</button>
+                <button type="button" class="preview-filter-tab px-3 py-1 rounded-lg text-slate-600 font-medium transition-all" data-filter="valid">Valid Only</button>
+                <button type="button" class="preview-filter-tab px-3 py-1 rounded-lg text-slate-600 font-medium transition-all" data-filter="error">Errors Only</button>
+              </div>
+
+              <button type="button" id="btnImportValidJobs" class="btn-primary text-xs !py-2 !px-4 shadow-sm" disabled>
+                <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Import Valid Jobs
+              </button>
+            </div>
+          </div>
+
+          <!-- Table Body -->
+          <div class="table-scroll-container overflow-x-auto max-h-[500px]">
+            <table class="ww-table ww-table-compact text-[11px] whitespace-nowrap">
+              <thead class="sticky top-0 bg-slate-100/95 backdrop-blur z-10 border-b border-slate-200">
+                <tr>
+                  <th style="width: 45px;" class="text-center">#</th>
+                  <th style="min-width: 90px;">Status</th>
+                  <th style="min-width: 140px;">Property</th>
+                  <th style="min-width: 120px;">Area</th>
+                  <th style="min-width: 90px;">Villa</th>
+                  <th style="min-width: 130px;">Location</th>
+                  <th style="min-width: 90px;">Priority</th>
+                  <th style="min-width: 120px;">Assigned To</th>
+                  <th style="min-width: 240px;">Job Details</th>
+                  <th style="min-width: 140px;">Validation Note</th>
+                </tr>
+              </thead>
+              <tbody id="previewTableBody">
+                <!-- Dynamically populated via bulk-import.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Import Progress Card -->
+      <div id="importProgressCard" class="hidden ww-card bg-white border border-blue-200 rounded-2xl p-6 shadow-lg animate-fade-in space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <i class="fa-solid fa-circle-notch fa-spin text-xl text-blue-600"></i>
+            <div>
+              <p class="text-xs font-bold text-slate-800" id="importProgressText">Processing import...</p>
+              <p class="text-[11px] text-slate-400">Saving jobs and linking team members</p>
+            </div>
+          </div>
+          <span class="text-sm font-extrabold text-blue-600" id="importProgressPercent">0%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+          <div id="importProgressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Success Summary Banner -->
+      <div id="importSummaryBanner" class="hidden p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 shadow-md space-y-4 animate-fade-in">
+        <div class="flex items-start gap-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-2xl shrink-0">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div class="space-y-1 flex-1">
+            <h3 class="text-base font-bold text-emerald-900">Bulk Import Complete!</h3>
+            <p class="text-xs text-emerald-800">
+              Successfully created <b id="importSuccessCount" class="font-extrabold">0</b> maintenance jobs in <span id="summaryPropNameEcho">your property</span>. (Failed: <span id="importFailedCount">0</span>)
+            </p>
+            <div class="pt-2 text-[11px] text-emerald-700">
+              <span>Created Job IDs:</span>
+              <div id="importCreatedJobIds" class="mt-1 flex flex-wrap gap-1 max-h-24 overflow-y-auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 pt-2 border-t border-emerald-200">
+          <a href="all-jobs.html" class="btn-primary text-xs !py-2 !px-4 shadow-sm inline-flex items-center gap-1.5">
+            <i class="fa-solid fa-list-check"></i>
+            <span>View All Jobs</span>
+          </a>
+          <button type="button" onclick="window.resetBulkUpload()" class="btn-outline text-xs !py-2 !px-4 bg-white text-slate-700">
+            <i class="fa-solid fa-arrow-rotate-left mr-1"></i> Import Another File
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Regular Add Job Modal from main.js (Available across pages) -->
+  <div id="addJobModal" class="modal-backdrop">
+    <div class="modal-container">
+      <div class="flex items-center justify-between p-6 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-slate-900 text-lg">Create New Job Order</h3>
+          <p class="text-xs text-slate-500 mt-0.5">Fill in the details below to log a new maintenance request</p>
+        </div>
+        <button id="closeJobModalBtn" class="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <form id="newJobForm" class="p-6 overflow-y-auto max-h-[calc(85vh-130px)] space-y-4 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Operational Area <span class="text-rose-500">*</span></label>
+            <select id="modalArea" required class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+              <option value="">Select Area</option>
+              <option value="Guest Villa">Guest Villa</option>
+              <option value="Public Area">Public Area</option>
+              <option value="Utility">Utility</option>
+              <option value="CAPEX">CAPEX</option>
+              <option value="Landscaping">Landscaping</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Villa Number</label>
+            <input type="text" id="modalVillaNumber" placeholder="e.g. Villa 101" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Location</label>
+            <input type="text" id="modalJobLocation" placeholder="Specific location" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Priority <span class="text-rose-500">*</span></label>
+            <select id="modalPriority" required class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Low">Low</option>
+              <option value="Safety">Safety</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Job Details <span class="text-rose-500">*</span></label>
+          <textarea id="modalJobDetails" rows="3" required placeholder="Describe the maintenance issue..." class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <button type="button" id="cancelJobModalBtn" class="btn-outline text-xs">Cancel</button>
+          <button type="submit" id="nextJobModalBtn" class="btn-primary text-xs">
+            <i class="fa-solid fa-paper-plane mr-1.5"></i> Submit Job
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/bulk-import.js"></script>
+</body>
+</html>

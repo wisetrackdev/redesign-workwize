@@ -405,6 +405,26 @@ const WorkWizeAPI = (function () {
     });
   }
 
+  // 14. Bulk Import Jobs (api/jobtracker/bulkimportjobs)
+  async function bulkImportJobs(formDataOrPayload) {
+    if (formDataOrPayload instanceof FormData) {
+      return await request("api/jobtracker/bulkimportjobs", {
+        method: "POST",
+        body: formDataOrPayload
+      });
+    } else {
+      const fd = new FormData();
+      if (formDataOrPayload.propId) fd.append("propId", formDataOrPayload.propId);
+      if (formDataOrPayload.propName) fd.append("propName", formDataOrPayload.propName);
+      if (formDataOrPayload.jobs) fd.append("jobs", typeof formDataOrPayload.jobs === "string" ? formDataOrPayload.jobs : JSON.stringify(formDataOrPayload.jobs));
+      if (formDataOrPayload.csvContent) fd.append("csvContent", formDataOrPayload.csvContent);
+      return await request("api/jobtracker/bulkimportjobs", {
+        method: "POST",
+        body: fd
+      });
+    }
+  }
+
   return {
     getBaseUrl,
     setBaseUrl,
@@ -430,7 +450,8 @@ const WorkWizeAPI = (function () {
     addNewJob,
     addComment,
     updateJobFields,
-    updateJob
+    updateJob,
+    bulkImportJobs
   };
 })();
 
