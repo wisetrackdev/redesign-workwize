@@ -1058,121 +1058,140 @@ async function initJobsByArea() {
 
 
 
-    // 2. Fetch Job Overview by Area from API for current property (mirrors OPRO-FRONTEND GetJobOverView)
+    // 2. Fetch Job Overview by Area AND Property Info in parallel (Strictly active areas from admin)
+    const [overviewResponse, propInfo] = await Promise.all([
+      WorkWizeAPI.getJobOverview(currentPropId).catch(err => {
+        console.warn("API Overview failed:", err.message);
+        return [];
+      }),
+      WorkWizeAPI.getPropertyInfo(currentPropId).catch(err => {
+        console.warn("API PropertyInfo failed:", err.message);
+        return null;
+      })
+    ]);
 
-    const response = await WorkWizeAPI.getJobOverview(currentPropId);
+    // Extract property areas configured in Admin
+    const propAreasList = (propInfo && (propInfo.propArea || propInfo.propAreas || propInfo.PropArea || propInfo.PropAreas)) || [];
 
-
-
-    if (Array.isArray(response)) {
-
-      const apiAreas = response
-
-        .filter(item => {
-
+    // Filter strictly for ACTIVE areas in Admin for this property
+    const activeAdminAreas = Array.isArray(propAreasList)
+      ? propAreasList.filter(item => {
           if (!item) return false;
-
-          // Exclude only if explicitly marked inactive
-
-          if (item.isactive === false || item.isactive === 0 || item.isactive === "0" ||
-
-              item.isActive === false || item.isActive === 0 || item.isActive === "0") {
-
+          // Exclude any area explicitly marked inactive
+          if (item.isactive === false || item.isactive === 0 || item.isactive === "0" || item.isactive === "false" ||
+              item.isActive === false || item.isActive === 0 || item.isActive === "0" || item.isActive === "false" ||
+              item.status === false || item.status === 0 || item.status === "0" || item.status === "false") {
             return false;
-
           }
-
           return true;
-
         })
+      : [];
 
+    let apiAreas = [];
+
+    if (activeAdminAreas.length > 0) {
+      // Strictly render active operational areas configured in Admin for this property
+      apiAreas = activeAdminAreas.map(item => {
+        const rawAreaId = item.areaid || item.areaId || item.AreaId || item.AreaID || "";
+        const aName = item.areaName || item.AreaName || item.name || "Operational Area";
+        const cleanId = String(rawAreaId).trim().toLowerCase();
+        const cleanName = String(aName).trim().toLowerCase();
+
+        // Match with overview statistics
+        const ov = Array.isArray(overviewResponse) ? overviewResponse.find(o => {
+          if (!o) return false;
+          const oId = String(o.areaID || o.areaId || o.AreaID || o.AreaId || o.id || o.Id || "").trim().toLowerCase();
+          const oName = String(o.areaName || o.name || o.AreaName || o.Name || "").trim().toLowerCase();
+          if (cleanId && oId && cleanId === oId) return true;
+          if (cleanName && oName && cleanName === oName) return true;
+          if (cleanName && oName && (cleanName.includes(oName) || oName.includes(cleanName))) return true;
+          return false;
+        }) : null;
+
+        const total = ov ? ((ov.total_jobs !== undefined && ov.total_jobs !== null && !isNaN(ov.total_jobs))
+          ? Number(ov.total_jobs)
+          : ((ov.total !== undefined && ov.total !== null && !isNaN(ov.total)) ? Number(ov.total) : 0)) : 0;
+
+        const open = ov ? ((ov.open_jobs !== undefined && ov.open_jobs !== null && !isNaN(ov.open_jobs))
+          ? Number(ov.open_jobs)
+          : ((ov.open !== undefined && ov.open !== null && !isNaN(ov.open)) ? Number(ov.open) : 0)) : 0;
+
+        const safety = ov ? ((ov.safety_jobs !== undefined && ov.safety_jobs !== null && !isNaN(ov.safety_jobs))
+          ? Number(ov.safety_jobs)
+          : ((ov.safety !== undefined && ov.safety !== null && !isNaN(ov.safety)) ? Number(ov.safety) : 0)) : 0;
+
+        const jobsObj = (ov && (ov.jobs || ov.Jobs)) || {};
+        const day30 = (jobsObj.day30 !== undefined && jobsObj.day30 !== null && !isNaN(jobsObj.day30)) ? Number(jobsObj.day30) : 0;
+        const day60 = (jobsObj.day60 !== undefined && jobsObj.day60 !== null && !isNaN(jobsObj.day60)) ? Number(jobsObj.day60) : 0;
+        const day90 = (jobsObj.day90 !== undefined && jobsObj.day90 !== null && !isNaN(jobsObj.day90)) ? Number(jobsObj.day90) : 0;
+
+        return {
+          id: rawAreaId || (aName ? aName.toLowerCase().replace(/\s+/g, "-") : "area"),
+          name: aName,
+          total: total,
+          open: open,
+          safety: safety,
+          day30: day30,
+          day60: day60,
+          day90: day90,
+          icon: getAreaIcon(aName)
+        };
+      });
+    } else if (Array.isArray(overviewResponse) && overviewResponse.length > 0) {
+      // Fallback if property info could not be fetched: filter overview response directly
+      apiAreas = overviewResponse
+        .filter(item => {
+          if (!item) return false;
+          if (item.isactive === false || item.isactive === 0 || item.isactive === "0" || item.isactive === "false" ||
+              item.isActive === false || item.isActive === 0 || item.isActive === "0" || item.isActive === "false" ||
+              item.status === false || item.status === 0 || item.status === "0" || item.status === "false") {
+            return false;
+          }
+          return true;
+        })
         .map(item => {
-
           const total = (item.total_jobs !== undefined && item.total_jobs !== null && !isNaN(item.total_jobs))
-
             ? Number(item.total_jobs)
-
             : ((item.total !== undefined && item.total !== null && !isNaN(item.total)) ? Number(item.total) : 0);
 
-
-
           const open = (item.open_jobs !== undefined && item.open_jobs !== null && !isNaN(item.open_jobs))
-
             ? Number(item.open_jobs)
-
             : ((item.open !== undefined && item.open !== null && !isNaN(item.open)) ? Number(item.open) : 0);
 
-
-
           const safety = (item.safety_jobs !== undefined && item.safety_jobs !== null && !isNaN(item.safety_jobs))
-
             ? Number(item.safety_jobs)
-
             : ((item.safety !== undefined && item.safety !== null && !isNaN(item.safety)) ? Number(item.safety) : 0);
 
-
-
           const jobsObj = item.jobs || item.Jobs || {};
-
           const day30 = (jobsObj.day30 !== undefined && jobsObj.day30 !== null && !isNaN(jobsObj.day30)) ? Number(jobsObj.day30) : 0;
-
           const day60 = (jobsObj.day60 !== undefined && jobsObj.day60 !== null && !isNaN(jobsObj.day60)) ? Number(jobsObj.day60) : 0;
-
           const day90 = (jobsObj.day90 !== undefined && jobsObj.day90 !== null && !isNaN(jobsObj.day90)) ? Number(jobsObj.day90) : 0;
 
-
-
-          const rawAreaId = item.areaID || item.areaId || item.AreaID || item.AreaId || item.id || item.Id || '';
-
-          const aName = item.areaName || item.name || item.AreaName || item.Name || 'Operational Area';
-
-
+          const rawAreaId = item.areaID || item.areaId || item.AreaID || item.AreaId || item.id || item.Id || "";
+          const aName = item.areaName || item.name || item.AreaName || item.Name || "Operational Area";
 
           return {
-
-            id: rawAreaId || (aName ? aName.toLowerCase().replace(/\s+/g, '-') : 'area'),
-
+            id: rawAreaId || (aName ? aName.toLowerCase().replace(/\s+/g, "-") : "area"),
             name: aName,
-
             total: total,
-
             open: open,
-
             safety: safety,
-
             day30: day30,
-
             day60: day60,
-
             day90: day90,
-
             icon: getAreaIcon(aName)
-
           };
-
         });
-
-
-
-      areaOverviewData = apiAreas;
-
-      updateAreaStats(areaOverviewData);
-
-      renderJobsByAreaTable();
-
-      restoreLastAreaModal();
-
-      return;
-
     }
 
+    areaOverviewData = apiAreas;
+    updateAreaStats(areaOverviewData);
+    renderJobsByAreaTable();
+    restoreLastAreaModal();
+    return;
   } catch (error) {
-
     console.warn("API Overview failed:", error.message);
-
   }
-
-
 
   // If API failed or returned non-array, render empty state for this property (no mock data)
 
