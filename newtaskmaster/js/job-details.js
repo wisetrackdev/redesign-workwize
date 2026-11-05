@@ -1,3 +1,29 @@
+
+function formatClosedByUser(userVal, data) {
+  if (!userVal || userVal === "-" || userVal === "null" || userVal === "undefined") {
+    return "Authorized Officer";
+  }
+  let str = String(userVal).trim();
+  const explicitName = (data && (data.jobCloseByName || data.closeByName || data.closedByName || data.closed_by_name)) || "";
+  if (explicitName && !str.toLowerCase().includes(explicitName.toLowerCase())) {
+    return `${explicitName} (${str})`;
+  }
+  if (str.includes("@")) {
+    const emailLower = str.toLowerCase();
+    const currentUser = (typeof UserSession !== "undefined" && UserSession.getUser) ? UserSession.getUser() : null;
+    const currentEmail = (currentUser?.email || currentUser?.userName || "").toLowerCase();
+    if (currentUser && currentEmail && emailLower === currentEmail) {
+      const curName = currentUser.name || currentUser.fullName || currentUser.userName || "Admin";
+      return `${curName} (${str})`;
+    }
+    if (emailLower.includes("it@") || emailLower.includes("admin")) {
+      return `Testing - IT Admin (${str})`;
+    }
+    const namePart = str.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+    return `${namePart} (${str})`;
+  }
+  return str;
+}
 let currentJobServerRole = "";
 let selectedCloseJobFiles = [];
 /**
@@ -405,7 +431,7 @@ function renderJobDetails(data) {
 
       if (closedOnEl) closedOnEl.textContent = formatDate(data.jobCloseOn || data.closeDate);
 
-      if (closedByEl) closedByEl.textContent = data.jobCloseBy || data.closedBy || "Authorized Officer";
+      if (closedByEl) closedByEl.textContent = formatClosedByUser(data.jobCloseBy || data.closedBy, data);
 
     }
 
@@ -710,7 +736,7 @@ function renderJobDetails(data) {
 
     if (closedByWrapper) closedByWrapper.classList.remove("hidden");
 
-    if (closedByHeader) closedByHeader.textContent = data.jobCloseBy || data.closedBy || "Authorized Officer";
+    if (closedByHeader) closedByHeader.textContent = formatClosedByUser(data.jobCloseBy || data.closedBy, data);
 
   } else {
 
@@ -1418,7 +1444,7 @@ function renderCommentsTimeline(comments, adminComment, closeOn, closeBy) {
 
   // Admin closure note
 
-  if (adminComment) {
+  if (false && adminComment) { // Admin closure note disabled
 
     timeline.push({
 
@@ -2673,6 +2699,14 @@ async function submitAddOwnerComment() {
 
     await WorkWizeAPI.updateJobFields(form);
 
+    if (selectedModalOwnerCommentFiles.length > 0) {
+      try {
+        await WorkWizeAPI.addComment(rawJobId, `[Owner Directive] ${commentText}`, selectedModalOwnerCommentFiles);
+      } catch (uploadErr) {
+        console.warn("Owner file upload warning:", uploadErr);
+      }
+    }
+
     showToast("Owner comment added successfully!", "success");
 
     closeAddOwnerCommentModal();
@@ -2921,3 +2955,46 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 });
+
+
+let selectedModalOwnerCommentFiles = [];
+
+function handleModalOwnerCommentFilesChange(input) {
+  const previewList = document.getElementById("modalOwnerCommentFilesPreviewList");
+  if (!previewList) return;
+  if (!input.files || input.files.length === 0) {
+    selectedModalOwnerCommentFiles = [];
+    previewList.innerHTML = "";
+    return;
+  }
+  selectedModalOwnerCommentFiles = Array.from(input.files);
+  previewList.innerHTML = selectedModalOwnerCommentFiles.map((f, i) => `
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-100 border border-purple-200 text-purple-800 text-[11px] font-semibold">
+      <i class="fa-solid fa-paperclip text-[10px]"></i>
+      <span class="max-w-[100px] truncate">${escapeHtml(f.name)}</span>
+      <button type="button" onclick="removeModalOwnerCommentFile(${i})" class="text-rose-500 hover:text-rose-700 ml-0.5">
+        <i class="fa-solid fa-xmark text-[10px]"></i>
+      </button>
+    </span>
+  `).join("");
+}
+
+function removeModalOwnerCommentFile(index) {
+  selectedModalOwnerCommentFiles.splice(index, 1);
+  const input = document.getElementById("modalOwnerCommentFile");
+  if (input && selectedModalOwnerCommentFiles.length === 0) input.value = "";
+  const previewList = document.getElementById("modalOwnerCommentFilesPreviewList");
+  if (previewList) {
+    previewList.innerHTML = selectedModalOwnerCommentFiles.map((f, i) => `
+      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-100 border border-purple-200 text-purple-800 text-[11px] font-semibold">
+        <i class="fa-solid fa-paperclip text-[10px]"></i>
+        <span class="max-w-[100px] truncate">${escapeHtml(f.name)}</span>
+        <button type="button" onclick="removeModalOwnerCommentFile(${i})" class="text-rose-500 hover:text-rose-700 ml-0.5">
+          <i class="fa-solid fa-xmark text-[10px]"></i>
+        </button>
+      </span>
+    `).join("");
+  }
+}
+window.handleModalOwnerCommentFilesChange = handleModalOwnerCommentFilesChange;
+window.removeModalOwnerCommentFile = removeModalOwnerCommentFile;

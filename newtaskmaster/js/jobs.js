@@ -6951,182 +6951,182 @@ async function showPropertySafetyJobsModal() {
 
 
 function attachModalSearchListener() {
-
-
-
-
-
-
-
+  populateAreaModalFilterDropdowns(currentAreaModalJobs);
   const searchInput = document.getElementById("areaModalSearchInput");
+  if (searchInput) {
+    searchInput.oninput = function () {
+      filterAreaModalJobs();
+    };
+  }
 
+  ["areaFilterStatus", "areaFilterPriority", "areaFilterAssignedTo", "areaFilterCreatedBy", "areaFilterFromDate", "areaFilterToDate"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.onchange = function () {
+        filterAreaModalJobs();
+      };
+    }
+  });
+}
 
+function filterAreaModalJobs() {
+  const searchInput = document.getElementById("areaModalSearchInput");
+  const q = (searchInput?.value || "").toLowerCase().trim();
 
+  const statusVal = (document.getElementById("areaFilterStatus")?.value || "").toLowerCase().trim();
+  const priorityVal = (document.getElementById("areaFilterPriority")?.value || "").toLowerCase().trim();
+  const assignedVal = (document.getElementById("areaFilterAssignedTo")?.value || "").toLowerCase().trim();
+  const createdByVal = (document.getElementById("areaFilterCreatedBy")?.value || "").toLowerCase().trim();
+  const fromDate = document.getElementById("areaFilterFromDate")?.value || "";
+  const toDate = document.getElementById("areaFilterToDate")?.value || "";
 
+  let activeCount = 0;
+  if (statusVal) activeCount++;
+  if (priorityVal) activeCount++;
+  if (assignedVal) activeCount++;
+  if (createdByVal) activeCount++;
+  if (fromDate || toDate) activeCount++;
 
+  const badge = document.getElementById("areaActiveFilterBadge");
+  if (badge) {
+    badge.textContent = activeCount;
+    if (activeCount > 0) badge.classList.remove("hidden");
+    else badge.classList.add("hidden");
+  }
 
-
-  if (!searchInput) return;
-
-
-
-
-
-
-
-  searchInput.oninput = function (e) {
-
-
-
-
-
-
-
-    const q = e.target.value.toLowerCase().trim();
-
-
-
-
-
-
-
-    if (!q) {
-
-
-
-
-
-
-
-      renderAreaModalRows(currentAreaModalJobs);
-
-
-
-
-
-
-
-      return;
-
-
-
-
-
-
-
+  let filtered = (currentAreaModalJobs || []).filter(j => {
+    // 1. Search Query
+    if (q) {
+      const id = String(j.orgjobId || j.jobId || "").toLowerCase();
+      const detail = String(j.jobDetail || j.title || j.details || "").toLowerCase();
+      const villa = String(j.villaNumber || "").toLowerCase();
+      const loc = String(j.jobLocation || j.location || "").toLowerCase();
+      const ref = String(j.refNum || "").toLowerCase();
+      const stat = String(j.jobStatus || j.status || "").toLowerCase();
+      const prio = String(j.priority || "").toLowerCase();
+      const assigned = String(j.assignedTo || (Array.isArray(j.data1) ? j.data1.map(d => (typeof d === "object" ? d.name || d.teamName : d)).join(", ") : "") || j.firstname || "").toLowerCase();
+      const matchSearch = id.includes(q) || detail.includes(q) || villa.includes(q) || loc.includes(q) || ref.includes(q) || stat.includes(q) || prio.includes(q) || assigned.includes(q);
+      if (!matchSearch) return false;
     }
 
-
-
-
-
-
-
-    const filtered = currentAreaModalJobs.filter(j => {
-
-
-
-
-
-
-
-      const id = String(j.orgjobId || j.jobId || "").toLowerCase();
-
-
-
-
-
-
-
-      const detail = String(j.jobDetail || j.title || "").toLowerCase();
-
-
-
-
-
-
-
-      const villa = String(j.villaNumber || "").toLowerCase();
-
-
-
-
-
-
-
-      const loc = String(j.jobLocation || "").toLowerCase();
-
-
-
-
-
-
-
-      const ref = String(j.refNum || "").toLowerCase();
-
-
-
-
-
-
-
-      const stat = String(j.jobStatus || "").toLowerCase();
-
-
-
-
-
-
-
-      const prio = String(j.priority || "").toLowerCase();
-
-
-
-
-
-
-
-      const assigned = String(j.assignedTo || "").toLowerCase();
-
-
-
-
-
-
-
-      return id.includes(q) || detail.includes(q) || villa.includes(q) || loc.includes(q) || ref.includes(q) || stat.includes(q) || prio.includes(q) || assigned.includes(q);
-
-
-
-
-
-
-
-    });
-
-
-
-
-
-
-
-    renderAreaModalRows(filtered);
-
-
-
-
-
-
-
-  };
-
-
-
-
-
-
-
+    // 2. Status
+    if (statusVal) {
+      const normSt = String(j.jobStatus || j.status || "").toLowerCase();
+      if (!normSt.includes(statusVal)) return false;
+    }
+
+    // 3. Priority
+    if (priorityVal) {
+      const normPr = String(j.priority || "").toLowerCase();
+      if (!normPr.includes(priorityVal)) return false;
+    }
+
+    // 4. Assigned To
+    if (assignedVal) {
+      const assigned = String(j.assignedTo || (Array.isArray(j.data1) ? j.data1.map(d => (typeof d === "object" ? d.name || d.teamName : d)).join(", ") : "") || j.firstname || "").toLowerCase();
+      if (!assigned.includes(assignedVal)) return false;
+    }
+
+    // 5. Created By
+    if (createdByVal) {
+      const creator = String(j.createdBy || (j.firstname ? `${j.firstname} ${j.lastname || ''}`.trim() : "")).toLowerCase();
+      if (!creator.includes(createdByVal)) return false;
+    }
+
+    // 6. Date Range
+    const dateVal = j.jobCreatedOn || j.openedOn || j.createdOn;
+    if (fromDate && dateVal) {
+      if (new Date(dateVal) < new Date(fromDate + "T00:00:00")) return false;
+    }
+    if (toDate && dateVal) {
+      if (new Date(dateVal) > new Date(toDate + "T23:59:59")) return false;
+    }
+
+    return true;
+  });
+
+  // Sort
+  if (currentAreaModalSortOrder === "asc") {
+    filtered.sort((a, b) => new Date(a.jobCreatedOn || a.openedOn || 0) - new Date(b.jobCreatedOn || b.openedOn || 0));
+  } else {
+    filtered.sort((a, b) => new Date(b.jobCreatedOn || b.openedOn || 0) - new Date(a.jobCreatedOn || a.openedOn || 0));
+  }
+
+  renderAreaModalRows(filtered);
 }
+
+function toggleAreaFilterSidebar(open) {
+  const sidebar = document.getElementById("areaFilterSidebar");
+  const backdrop = document.getElementById("areaFilterBackdrop");
+  if (!sidebar || !backdrop) return;
+  const isOpen = !sidebar.classList.contains("translate-x-full");
+  const target = (open !== undefined) ? open : !isOpen;
+  if (target) {
+    sidebar.classList.remove("translate-x-full");
+    backdrop.classList.remove("opacity-0", "pointer-events-none");
+    backdrop.classList.add("opacity-100");
+  } else {
+    sidebar.classList.add("translate-x-full");
+    backdrop.classList.remove("opacity-100");
+    backdrop.classList.add("opacity-0", "pointer-events-none");
+  }
+}
+
+function applyAreaModalFilters() {
+  filterAreaModalJobs();
+  toggleAreaFilterSidebar(false);
+}
+
+function resetAreaModalFilters() {
+  ["areaFilterStatus", "areaFilterPriority", "areaFilterAssignedTo", "areaFilterCreatedBy", "areaFilterFromDate", "areaFilterToDate"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  filterAreaModalJobs();
+  toggleAreaFilterSidebar(false);
+}
+
+function populateAreaModalFilterDropdowns(jobs) {
+  const list = jobs || currentAreaModalJobs || [];
+  const assignedSelect = document.getElementById("areaFilterAssignedTo");
+  if (assignedSelect) {
+    const curVal = assignedSelect.value;
+    const assignees = [...new Set(list.map(j => {
+      if (j.assignedTo) return j.assignedTo;
+      if (Array.isArray(j.data1)) return j.data1.map(d => (typeof d === "object" ? d.name || d.teamName : d)).join(", ");
+      return "";
+    }))].filter(Boolean).sort();
+    assignedSelect.innerHTML = '<option value="">Assigned: All</option>';
+    assignees.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      assignedSelect.appendChild(opt);
+    });
+    if (curVal) assignedSelect.value = curVal;
+  }
+
+  const createdBySelect = document.getElementById("areaFilterCreatedBy");
+  if (createdBySelect) {
+    const curVal = createdBySelect.value;
+    const creators = [...new Set(list.map(j => j.createdBy || (j.firstname ? `${j.firstname} ${j.lastname || ''}`.trim() : "")))].filter(Boolean).sort();
+    createdBySelect.innerHTML = '<option value="">Created By: All</option>';
+    creators.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      createdBySelect.appendChild(opt);
+    });
+    if (curVal) createdBySelect.value = curVal;
+  }
+}
+
+window.toggleAreaFilterSidebar = toggleAreaFilterSidebar;
+window.applyAreaModalFilters = applyAreaModalFilters;
+window.resetAreaModalFilters = resetAreaModalFilters;
+window.filterAreaModalJobs = filterAreaModalJobs;
+window.populateAreaModalFilterDropdowns = populateAreaModalFilterDropdowns;
+
 
 
 
@@ -7841,125 +7841,14 @@ function formatDateStr(dateStr) {
 
 
 function toggleAreaModalDateSort() {
-
-
-
-
-
-
-
   currentAreaModalSortOrder = currentAreaModalSortOrder === "asc" ? "desc" : "asc";
-
-
-
-
-
-
-
   const icon = document.getElementById("areaModalSortIcon");
-
-
-
-
-
-
-
   if (icon) {
-
-
-
-
-
-
-
     icon.className = currentAreaModalSortOrder === "asc" 
-
-
-
-
-
-
-
       ? "fa-solid fa-arrow-up-short-wide ml-1 text-blue-600" 
-
-
-
-
-
-
-
       : "fa-solid fa-arrow-down-short-wide ml-1 text-blue-600";
-
-
-
-
-
-
-
   }
-
-
-
-
-
-
-
-  const searchInput = document.getElementById("areaModalSearchInput");
-
-
-
-
-
-
-
-  const q = (searchInput?.value || "").toLowerCase().trim();
-
-
-
-
-
-
-
-  const filtered = q ? currentAreaModalJobs.filter(j => {
-
-
-
-
-
-
-
-    const text = ((j.orgjobId || j.jobId || '') + ' ' + (j.jobDetail || j.details || '') + ' ' + (j.jobLocation || '') + ' ' + (j.villaNumber || '')).toLowerCase();
-
-
-
-
-
-
-
-    return text.includes(q);
-
-
-
-
-
-
-
-  }) : currentAreaModalJobs;
-
-
-
-
-
-
-
-  renderAreaModalRows(filtered);
-
-
-
-
-
-
-
+  filterAreaModalJobs();
 }
 
 

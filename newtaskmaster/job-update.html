@@ -61,11 +61,6 @@
     <div class="flex-1 overflow-y-auto py-3 px-3 space-y-1" id="tabs">
       <div class="px-2 pt-1 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Main Navigation</div>
 
-      <a href="dashboard.html" class="tab sidebar-tab" id="headerNavDashboard" data-tab="dashboard">
-        <i class="fa-solid fa-house text-xs w-4 text-center"></i>
-        <span class="truncate">Dashboard</span>
-      </a>
-
       <!-- Create New Job Button -->
       <button type="button" class="tab sidebar-tab btn-open-job-modal text-left justify-start cursor-pointer" id="headerNavCreateJob" data-tab="create-job">
         <i class="fa-solid fa-plus text-xs w-4 text-center"></i>
@@ -87,6 +82,11 @@
         <i class="fa-regular fa-circle-check text-xs w-4 text-center"></i>
         <span class="truncate">Closed Jobs</span>
         <span id="headerClosedBadge" class="badge ml-auto">0</span>
+      </a>
+
+      <a href="dashboard.html" class="tab sidebar-tab" id="headerNavDashboard" data-tab="dashboard">
+        <i class="fa-solid fa-house text-xs w-4 text-center"></i>
+        <span class="truncate">Dashboard</span>
       </a>
 
 
@@ -200,7 +200,7 @@
       <form id="jobUpdateForm" class="space-y-4 sm:space-y-5">
 
         <!-- 2-Column Grid Row 1: Location Details (Left) + Status & Priority Settings (Right) -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-start">
           <!-- 1. Location Details -->
           <div class="ww-card space-y-4 flex flex-col justify-between">
             <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
@@ -291,9 +291,9 @@
         </div>
 
         <!-- 2-Column Grid Row 2: Assignment & Timeline (Left) + Financial Allocation (Right) -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-start">
           <!-- 3. Assignment & Timeline -->
-          <div class="ww-card space-y-4 flex flex-col justify-between">
+          <div class="ww-card space-y-4">
             <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold">
                 <i class="fa-solid fa-users-gear"></i>
@@ -352,7 +352,7 @@
           </div>
 
           <!-- 4. Financial Allocation -->
-          <div class="ww-card space-y-4 flex flex-col justify-between" id="editFinancialCard">
+          <div class="ww-card space-y-4" id="editFinancialCard">
             <div class="border-b border-slate-100 pb-3 flex items-center gap-2">
               <div class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold">
                 <i class="fa-solid fa-dollar-sign"></i>
@@ -374,6 +374,10 @@
                   <option value="CAPEX">CAPEX</option>
                   <option value="Department Operational Budget">Department Operational Budget</option>
                 </select>
+                <div id="editCcfDeptContainer" class="hidden mt-2.5">
+                  <label class="block text-xs font-bold text-slate-700 mb-1.5">Department Name <span class="text-rose-500">*</span></label>
+                  <input type="text" id="editCcfDept" placeholder="Enter Department Name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
+                </div>
               </div>
 
               <div id="editFinalExpGroup">
@@ -382,10 +386,7 @@
               </div>
             </div>
 
-            <div id="editCcfDeptContainer" class="hidden w-full sm:w-1/3">
-              <label class="block text-xs font-bold text-slate-700 mb-1.5">Department Name <span class="text-rose-500">*</span></label>
-              <input type="text" id="editCcfDept" placeholder="Enter Department Name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-3 focus:border-blue-500 focus:bg-white outline-none">
-            </div>
+            
           </div>
         </div>
 
@@ -415,6 +416,25 @@
             </div>
           </div>
         </div>
+        <!-- 6. Job Documentation & Photos (with Delete Icon) -->
+        <div class="ww-card space-y-4" id="jobUpdatePhotosCard">
+          <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold">
+                <i class="fa-solid fa-images"></i>
+              </div>
+              <h3 class="font-bold text-slate-900 text-sm">Job Documentation & Photos</h3>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200" id="updateUploadsCount">0 Files</span>
+          </div>
+
+          <!-- Photos Grid with Delete Icons -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="updateJobUploads">
+            <!-- Populated dynamically via job-update.js -->
+          </div>
+        </div>
+
+
 
         <!-- 6. Owner's Comment (Separate Dedicated Card Above Progress Note/Updates) -->
         <div class="ww-card space-y-4 border-purple-200 bg-purple-50/30" id="editOwnerCard">
@@ -433,6 +453,18 @@
 
           <div>
             <textarea id="editOwnerComment" rows="3" placeholder="Enter new owner comment..." class="w-full text-xs text-purple-950 bg-white border border-purple-200/90 rounded-xl p-3 focus:border-purple-500 focus:bg-white outline-none resize-y"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1.5">Attach Owner Directive Photo / Document</label>
+            <div class="flex items-center gap-2 flex-wrap">
+              <label for="editOwnerPhotoFile" class="cursor-pointer px-3 py-1.5 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100/70 text-purple-700 text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors">
+                <i class="fa-solid fa-paperclip text-xs"></i>
+                <span>Attach File</span>
+                <input type="file" id="editOwnerPhotoFile" multiple accept="image/*,application/pdf" class="hidden" onchange="handleEditOwnerFilesChange(this)">
+              </label>
+              <div id="editOwnerFilesPreviewList" class="flex items-center gap-1.5 flex-wrap"></div>
+            </div>
           </div>
 
           <!-- Owner Comments History Container -->
@@ -466,9 +498,14 @@
               <label class="block text-xs font-bold text-slate-700 mb-1.5">
                 Attach New Photo / Documentation File
               </label>
-              <input type="file" id="editPhotoFile" accept="image/*" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl p-2.5 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer">
-              <p class="text-[11px] text-slate-400 mt-1">Upload JPEG, PNG or WebP images to append to this work order.</p>
-            </div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <label for="editPhotoFile" class="cursor-pointer px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold inline-flex items-center gap-2 shadow-2xs transition-colors">
+                  <i class="fa-solid fa-image text-blue-600"></i>
+                  <span>Choose Photo</span>
+                  <input type="file" id="editPhotoFile" multiple accept="image/*,application/pdf" class="hidden" onchange="handleEditCommentFilesChange(this)">
+                </label>
+                <div id="editCommentFilesPreviewList" class="flex items-center gap-1.5 flex-wrap"></div>
+              </div>
 
             <!-- Progress Notes & Activity Comments History -->
             <div id="progressNotesHistorySection" class="space-y-2 pt-3 border-t border-slate-200 hidden">
@@ -641,13 +678,13 @@
                 <option value="CAPEX">CAPEX</option>
                 <option value="Department Operational Budget">Department Operational Budget</option>
               </select>
+              <div id="modalCcfDeptContainer" class="hidden mt-2.5">
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department Name <span class="text-rose-500">*</span></label>
+            <input type="text" id="modalCcfDept" placeholder="Enter Department Name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
+              </div>
             </div>
           </div>
-
-          <div id="modalCcfDeptContainer" class="hidden w-full sm:w-1/2 lg:w-1/4">
-            <label class="block text-xs font-semibold text-slate-700 mb-1.5">Department Name <span class="text-rose-500">*</span></label>
-            <input type="text" id="modalCcfDept" placeholder="Enter Department Name" class="w-full text-xs bg-slate-50 border border-slate-200 rounded-lg p-2.5 focus:border-blue-500 focus:bg-white outline-none">
-          </div>
+
 
           <div>
             <div class="flex items-center justify-between mb-1.5">

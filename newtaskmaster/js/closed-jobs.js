@@ -1,3 +1,25 @@
+
+function formatClosedByUser(userVal) {
+  if (!userVal || userVal === "-" || userVal === "null" || userVal === "undefined") {
+    return "Authorized Officer";
+  }
+  let str = String(userVal).trim();
+  if (str.includes("@")) {
+    const emailLower = str.toLowerCase();
+    const currentUser = (typeof UserSession !== "undefined" && UserSession.getUser) ? UserSession.getUser() : null;
+    const currentEmail = (currentUser?.email || currentUser?.userName || "").toLowerCase();
+    if (currentUser && currentEmail && emailLower === currentEmail) {
+      const curName = currentUser.name || currentUser.fullName || currentUser.userName || "Admin";
+      return `${curName} (${str})`;
+    }
+    if (emailLower.includes("it@") || emailLower.includes("admin")) {
+      return `Testing - IT Admin (${str})`;
+    }
+    const namePart = str.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, l => l.toUpperCase());
+    return `${namePart} (${str})`;
+  }
+  return str;
+}
 /**
  * WorkWize Closed Jobs Standalone Page Logic
  * Connected to live API: api/jobtracker/getclosedjobs
@@ -53,7 +75,7 @@ document.addEventListener("DOMContentLoaded", async function () {
   }
 
   // Attach Filter Listeners
-  ["filterProperty", "filterArea", "filterLocation", "filterPriority", "filterAssignedTo", "filterDateSpan", "filterSortOrder"].forEach(id => {
+  ["filterProperty", "filterArea", "filterPriority", "filterCreatedBy", "filterFromDate", "filterToDate", "filterSortOrder"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener("change", () => {
@@ -331,6 +353,8 @@ function mapApiJobToModel(job, forceClosed = true) {
     assignedTo: assignees,
     expectedCompletion: job.expectedCompletion || job.ExpectedCompletion,
     closeDate: closeDate,
+    closedBy: job.jobCloseBy || job.JobCloseBy || job.closedBy || job.ClosedBy || job.closeBy || job.CloseBy || "-",
+    closedByName: job.jobCloseByName || job.closeByName || job.closedByName || "",
     uploadCount: job.uploadCount !== undefined ? job.uploadCount : (job.UploadCount !== undefined ? job.UploadCount : (Array.isArray(job.imageUploads) ? job.imageUploads.length : 0)),
     commentCount: job.commentCount !== undefined ? job.commentCount : (job.CommentCount !== undefined ? job.CommentCount : (Array.isArray(job.comments) ? job.comments.length : 0)),
     createdBy: (job.createdBy && job.createdBy !== "-" && job.createdBy !== "null" && job.createdBy !== "undefined")
@@ -390,6 +414,22 @@ async function populateFilterDropdowns() {
   const areaSelect = document.getElementById("filterArea");
   const locationSelect = document.getElementById("filterLocation");
   const assignedSelect = document.getElementById("filterAssignedTo");
+
+  
+  // Populate Created By
+  const createdBySelect = document.getElementById("filterCreatedBy");
+  if (createdBySelect) {
+    const currentVal = createdBySelect.value;
+    const creators = [...new Set(closedJobsStore.map(j => j.createdBy))].filter(Boolean).sort();
+    createdBySelect.innerHTML = '<option value="">Created By: All</option>';
+    creators.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      createdBySelect.appendChild(opt);
+    });
+    if (currentVal) createdBySelect.value = currentVal;
+  }
 
   // Populate Properties
   if (propSelect && typeof WorkWizeAPI !== "undefined") {
@@ -634,6 +674,14 @@ function renderTableRows() {
       <td class="text-slate-800 font-bold whitespace-nowrap text-emerald-700">
         <i class="fa-regular fa-calendar-check mr-1 text-emerald-500"></i>${formatDate(job.closeDate)}
       </td>
+      <td class="text-slate-700 whitespace-nowrap">
+        <div class="flex items-center gap-1.5">
+          <span class="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[9px] font-bold">
+            ${(formatClosedByUser(job.closedBy) || "IT").slice(0, 2).toUpperCase()}
+          </span>
+          <span title="${escapeHtml(job.closedBy || '')}">${escapeHtml(formatClosedByUser(job.closedBy))}</span>
+        </div>
+      </td>
       <td class="text-center font-semibold text-slate-600">
         <span class="inline-flex items-center gap-1"><i class="fa-regular fa-image text-blue-500"></i> ${job.uploadCount}</span>
       </td>
@@ -825,8 +873,9 @@ function resetAllFilters() {
   const areaSelect = document.getElementById("filterArea");
   const prioritySelect = document.getElementById("filterPriority");
   const assignedSelect = document.getElementById("filterAssignedTo");
-  const dateSpanSelect = document.getElementById("filterDateSpan");
-  const locationSelect = document.getElementById("filterLocation");
+  const createdBySelect = document.getElementById("filterCreatedBy");
+  const fromDateInput = document.getElementById("filterFromDate");
+  const toDateInput = document.getElementById("filterToDate");
   const sortSelect = document.getElementById("filterSortOrder");
 
   if (searchInput) searchInput.value = "";
@@ -940,6 +989,7 @@ function exportJobsToCSV() {
     "Ref No",
     "Assigned To",
     "Closed Date",
+    "Closed By",
     "Attachments",
     "Comments",
     "Created By",
@@ -958,6 +1008,7 @@ function exportJobsToCSV() {
     `"${j.refNum || "-"}"`,
     `"${(j.assignedTo || "-").replace(/"/g, '""')}"`,
     `"${j.closeDate || "-"}"`,
+    `"${(formatClosedByUser(j.closedBy) || "-").replace(/"/g, '""')}"`,
     `"${j.uploadCount || 0}"`,
     `"${j.commentCount || 0}"`,
     `"${(j.createdBy || "-").replace(/"/g, '""')}"`,

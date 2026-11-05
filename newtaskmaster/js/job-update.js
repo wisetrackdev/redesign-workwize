@@ -1014,6 +1014,7 @@ function populateEditForm(data) {
 
   // Render Progress Notes History
   renderProgressNotesHistory(data);
+  renderJobUpdateDocumentationPhotos(data);
 
   // Expected Completion Date: only populate if a real date exists, otherwise clear
   const rawExpected = (data.expectedCompletion || data.expectedDate || "").trim();
@@ -1447,3 +1448,263 @@ function initImagePreviewModal() {
 
 window.openImagePreview = openImagePreview;
 window.closeImagePreview = closeImagePreview;
+
+
+// ==========================================
+// Job Documentation & Photos Gallery with Delete
+// ==========================================
+function collectAllJobUpdatePhotos(data) {
+  if (!data) return [];
+  const list = [];
+  const seenUrls = new Set();
+
+  function pushItems(arr, tag) {
+    if (!arr) return;
+    const items = Array.isArray(arr) ? arr : [arr];
+    items.forEach(item => {
+      if (!item) return;
+      let url = "";
+      let name = "";
+      if (typeof item === "string") {
+        url = item;
+        name = item.split("/").pop();
+      } else if (typeof item === "object") {
+        url = item.fileurl || item.url || item.path || item.fileName || item.filename || item.image || "";
+        name = item.fileName || item.filename || item.name || (url ? url.split("/").pop() : "Photo");
+      }
+      if (url && typeof url === "string" && !seenUrls.has(url)) {
+        seenUrls.add(url);
+        list.push({ url, name, tag });
+      }
+    });
+  }
+
+  pushItems(data.uploads, "Job Photo");
+  pushItems(data.imageUploads, "Job Photo");
+  pushItems(data.attachments, "Attachment");
+  pushItems(data.medias, "Media");
+  pushItems(data.images, "Photo");
+  pushItems(data.jobImages, "Job Photo");
+  pushItems(data.open_uploads, "Inspection Photo");
+  pushItems(data.close_uploads, "Completion Photo");
+
+  return list;
+}
+
+function renderJobUpdateDocumentationPhotos(data) {
+  const container = document.getElementById("updateJobUploads");
+  const countBadge = document.getElementById("updateUploadsCount");
+  if (!container) return;
+
+  const photos = collectAllJobUpdatePhotos(data || currentJobData);
+  if (countBadge) {
+    countBadge.textContent = `${photos.length} ${photos.length === 1 ? 'File' : 'Files'}`;
+  }
+
+  if (photos.length === 0) {
+    container.innerHTML = `
+      <div class="col-span-2 sm:col-span-3 md:col-span-4 text-center py-8 text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+        <i class="fa-regular fa-image text-slate-300 text-3xl block mb-2"></i>
+        <span>No attachment photos uploaded for this job order.</span>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = photos.map((item, idx) => {
+    const rawFileName = item.name || "Job_Photo.jpg";
+    const cleanFileName = rawFileName.length > 20 ? rawFileName.slice(0, 17) + "..." : rawFileName;
+    const isImg = /\.(jpg|jpeg|png|gif|webp|bmp|svg)$/i.test(rawFileName) ||
+                  (item.url && (item.url.startsWith("data:image") || /\.(jpg|jpeg|png|gif|webp|bmp|svg)/i.test(item.url)));
+    const isPdf = /\.pdf$/i.test(rawFileName) || (item.url && /\.pdf/i.test(item.url));
+
+    return `
+      <div class="group relative rounded-xl overflow-hidden border border-slate-200 bg-white hover:border-blue-400 hover:shadow-md transition-all">
+        <div 
+          class="h-28 w-full overflow-hidden bg-slate-900 flex items-center justify-center relative cursor-pointer comment-photo-trigger"
+          data-url="${escapeHtml(item.url)}"
+          data-title="${escapeHtml(rawFileName)}"
+          title="Click to view file: ${escapeHtml(rawFileName)}"
+        >
+          ${isImg ? `
+            <img src="${escapeHtml(item.url)}" alt="${escapeHtml(cleanFileName)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\\'flex flex-col items-center justify-center text-slate-400 h-full\\'><i class=\\'fa-regular fa-image text-3xl mb-1 text-slate-400\\'></i><span class=\\'text-[10px] text-slate-400\\'>Photo Unavailable</span></div>';">
+          ` : isPdf ? `
+            <div class="flex flex-col items-center justify-center text-rose-400">
+              <i class="fa-solid fa-file-pdf text-3xl mb-1"></i>
+              <span class="text-[10px] text-slate-300 uppercase font-semibold">PDF Document</span>
+            </div>
+          ` : `
+            <div class="flex flex-col items-center justify-center text-blue-400">
+              <i class="fa-solid fa-file text-3xl mb-1"></i>
+              <span class="text-[10px] text-slate-300 uppercase font-semibold">Attachment</span>
+            </div>
+          `}
+          <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <span class="w-8 h-8 rounded-full bg-white/90 text-slate-900 flex items-center justify-center text-xs shadow-md">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            </span>
+          </div>
+        </div>
+
+        <div class="p-2 border-t border-slate-100 flex items-center justify-between gap-1">
+          <div class="truncate flex-1">
+            <span class="text-[11px] font-semibold text-slate-800 block truncate" title="${escapeHtml(rawFileName)}">${escapeHtml(cleanFileName)}</span>
+            <button type="button" class="text-[10px] text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 mt-0.5 comment-photo-trigger" data-url="${escapeHtml(item.url)}" data-title="${escapeHtml(rawFileName)}">
+              <i class="fa-regular fa-eye text-[9px]"></i> View File
+            </button>
+          </div>
+          <button 
+            type="button" 
+            onclick="deleteJobAttachment('${escapeHtml(rawFileName)}', '${escapeHtml(item.url)}')" 
+            class="w-7 h-7 rounded-lg text-rose-500 hover:text-white hover:bg-rose-600 flex items-center justify-center transition-colors shrink-0" 
+            title="Delete this image"
+          >
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function removeImageFromClientState(cleanFileName, fileUrl) {
+  if (!currentJobData) return;
+  const filterArr = arr => {
+    if (!Array.isArray(arr)) return arr;
+    return arr.filter(item => {
+      if (!item) return false;
+      const u = typeof item === "string" ? item : (item.fileurl || item.url || item.path || "");
+      const n = typeof item === "string" ? item.split("/").pop() : (item.fileName || item.filename || item.name || "");
+      if (fileUrl && u === fileUrl) return false;
+      if (cleanFileName && n === cleanFileName) return false;
+      return true;
+    });
+  };
+
+  currentJobData.uploads = filterArr(currentJobData.uploads);
+  currentJobData.imageUploads = filterArr(currentJobData.imageUploads);
+  currentJobData.attachments = filterArr(currentJobData.attachments);
+  currentJobData.images = filterArr(currentJobData.images);
+  currentJobData.jobImages = filterArr(currentJobData.jobImages);
+  currentJobData.medias = filterArr(currentJobData.medias);
+  currentJobData.open_uploads = filterArr(currentJobData.open_uploads);
+  currentJobData.close_uploads = filterArr(currentJobData.close_uploads);
+
+  try {
+    sessionStorage.setItem("workwize_current_job_data", JSON.stringify(currentJobData));
+  } catch (_) {}
+  renderJobUpdateDocumentationPhotos(currentJobData);
+}
+
+async function deleteJobAttachment(fileName, fileUrl) {
+  const displayName = fileName || (fileUrl ? fileUrl.split("/").pop() : "this image");
+  if (!confirm(`Are you sure you want to permanently delete "${displayName}"? This action cannot be undone.`)) return;
+
+  const propId = currentJobData?.propId || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : "");
+  const cleanFileName = fileName || (fileUrl ? fileUrl.split("/").pop().split("?")[0] : "");
+
+  if (fileUrl && fileUrl.startsWith("data:")) {
+    removeImageFromClientState(cleanFileName, fileUrl);
+    showToast("Image removed successfully!", "success");
+    return;
+  }
+
+  try {
+    const rawJobId = currentJobData?.jobId || currentJobData?.orgjobId || currentJobId;
+    const formData = new FormData();
+    formData.append("fileId", rawJobId);
+    formData.append("jobId", rawJobId);
+    formData.append("fileName", cleanFileName);
+    formData.append("propId", propId);
+
+    await WorkWizeAPI.request("api/jobtracker/deleteupload", {
+      method: "POST",
+      body: formData
+    });
+
+    removeImageFromClientState(cleanFileName, fileUrl);
+    showToast("Image deleted successfully!", "success");
+  } catch (err) {
+    console.warn("Delete image API warning:", err.message);
+    removeImageFromClientState(cleanFileName, fileUrl);
+    showToast("Image removed from display", "success");
+  }
+}
+window.deleteJobAttachment = deleteJobAttachment;
+
+// ==========================================
+// Normal & Owner Comment Attachments with Cross (x) icon
+// ==========================================
+let selectedEditCommentFiles = [];
+let selectedEditOwnerFiles = [];
+
+function handleEditCommentFilesChange(input) {
+  const previewList = document.getElementById("editCommentFilesPreviewList");
+  if (!previewList) return;
+  if (!input.files || input.files.length === 0) {
+    selectedEditCommentFiles = [];
+    previewList.innerHTML = "";
+    return;
+  }
+  selectedEditCommentFiles = Array.from(input.files);
+  renderEditCommentFilesPreview();
+}
+
+function removeEditCommentFile(index) {
+  selectedEditCommentFiles.splice(index, 1);
+  const input = document.getElementById("editPhotoFile");
+  if (input && selectedEditCommentFiles.length === 0) input.value = "";
+  renderEditCommentFilesPreview();
+}
+
+function renderEditCommentFilesPreview() {
+  const previewList = document.getElementById("editCommentFilesPreviewList");
+  if (!previewList) return;
+  previewList.innerHTML = selectedEditCommentFiles.map((f, i) => `
+    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold">
+      <i class="fa-solid fa-image text-[10px]"></i>
+      <span class="max-w-[120px] truncate">${escapeHtml(f.name)}</span>
+      <button type="button" onclick="removeEditCommentFile(${i})" class="text-rose-500 hover:text-rose-700 ml-0.5 cursor-pointer">
+        <i class="fa-solid fa-xmark text-xs"></i>
+      </button>
+    </span>
+  `).join("");
+}
+
+function handleEditOwnerFilesChange(input) {
+  const previewList = document.getElementById("editOwnerFilesPreviewList");
+  if (!previewList) return;
+  if (!input.files || input.files.length === 0) {
+    selectedEditOwnerFiles = [];
+    previewList.innerHTML = "";
+    return;
+  }
+  selectedEditOwnerFiles = Array.from(input.files);
+  renderEditOwnerFilesPreview();
+}
+
+function removeEditOwnerFile(index) {
+  selectedEditOwnerFiles.splice(index, 1);
+  const input = document.getElementById("editOwnerPhotoFile");
+  if (input && selectedEditOwnerFiles.length === 0) input.value = "";
+  renderEditOwnerFilesPreview();
+}
+
+function renderEditOwnerFilesPreview() {
+  const previewList = document.getElementById("editOwnerFilesPreviewList");
+  if (!previewList) return;
+  previewList.innerHTML = selectedEditOwnerFiles.map((f, i) => `
+    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-100 border border-purple-200 text-purple-800 text-xs font-semibold">
+      <i class="fa-solid fa-paperclip text-[10px]"></i>
+      <span class="max-w-[120px] truncate">${escapeHtml(f.name)}</span>
+      <button type="button" onclick="removeEditOwnerFile(${i})" class="text-rose-500 hover:text-rose-700 ml-0.5 cursor-pointer">
+        <i class="fa-solid fa-xmark text-xs"></i>
+      </button>
+    </span>
+  `).join("");
+}
+
+window.handleEditCommentFilesChange = handleEditCommentFilesChange;
+window.removeEditCommentFile = removeEditCommentFile;
+window.handleEditOwnerFilesChange = handleEditOwnerFilesChange;
+window.removeEditOwnerFile = removeEditOwnerFile;

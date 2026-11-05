@@ -54,7 +54,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     });
   }
 
-  ["filterProperty", "filterArea", "filterLocation", "filterStatus", "filterPriority", "filterAssignedTo", "filterDateSpan", "filterSortOrder"].forEach(id => {
+  ["filterProperty", "filterArea", "filterStatus", "filterPriority", "filterAssignedTo", "filterCreatedBy", "filterFromDate", "filterToDate", "filterSortOrder"].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener("change", () => {
@@ -477,6 +477,22 @@ async function populateFilterDropdowns() {
         locationSelect.appendChild(opt);
       }
     });
+  }
+
+  
+  // Populate Created By
+  const createdBySelect = document.getElementById("filterCreatedBy");
+  if (createdBySelect) {
+    const currentVal = createdBySelect.value;
+    const creators = [...new Set(allJobsStore.map(j => j.createdBy))].filter(Boolean).sort();
+    createdBySelect.innerHTML = '<option value="">Created By: All</option>';
+    creators.forEach(name => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name;
+      createdBySelect.appendChild(opt);
+    });
+    if (currentVal) createdBySelect.value = currentVal;
   }
 
   // Populate Assignees
