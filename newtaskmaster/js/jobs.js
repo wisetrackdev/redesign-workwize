@@ -7090,125 +7090,27 @@ function renderAreaModalRows(jobs) {
 
 
 
+  const isGuestVillaArea = /villa/i.test(String(currentAreaModalName || "")) && !String(currentAreaModalName || "").toLowerCase().includes("all areas");
   const villaHeader = document.getElementById("areaModalVillaHeader");
-
-
-
-
-
-
-
   if (villaHeader) {
-
-
-
-
-
-
-
-    villaHeader.classList.remove("hidden");
-
-
-
-
-
-
-
+    if (isGuestVillaArea) {
+      villaHeader.classList.remove("hidden");
+    } else {
+      villaHeader.classList.add("hidden");
+    }
   }
-
-
-
-
-
-
 
   if (!jobs || jobs.length === 0) {
-
-
-
-
-
-
-
     tbody.innerHTML = `
-
-
-
-
-
-
-
       <tr>
-
-
-
-
-
-
-
-        <td colspan="11" class="py-12 text-center text-slate-400 text-xs">
-
-
-
-
-
-
-
+        <td colspan="${isGuestVillaArea ? 12 : 11}" class="py-12 text-center text-slate-400 text-xs">
           <i class="fa-regular fa-folder-open text-2xl text-slate-300 mb-2 block"></i>
-
-
-
-
-
-
-
           <span>No jobs found for this selection.</span>
-
-
-
-
-
-
-
         </td>
-
-
-
-
-
-
-
       </tr>
-
-
-
-
-
-
-
     `;
-
-
-
-
-
-
-
     return;
-
-
-
-
-
-
-
   }
-
-
-
-
-
-
 
   const sortedJobs = [...jobs].sort((a, b) => {
 
@@ -7280,822 +7182,131 @@ function renderAreaModalRows(jobs) {
 
 
   tbody.innerHTML = sortedJobs.map(rawJob => {
-
-
-
-
-
-
-
     const j = normalizeJobObject(rawJob);
-
-
-
-
-
-
-
     const displayId = j.orgjobId || j.jobId;
-
-
-
-
-
-
-
     const rawId = j.jobId || j.orgjobId;
-
-
-
-
-
-
-
     const normStatus = normalizeStatusString(j.jobStatus || j.status);
-
-
-
-
-
-
-
     const normPriority = normalizePriorityString(j.priority);
 
-
-
-
-
-
-
     let statusCls = "badge-in-progress";
-
-
-
-
-
-
-
     if (normStatus === "Yet to Commence") statusCls = "badge-yet-to-commence";
-
-
-
-
-
-
-
     else if (normStatus === "Under Discussion") statusCls = "badge-under-discussion";
-
-
-
-
-
-
-
     else if (normStatus === "Closed") statusCls = "badge-closed";
     else if (normStatus === "Completed") statusCls = "badge-completed bg-emerald-100 text-emerald-800 border border-emerald-300";
-
-
-
-
-
-
-
     else if (normStatus === "Fixed") statusCls = "badge-open";
 
-
-
-
-
-
-
     let priorityCls = "badge-priority-medium";
-
-
-
-
-
-
-
     if (normPriority.toLowerCase() === "high") priorityCls = "badge-priority-high";
-
-
-
-
-
-
-
     else if (normPriority.toLowerCase() === "low") priorityCls = "badge-priority-low";
-
-
-
-
-
-
-
     else if (normPriority.toLowerCase() === "safety") priorityCls = "badge-priority-safety";
 
-
-
-
-
-
-
     let assignedText = "Unassigned";
-
-
-
-
-
-
-
     if (Array.isArray(j.data1) && j.data1.length > 0) {
-
-
-
-
-
-
-
       assignedText = j.data1.map(t => t.teamName || t.name || t).join(", ");
-
-
-
-
-
-
-
     } else if (j.assignedTo) {
-
-
-
-
-
-
-
       assignedText = j.assignedTo;
-
-
-
-
-
-
-
     }
 
-
-
-
-
-
-
     const attachmentsCount = j.uploadCount !== undefined ? j.uploadCount : (Array.isArray(j.imageUploads) ? j.imageUploads.length : 0);
-
-
-
-
-
-
-
     const commentsCount = j.commentCount !== undefined ? j.commentCount : (Array.isArray(j.comments) ? j.comments.length : 0);
-
-
-
-
-
-
-
     const detailText = j.jobDetail || j.details || j.title || "";
-
-
-
-
-
-
+    const displayAreaName = j.areaName || j.area || (currentAreaModalName ? currentAreaModalName.replace(/\s*(Open|Safety|\(.*?\))\s*$/i, '').trim() : '-');
 
     return `
-
-
-
-
-
-
-
       <tr class="hover:bg-blue-50/40 transition-colors cursor-pointer" data-job-id="${escapeHtml(rawId)}" data-display-id="${escapeHtml(displayId)}" data-area-id="${escapeHtml(j.areaID || j.areaId || "")}">
-
-
-
-
-
-
-
-        <!-- 1. ID -->
-
-
-
-
-
-
-
+        <!-- 1. Job ID -->
         <td>
-
-
-
-
-
-
-
           <a href="job-details.html?id=${encodeURIComponent(rawId)}" target="_blank" class="font-bold text-blue-600 hover:underline hover:text-blue-800" title="Open Job ${displayId}">
-
-
-
-
-
-
-
             ${displayId}
-
-
-
-
-
-
-
           </a>
-
-
-
-
-
-
-
         </td>
 
-
-
-
-
-
-
-        <!-- 2. VILLA -->
-
-
-
-
-
-
-
-        <td class="font-semibold text-slate-800">
-
-
-
-
-
-
-
-          ${(j.villaNumber && j.villaNumber !== '-' && j.villaNumber !== 'null') ? j.villaNumber : '<span class="text-slate-300">-</span>'}
-
-
-
-
-
-
-
-        </td>
-
-
-
-
-
-
-
-        <!-- 3. DETAILS (Interactive Hover Preview Card) -->
-
-
-
-
-
-
-
+        <!-- 2. Job Details (Interactive Hover Preview Card) -->
         <td class="max-w-[260px] relative group text-slate-700 font-medium">
-
-
-
-
-
-
-
           <div class="truncate cursor-help flex items-center gap-1.5" title="${escapeHtml(detailText)}">
-
-
-
-
-
-
-
             <span class="truncate">${escapeHtml(detailText) || '<span class="text-slate-400">No details provided</span>'}</span>
-
-
-
-
-
-
-
             <i class="fa-solid fa-circle-info text-[10px] text-slate-400 group-hover:text-blue-500 shrink-0"></i>
-
-
-
-
-
-
-
           </div>
-
-
-
-
-
-
-
           <!-- Hover Details Card -->
-
-
-
-
-
-
-
           <div class="hidden group-hover:block absolute left-4 top-full mt-1 w-80 max-w-sm p-3.5 bg-slate-900/95 backdrop-blur text-white text-xs rounded-xl shadow-2xl z-50 pointer-events-none transition-all duration-200 border border-slate-700">
-
-
-
-
-
-
-
             <div class="flex items-center justify-between border-b border-slate-700/80 pb-1.5 mb-2">
-
-
-
-
-
-
-
               <span class="font-bold text-blue-400 flex items-center gap-1.5 text-[11px]"><i class="fa-solid fa-file-lines"></i> Job Details Preview</span>
-
-
-
-
-
-
-
               <span class="text-[10px] text-slate-400">${displayId}</span>
-
-
-
-
-
-
-
             </div>
-
-
-
-
-
-
-
             <p class="whitespace-pre-wrap leading-relaxed text-slate-200 text-xs">${renderRichText(detailText)}</p>
-
-
-
-
-
-
-
             <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
-
-
-
-
-
-
-
+              <span>Area: <b class="text-slate-200">${escapeHtml(displayAreaName)}</b></span>
               <span>Location: <b class="text-slate-200">${escapeHtml(j.jobLocation || j.location || 'N/A')}</b></span>
-
-
-
-
-
-
-
-              <span>Villa: <b class="text-slate-200">${escapeHtml(j.villaNumber || 'N/A')}</b></span>
-
-
-
-
-
-
-
             </div>
-
-
-
-
-
-
-
           </div>
-
-
-
-
-
-
-
         </td>
 
+        <!-- 3. Area -->
+        <td class="text-slate-700 font-medium">
+          ${escapeHtml(displayAreaName)}
+        </td>
 
-
-
-
-
-
-        <!-- 4. CREATE DATE -->
-
-
-
-
-
-
-
-        <td class="text-slate-500">${formatDateStr(j.jobCreatedOn || j.openedOn)}</td>
-
-
-
-
-
-
-
-        <!-- 5. LOCATION -->
-
-
-
-
-
-
-
+        <!-- 4. Location -->
         <td class="text-slate-600">${j.jobLocation || j.location || '<span class="text-slate-300">-</span>'}</td>
 
-
-
-
-
-
-
-        <!-- 6. PRIORITY -->
-
-
-
-
-
-
-
+        <!-- 5. Priority -->
         <td>
-
-
-
-
-
-
-
           <span class="badge-priority ${priorityCls}">${normPriority}</span>
-
-
-
-
-
-
-
         </td>
 
-
-
-
-
-
-
-        <!-- 7. STATUS -->
-
-
-
-
-
-
-
+        <!-- 6. Status -->
         <td>
-
-
-
-
-
-
-
           <span class="badge-status ${statusCls}">${normStatus}</span>
-
-
-
-
-
-
-
         </td>
 
-
-
-
-
-
-
-        <!-- 8. ASSIGNED TO -->
-
-
-
-
-
-
-
+        <!-- 7. Assigned To -->
         <td class="text-slate-700 whitespace-nowrap">
-
-
-
-
-
-
-
           <div class="flex items-center gap-1.5">
-
-
-
-
-
-
-
             <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
-
-
-
-
-
-
-
               ${(assignedText || "IT").slice(0, 2).toUpperCase()}
-
-
-
-
-
-
-
             </span>
-
-
-
-
-
-
-
             <span>${assignedText}</span>
-
-
-
-
-
-
-
           </div>
-
-
-
-
-
-
-
         </td>
 
+        <!-- 8. Villa (Guest Villa only) -->
+        ${isGuestVillaArea ? `
+        <td class="font-semibold text-slate-800">
+          ${(j.villaNumber && j.villaNumber !== '-' && j.villaNumber !== 'null') ? j.villaNumber : '<span class="text-slate-300">-</span>'}
+        </td>
+        ` : ''}
 
+        <!-- 9. Created Date -->
+        <td class="text-slate-500">${formatDateStr(j.jobCreatedOn || j.openedOn)}</td>
 
-
-
-
-
-        <!-- 9. ATTACHMENTS -->
-
-
-
-
-
-
-
+        <!-- 10. Attachment -->
         <td class="text-center font-semibold text-slate-600">
-
-
-
-
-
-
-
           <span class="inline-flex items-center gap-1"><i class="fa-regular fa-image text-blue-500"></i> ${attachmentsCount}</span>
-
-
-
-
-
-
-
         </td>
 
-
-
-
-
-
-
-        <!-- 10. COMMENTS -->
-
-
-
-
-
-
-
+        <!-- 11. Comment -->
         <td class="text-center font-semibold text-slate-600">
-
-
-
-
-
-
-
           <span class="inline-flex items-center gap-1"><i class="fa-regular fa-comment text-slate-400"></i> ${commentsCount}</span>
-
-
-
-
-
-
-
         </td>
 
-
-
-
-
-
-
-        <!-- 11. ACTION -->
-
-
-
-
-
-
-
+        <!-- 12. Action -->
         <td class="text-right">
-
-
-
-
-
-
-
           <div class="relative inline-block text-left dropdown-group">
-
-
-
-
-
-
-
             <button type="button" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" onclick="toggleRowMenu(this)">
-
-
-
-
-
-
-
               <i class="fa-solid fa-ellipsis"></i>
-
-
-
-
-
-
-
             </button>
-
-
-
-
-
-
-
             <div class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 dropdown-menu">
-
-
-
-
-
-
-
               <a href="job-details.html?id=${encodeURIComponent(rawId)}" target="_blank" class="flex items-center px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium transition-colors">
-
-
-
-
-
-
-
                 <i class="fa-regular fa-eye mr-2 text-blue-600"></i> View Details
-
-
-
-
-
-
-
               </a>
-
-
-
-
-
-
-
               <a href="job-update.html?id=${encodeURIComponent(rawId)}" target="_blank" class="flex items-center px-3 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-700 font-medium transition-colors">
-
-
-
-
-
-
-
                 <i class="fa-solid fa-pen-to-square mr-2 text-amber-600"></i> Update Job
-
-
-
-
-
-
-
               </a>
-
-
-
-
-
-
-
             </div>
-
-
-
-
-
-
-
           </div>
-
-
-
-
-
-
-
         </td>
-
-
-
-
-
-
-
       </tr>
-
-
-
-
-
-
-
     `;
-
-
-
-
-
-
-
   }).join("");
 
 
@@ -8882,492 +8093,84 @@ function formatDetailForExport(val) {
 
 
 function exportAreaJobsToCSV() {
-
-
-
-
-
-
-
   if (!currentAreaModalJobs || currentAreaModalJobs.length === 0) {
-
-
-
-
-
-
-
     if (typeof showToast === "function") showToast("No jobs to export.", "error");
-
-
-
-
-
-
-
     else alert("No jobs to export.");
-
-
-
-
-
-
-
     return;
-
-
-
-
-
-
-
   }
 
-
-
-
-
-
-
+  const isGuestVillaArea = /villa/i.test(String(currentAreaModalName || "")) && !String(currentAreaModalName || "").toLowerCase().includes("all areas");
   const headers = [
-
-
-
-
-
-
-
     "Job ID",
-
-
-
-
-
-
-
-    "Villa",
-
-
-
-
-
-
-
-    "Details",
-
-
-
-
-
-
-
-    "Create Date",
-
-
-
-
-
-
-
+    "Job Details",
+    "Area",
     "Location",
-
-
-
-
-
-
-
     "Priority",
-
-
-
-
-
-
-
     "Status",
-
-
-
-
-
-
-
-    "Ref No",
-
-
-
-
-
-
-
     "Assigned To",
-
-
-
-
-
-
-
-    "Closed Date",
-
-
-
-
-
-
-
+    ...(isGuestVillaArea ? ["Villa"] : []),
+    "Create Date",
     "Attachments",
-
-
-
-
-
-
-
     "Comments",
-
-
-
-
-
-
-
+    "Ref No",
+    "Closed Date",
     "Created By",
-
-
-
-
-
-
-
     "Property",
-
-
-
-
-
-
-
     "Expected Completion Date"
-
-
-
-
-
-
-
   ];
 
-
-
-
-
-
-
   const rows = currentAreaModalJobs.map(rawJob => {
-
-
-
-
-
-
-
     const j = normalizeJobObject(rawJob);
-
-
-
-
-
-
-
     const displayId = j.orgjobId || j.jobId;
-
-
-
-
-
-
-
     const detailText = formatDetailForExport(j.jobDetail || j.details);
-
-
-
-
-
-
+    const displayAreaName = j.areaName || j.area || (currentAreaModalName ? currentAreaModalName.replace(/\s*(Open|Safety|\(.*?\))\s*$/i, '').trim() : '-');
 
     let assigned = "Unassigned";
-
-
-
-
-
-
-
     if (Array.isArray(j.data1) && j.data1.length > 0) {
-
-
-
-
-
-
-
       assigned = j.data1.map(t => {
-
-
-
-
-
-
-
         if (typeof t === "string") return t;
-
-
-
-
-
-
-
         if (typeof t === "object" && t !== null) {
-
-
-
-
-
-
-
           return t.teamName || t.name || t.team_name || t.assignedTeam || t.team || t.title || "";
-
-
-
-
-
-
-
         }
-
-
-
-
-
-
-
         return String(t || "");
-
-
-
-
-
-
-
       }).filter(Boolean).join(", ") || "Unassigned";
-
-
-
-
-
-
-
     } else if (j.assignedTo) {
-
-
-
-
-
-
-
       assigned = j.assignedTo;
-
-
-
-
-
-
-
     }
 
-
-
-
-
-
-
     const createdBy = (j.createdBy && j.createdBy !== "-" && j.createdBy !== "null" && j.createdBy !== "undefined")
-
-
-
-
-
-
-
       ? j.createdBy
-
-
-
-
-
-
-
       : (`${j.firstname || ""} ${j.lastname || ""}`.trim() || j.userId || "-");
 
-
-
-
-
-
-
-    return [
-
-
-
-
-
-
-
+    const row = [
       `"${displayId}"`,
-
-
-
-
-
-
-
-      `"${j.villaNumber || "-"}"`,
-
-
-
-
-
-
-
       detailText,
-
-
-
-
-
-
-
-      `"${j.jobCreatedOn || j.openedOn || "-"}"`,
-
-
-
-
-
-
-
+      `"${displayAreaName.replace(/"/g, '""')}"`,
       `"${(j.jobLocation || j.location || "-").replace(/"/g, '""')}"`,
-
-
-
-
-
-
-
       `"${j.priority || "MEDIUM"}"`,
-
-
-
-
-
-
-
       `"${j.jobStatus || j.status || "-"}"`,
+      `"${assigned.replace(/"/g, '""')}"`
+    ];
 
+    if (isGuestVillaArea) {
+      row.push(`"${j.villaNumber || "-"}"`);
+    }
 
-
-
-
-
-
-      `"${j.refNum || j.refNo || "-"}"`,
-
-
-
-
-
-
-
-      `"${assigned.replace(/"/g, '""')}"`,
-
-
-
-
-
-
-
-      `"${j.jobCloseOn || j.closeDate || "-"}"`,
-
-
-
-
-
-
-
+    row.push(
+      `"${j.jobCreatedOn || j.openedOn || "-"}"`,
       `"${j.uploadCount !== undefined ? j.uploadCount : (Array.isArray(j.imageUploads) ? j.imageUploads.length : 0)}"`,
-
-
-
-
-
-
-
       `"${j.commentCount !== undefined ? j.commentCount : (Array.isArray(j.comments) ? j.comments.length : 0)}"`,
-
-
-
-
-
-
-
+      `"${j.refNum || j.refNo || "-"}"`,
+      `"${j.jobCloseOn || j.closeDate || "-"}"`,
       `"${createdBy.replace(/"/g, '""')}"`,
+      `"${(j.propName || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentPropertyName() : "") || "-").replace(/"/g, '""')}"`,
+      `"${j.expectedCompletion || "-"}"`
+    );
 
-
-
-
-
-
-
-      `"${(j.propName || WorkWizeAPI.getCurrentPropertyName() || "-").replace(/"/g, '""')}"`,
-
-
-
-
-
-
-
-      `"${j.expectedCompletion || j.expectedDate || "-"}"`
-
-
-
-
-
-
-
-    ].join(",");
-
-
-
-
-
-
-
+    return row;
   });
 
-
-
-
-
-
-
-  const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
-
-
-
-
-
-
+  const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\r\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
 

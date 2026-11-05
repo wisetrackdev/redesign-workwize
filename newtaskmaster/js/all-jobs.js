@@ -151,7 +151,7 @@ async function loadAllJobsFromAPI() {
   if (tbody) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="12" class="py-12 text-center text-slate-400">
+        <td colspan="13" class="py-12 text-center text-slate-400">
           <i class="fa-solid fa-circle-notch fa-spin text-2xl text-blue-600 mb-2"></i>
           <p class="text-xs">Fetching job orders from server...</p>
         </td>
@@ -603,7 +603,7 @@ function renderTableRows() {
   if (filteredJobs.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="12" class="py-12 text-center text-slate-400">
+        <td colspan="13" class="py-12 text-center text-slate-400">
           <div class="flex flex-col items-center justify-center gap-3">
             <i class="fa-solid fa-magnifying-glass text-3xl text-slate-300"></i>
             <p class="font-medium text-slate-600">No jobs match your search and filter criteria.</p>
@@ -655,9 +655,6 @@ function renderTableRows() {
           ${isNew ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs animate-pulse">NEW</span>' : ''}
         </div>
       </td>
-      <td class="font-semibold text-slate-800">
-        ${job.villaNumber && job.villaNumber !== '-' ? job.villaNumber : '<span class="text-slate-300">-</span>'}
-      </td>
       <!-- Interactive Job Details on Hover Preview Card -->
       <td class="max-w-[240px] relative group text-slate-700 font-medium">
         <div class="truncate cursor-help flex items-center gap-1.5" title="${escapeHtml(job.details)}">
@@ -677,7 +674,7 @@ function renderTableRows() {
           </div>
         </div>
       </td>
-      <td class="text-slate-500">${formatDate(job.createdOn)}</td>
+      <td class="text-slate-700 font-medium">${escapeHtml(job.area || '-')}</td>
       <td class="text-slate-600">${job.location || '<span class="text-slate-300">-</span>'}</td>
       <td>
         <span class="badge-priority ${priorityBadgeClass}">
@@ -697,6 +694,10 @@ function renderTableRows() {
           <span>${job.assignedTo}</span>
         </div>
       </td>
+      <td class="font-semibold text-slate-800">
+        ${job.villaNumber && job.villaNumber !== '-' ? job.villaNumber : '<span class="text-slate-300">-</span>'}
+      </td>
+      <td class="text-slate-500">${formatDate(job.createdOn)}</td>
       <td class="text-center font-semibold text-slate-600">
         <span class="inline-flex items-center gap-1"><i class="fa-regular fa-image text-blue-500"></i> ${job.uploadCount}</span>
       </td>
@@ -934,17 +935,18 @@ function exportJobsToCSV() {
 
   const headers = [
     "Job ID",
-    "Villa",
-    "Details",
-    "Create Date",
+    "Job Details",
+    "Area",
     "Location",
     "Priority",
     "Status",
-    "Ref No",
     "Assigned To",
-    "Closed Date",
+    "Villa",
+    "Create Date",
     "Attachments",
     "Comments",
+    "Ref No",
+    "Closed Date",
     "Created By",
     "Property",
     "Expected Completion Date"
@@ -952,17 +954,18 @@ function exportJobsToCSV() {
 
   const rows = filteredJobs.map(j => [
     `"${j.id}"`,
-    `"${j.villaNumber || "-"}"`,
     formatDetailForExport(j.details),
-    `"${j.createdOn || "-"}"`,
+    `"${(j.area || "-").replace(/"/g, '""')}"`,
     `"${(j.location || "-").replace(/"/g, '""')}"`,
     `"${j.priority}"`,
     `"${j.status}"`,
-    `"${j.refNum || "-"}"`,
     `"${(j.assignedTo || "-").replace(/"/g, '""')}"`,
-    `"${j.closeDate || "-"}"`,
+    `"${j.villaNumber || "-"}"`,
+    `"${j.createdOn || "-"}"`,
     `"${j.uploadCount}"`,
     `"${j.commentCount}"`,
+    `"${j.refNum || "-"}"`,
+    `"${j.closeDate || "-"}"`,
     `"${(j.createdBy || "-").replace(/"/g, '""')}"`,
     `"${(j.propName || "-").replace(/"/g, '""')}"`,
     `"${j.expectedCompletion || "-"}"`
