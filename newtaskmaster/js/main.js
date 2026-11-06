@@ -811,6 +811,7 @@ function initTopHeaderSearch() {
 let currentStep = 1;
 
 let modalUploadFiles = [];
+let modalOwnerUploadFiles = [];
 
 
 
@@ -2028,6 +2029,19 @@ async function submitJobForm() {
 
 
 
+    // Owner Directive & Owner Attachments
+    const ownerCommentInput = document.getElementById("modalOwnerComment");
+    const ownerCommentVal = (ownerCommentInput?.value || "").trim();
+    if (ownerCommentVal) {
+      formData.append("ownerComment", ownerCommentVal);
+      formData.append("owner_comment", ownerCommentVal);
+    }
+    if (modalOwnerUploadFiles && modalOwnerUploadFiles.length > 0) {
+      modalOwnerUploadFiles.forEach(file => {
+        formData.append("ownerMedia", file);
+      });
+    }
+
     // Append uploaded files
 
     if (modalUploadFiles && modalUploadFiles.length > 0) {
@@ -2205,6 +2219,21 @@ async function submitJobForm() {
 
         jobremark: remarks,
 
+        owner_comment: ownerCommentVal || "",
+
+        owner_comments_history: ownerCommentVal ? [{
+          commentDetail: ownerCommentVal,
+          commentDate: creationDate,
+          author: createdBy || "Owner",
+          uploads: (modalOwnerUploadFiles || []).map(f => ({
+            name: f.name,
+            fileName: f.name,
+            url: URL.createObjectURL(f),
+            size: f.size,
+            type: f.type
+          }))
+        }] : [],
+
         uploads: uploadedFilePreviews,
 
         imageUploads: uploadedFilePreviews,
@@ -2245,10 +2274,15 @@ async function submitJobForm() {
     clearModalAssignees();
 
     modalUploadFiles = [];
+    modalOwnerUploadFiles = [];
 
     const fileList = document.getElementById("uploadedFileList");
-
     if (fileList) fileList.innerHTML = "";
+
+    const ownerCommentField = document.getElementById("modalOwnerComment");
+    if (ownerCommentField) ownerCommentField.value = "";
+    const ownerFileList = document.getElementById("modalOwnerUploadedFileList");
+    if (ownerFileList) ownerFileList.innerHTML = "";
 
 
 
@@ -2456,15 +2490,24 @@ function initFileUpload() {
 
 
 
+      const isImg = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext);
+      let thumbImgHtml = "";
+      try {
+        if (isImg) {
+          const tUrl = URL.createObjectURL(f);
+          thumbImgHtml = `<img src="${tUrl}" class="w-7 h-7 rounded-md object-cover border border-slate-200 shrink-0" alt="">`;
+        }
+      } catch (_) {}
+
       const item = document.createElement("div");
 
-      item.className = "flex items-center justify-between p-2 bg-slate-50 border border-slate-200/80 rounded-lg text-xs mt-2";
+      item.className = "flex items-center justify-between p-2 bg-slate-50 border border-slate-200/80 rounded-lg text-xs mt-2 hover:bg-slate-100/70 transition-colors";
 
       item.innerHTML = `
 
         <span class="flex items-center gap-2 font-medium text-slate-700 truncate">
 
-          <i class="fa-solid ${iconClass}"></i>
+          ${thumbImgHtml || `<i class="fa-solid ${iconClass} text-sm"></i>`}
 
           <span class="truncate">${escapeHtml(f.name)}</span>
 
@@ -2472,9 +2515,9 @@ function initFileUpload() {
 
         </span>
 
-        <button type="button" class="text-slate-400 hover:text-rose-500 ml-2 shrink-0" data-idx="${idx}">
+        <button type="button" class="w-7 h-7 rounded-lg hover:bg-rose-100 text-rose-500 hover:text-rose-700 flex items-center justify-center transition-colors ml-2 shrink-0 cursor-pointer" data-idx="${idx}" title="Delete attachment">
 
-          <i class="fa-solid fa-xmark"></i>
+          <i class="fa-solid fa-trash-can text-xs"></i>
 
         </button>
 
@@ -2820,7 +2863,8 @@ function initHeaderNavAndBadges() {
 
 
 
-// ==========================================
+// ===================================
+
 // Reset Password Modal & Handlers
 // ==========================================
 function ensureResetPasswordModalInDOM() {
@@ -3076,3 +3120,62 @@ window.openResetPasswordModal = openResetPasswordModal;
 window.closeResetPasswordModal = closeResetPasswordModal;
 window.handleResetPasswordSubmit = handleResetPasswordSubmit;
 window.togglePasswordVisibility = togglePasswordVisibility;
+
+
+
+// ==========================================
+// Owner Comment Attachment Handlers (Add Job Modal)
+// ==========================================
+function handleModalOwnerUploadChange(input) {
+  if (!input || !input.files || input.files.length === 0) return;
+  Array.from(input.files).forEach(f => {
+    if (modalOwnerUploadFiles.length >= 10) {
+      showToast("Maximum 10 owner attachments allowed.", "error");
+      return;
+    }
+    modalOwnerUploadFiles.push(f);
+  });
+  renderModalOwnerUploadFilesPreview();
+}
+
+function removeModalOwnerUploadFile(idx) {
+  modalOwnerUploadFiles.splice(idx, 1);
+  const input = document.getElementById("modalOwnerUploadInput");
+  if (input && modalOwnerUploadFiles.length === 0) input.value = "";
+  renderModalOwnerUploadFilesPreview();
+}
+
+function renderModalOwnerUploadFilesPreview() {
+  const container = document.getElementById("modalOwnerUploadedFileList");
+  if (!container) return;
+  if (!modalOwnerUploadFiles || modalOwnerUploadFiles.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+  container.innerHTML = modalOwnerUploadFiles.map((f, idx) => {
+    const ext = (f.name.split(".").pop() || "").toLowerCase();
+    const isImg = ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext);
+    let thumbHtml = "";
+    try {
+      if (isImg) {
+        const u = URL.createObjectURL(f);
+        thumbHtml = `<img src="${u}" class="w-5 h-5 rounded object-cover border border-purple-200" alt="">`;
+      }
+    } catch (_) {}
+    const sizeStr = (f.size / 1024 < 1024) ? `${(f.size / 1024).toFixed(0)}KB` : `${(f.size / (1024 * 1024)).toFixed(1)}MB`;
+    return `
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-100 border border-purple-200 text-purple-900 text-xs font-semibold shadow-2xs">
+        ${thumbHtml || `<i class="fa-solid fa-paperclip text-purple-600 text-[10px]"></i>`}
+        <span class="max-w-[120px] truncate" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</span>
+        <span class="text-[10px] text-purple-500">(${sizeStr})</span>
+        <button type="button" onclick="removeModalOwnerUploadFile(${idx})" class="w-5 h-5 rounded hover:bg-rose-100 text-rose-500 hover:text-rose-700 flex items-center justify-center transition-colors cursor-pointer" title="Delete file">
+          <i class="fa-solid fa-trash-can text-[11px]"></i>
+        </button>
+      </span>
+    `;
+  }).join("");
+}
+
+window.handleModalOwnerUploadChange = handleModalOwnerUploadChange;
+window.removeModalOwnerUploadFile = removeModalOwnerUploadFile;
+window.renderModalOwnerUploadFilesPreview = renderModalOwnerUploadFilesPreview;
