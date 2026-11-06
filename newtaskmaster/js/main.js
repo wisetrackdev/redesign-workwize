@@ -2818,3 +2818,261 @@ function initHeaderNavAndBadges() {
 
 }
 
+
+
+// ==========================================
+// Reset Password Modal & Handlers
+// ==========================================
+function ensureResetPasswordModalInDOM() {
+  if (document.getElementById("resetPasswordModal")) return;
+
+  const modalHtml = `
+  <div id="resetPasswordModal" class="modal-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-[1100] flex items-center justify-center p-4 transition-all duration-200 opacity-0 pointer-events-none">
+    <div class="modal-container bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden transform scale-95 transition-all duration-200">
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/70">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 text-sm">Reset Password</h3>
+            <p class="text-[11px] text-slate-400">Change your account password</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeResetPasswordModal()" class="w-7 h-7 rounded-lg hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body Form -->
+      <form id="resetPasswordForm" class="p-5 space-y-4 text-xs" onsubmit="handleResetPasswordSubmit(event)">
+        <div id="resetPasswordError" class="hidden p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 font-semibold text-center"></div>
+        <div id="resetPasswordSuccess" class="hidden p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold text-center"></div>
+
+        <!-- Account / Email -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">User Account</label>
+          <div class="relative flex items-center">
+            <i class="fa-regular fa-envelope absolute left-3 text-slate-400 text-xs pointer-events-none"></i>
+            <input type="text" id="resetPasswordUserEmail" readonly class="w-full bg-slate-100 border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-slate-600 font-medium cursor-not-allowed select-none">
+          </div>
+        </div>
+
+        <!-- Old Password -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Old Password <span class="text-rose-500">*</span></label>
+          <div class="relative flex items-center">
+            <i class="fa-solid fa-lock-open absolute left-3 text-slate-400 text-xs pointer-events-none"></i>
+            <input type="password" id="resetOldPassword" required placeholder="Enter current / old password" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-9 py-2 text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium">
+            <button type="button" onclick="togglePasswordVisibility('resetOldPassword', this)" class="absolute right-2.5 text-slate-400 hover:text-slate-600 p-1 cursor-pointer" title="Show/Hide">
+              <i class="fa-regular fa-eye text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- New Password -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">New Password <span class="text-rose-500">*</span></label>
+          <div class="relative flex items-center">
+            <i class="fa-solid fa-lock absolute left-3 text-slate-400 text-xs pointer-events-none"></i>
+            <input type="password" id="resetNewPassword" required minlength="6" placeholder="Minimum 6 characters" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-9 py-2 text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium">
+            <button type="button" onclick="togglePasswordVisibility('resetNewPassword', this)" class="absolute right-2.5 text-slate-400 hover:text-slate-600 p-1 cursor-pointer" title="Show/Hide">
+              <i class="fa-regular fa-eye text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Confirm Password -->
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">Confirm Password <span class="text-rose-500">*</span></label>
+          <div class="relative flex items-center">
+            <i class="fa-solid fa-shield-halved absolute left-3 text-slate-400 text-xs pointer-events-none"></i>
+            <input type="password" id="resetConfirmPassword" required minlength="6" placeholder="Re-enter new password" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-9 py-2 text-slate-800 outline-none focus:border-blue-500 focus:bg-white font-medium">
+            <button type="button" onclick="togglePasswordVisibility('resetConfirmPassword', this)" class="absolute right-2.5 text-slate-400 hover:text-slate-600 p-1 cursor-pointer" title="Show/Hide">
+              <i class="fa-regular fa-eye text-xs"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+          <button type="button" onclick="closeResetPasswordModal()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold cursor-pointer">Cancel</button>
+          <button type="submit" id="resetPasswordSubmitBtn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-1.5 shadow-sm cursor-pointer">
+            <i class="fa-solid fa-check text-xs"></i>
+            <span>Update Password</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+function openResetPasswordModal() {
+  ensureResetPasswordModalInDOM();
+
+  const userMenu = document.getElementById("userProfileMenu");
+  if (userMenu) userMenu.classList.add("hidden");
+
+  const modal = document.getElementById("resetPasswordModal");
+  const emailInput = document.getElementById("resetPasswordUserEmail");
+  const err = document.getElementById("resetPasswordError");
+  const success = document.getElementById("resetPasswordSuccess");
+  const form = document.getElementById("resetPasswordForm");
+
+  if (form) form.reset();
+  if (err) err.classList.add("hidden");
+  if (success) success.classList.add("hidden");
+
+  let uEmail = "it@workwise.in";
+  if (typeof UserSession !== "undefined") {
+    uEmail = UserSession.getUserEmail() || uEmail;
+  } else if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.getStoredUserData()) {
+    const u = WorkWizeAPI.getStoredUserData();
+    uEmail = u.email || u.username || uEmail;
+  }
+
+  if (emailInput) emailInput.value = uEmail;
+
+  if (modal) {
+    modal.classList.remove("opacity-0", "pointer-events-none");
+    modal.classList.add("open");
+    const container = modal.querySelector(".modal-container");
+    if (container) {
+      container.classList.remove("scale-95");
+      container.classList.add("scale-100");
+    }
+  }
+}
+
+function closeResetPasswordModal() {
+  const modal = document.getElementById("resetPasswordModal");
+  if (modal) {
+    modal.classList.add("opacity-0", "pointer-events-none");
+    modal.classList.remove("open");
+    const container = modal.querySelector(".modal-container");
+    if (container) {
+      container.classList.remove("scale-100");
+      container.classList.add("scale-95");
+    }
+  }
+}
+
+async function handleResetPasswordSubmit(e) {
+  e.preventDefault();
+  const oldPass = document.getElementById("resetOldPassword")?.value.trim() || "";
+  const newPass = document.getElementById("resetNewPassword")?.value.trim() || "";
+  const confirmPass = document.getElementById("resetConfirmPassword")?.value.trim() || "";
+  const err = document.getElementById("resetPasswordError");
+  const success = document.getElementById("resetPasswordSuccess");
+  const btn = document.getElementById("resetPasswordSubmitBtn");
+
+  if (!oldPass) {
+    if (err) {
+      err.textContent = "Please enter your current / old password.";
+      err.classList.remove("hidden");
+    }
+    return;
+  }
+
+  if (!newPass || !confirmPass) {
+    if (err) {
+      err.textContent = "Please enter and confirm your new password.";
+      err.classList.remove("hidden");
+    }
+    return;
+  }
+
+  if (newPass.length < 6) {
+    if (err) {
+      err.textContent = "New password must be at least 6 characters long.";
+      err.classList.remove("hidden");
+    }
+    return;
+  }
+
+  if (newPass === oldPass) {
+    if (err) {
+      err.textContent = "New password cannot be the same as your old password.";
+      err.classList.remove("hidden");
+    }
+    return;
+  }
+
+  if (newPass !== confirmPass) {
+    if (err) {
+      err.textContent = "Passwords do not match. Please verify.";
+      err.classList.remove("hidden");
+    }
+    return;
+  }
+
+  if (err) err.classList.add("hidden");
+  if (success) success.classList.add("hidden");
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xs"></i> <span>Updating...</span>';
+  }
+
+  try {
+    const res = await WorkWizeAPI.resetPasswordLoggedIn(newPass, oldPass);
+    if (res && (res.status === true || res.success === true)) {
+      if (success) {
+        success.textContent = res.message || "Password has been reset successfully!";
+        success.classList.remove("hidden");
+      }
+      if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i> <span>Success!</span>';
+        btn.classList.remove("bg-blue-600", "hover:bg-blue-700");
+        btn.classList.add("bg-emerald-600");
+      }
+      setTimeout(() => {
+        closeResetPasswordModal();
+        if (typeof showToast === "function") {
+          showToast("Password updated successfully!", "success");
+        }
+      }, 1500);
+    } else {
+      throw new Error(res?.message || "Failed to update password. Please check your old password.");
+    }
+  } catch (apiErr) {
+    console.error("Password reset error:", apiErr);
+    if (err) {
+      err.textContent = apiErr.message || "An error occurred while resetting your password. Please verify your old password.";
+      err.classList.remove("hidden");
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i> <span>Update Password</span>';
+      btn.classList.remove("bg-emerald-600");
+      btn.classList.add("bg-blue-600", "hover:bg-blue-700");
+    }
+  }
+}
+
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  const icon = btn?.querySelector("i");
+  if (input.type === "password") {
+    input.type = "text";
+    if (icon) {
+      icon.classList.remove("fa-eye");
+      icon.classList.add("fa-eye-slash");
+    }
+  } else {
+    input.type = "password";
+    if (icon) {
+      icon.classList.remove("fa-eye-slash");
+      icon.classList.add("fa-eye");
+    }
+  }
+}
+
+window.openResetPasswordModal = openResetPasswordModal;
+window.closeResetPasswordModal = closeResetPasswordModal;
+window.handleResetPasswordSubmit = handleResetPasswordSubmit;
+window.togglePasswordVisibility = togglePasswordVisibility;

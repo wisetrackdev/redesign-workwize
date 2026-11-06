@@ -425,6 +425,72 @@ const WorkWizeAPI = (function () {
     }
   }
 
+  // 15. Password Management Methods
+  async function resetPasswordLoggedIn(newPassword, oldPassword, userId) {
+    const user = getStoredUserData();
+    const uid = userId || user?.email || user?.userName || user?.userId || "";
+    const fd = new FormData();
+    fd.append("userid", uid);
+    fd.append("password", newPassword);
+    if (oldPassword) {
+      fd.append("oldpassword", oldPassword);
+    }
+
+    try {
+      let response;
+      try {
+        response = await request("api/users/resetpassword", {
+          method: "POST",
+          body: fd
+        });
+      } catch (postErr) {
+        // Fallback to /api/login/resetpassword
+        response = await request("api/login/resetpassword", {
+          method: "POST",
+          body: fd
+        });
+      }
+      return response;
+    } catch (err) {
+      console.error("resetPasswordLoggedIn API error:", err);
+      throw err;
+    }
+  }
+
+  async function forgotPassword(email) {
+    const fd = new FormData();
+    fd.append("email", email.trim());
+
+    try {
+      const response = await request("api/it/forgotpassword", {
+        method: "POST",
+        body: fd
+      });
+      return response;
+    } catch (err) {
+      console.error("forgotPassword API error:", err);
+      throw err;
+    }
+  }
+
+  async function confirmResetPassword(uid, token, newPassword) {
+    const fd = new FormData();
+    fd.append("uid", uid.trim());
+    fd.append("token", token.trim());
+    fd.append("pass", newPassword);
+
+    try {
+      const response = await request("api/it/resetpassword", {
+        method: "POST",
+        body: fd
+      });
+      return response;
+    } catch (err) {
+      console.error("confirmResetPassword API error:", err);
+      throw err;
+    }
+  }
+
   return {
     getBaseUrl,
     setBaseUrl,
@@ -451,7 +517,10 @@ const WorkWizeAPI = (function () {
     addComment,
     updateJobFields,
     updateJob,
-    bulkImportJobs
+    bulkImportJobs,
+    resetPasswordLoggedIn,
+    forgotPassword,
+    confirmResetPassword
   };
 })();
 
