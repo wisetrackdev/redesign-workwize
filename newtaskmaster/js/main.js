@@ -1397,6 +1397,30 @@ async function populateModalDropdowns() {
 
         // Populate Assignee with checkboxes
 
+        if (Array.isArray(data.propEmp)) {
+          // Always ensure OproAdmin is present in propEmp
+          const hasOproInEmp = data.propEmp.some(emp => {
+            const roleStr = String(emp.role || emp.userRole || emp.desg || "").toUpperCase();
+            const mgrRoleStr = String(emp.manager?.role || emp.manager?.desg || "").toUpperCase();
+            return roleStr.includes("OPRO") || mgrRoleStr.includes("OPRO") || String(emp.email || "").toLowerCase().includes("oproadmin");
+          });
+          if (!hasOproInEmp) {
+            const curU = (typeof UserSession !== "undefined" && typeof UserSession.getUser === "function") ? UserSession.getUser() : null;
+            const curName = (typeof UserSession !== "undefined" && typeof UserSession.getUserFullName === "function")
+              ? UserSession.getUserFullName()
+              : "Testing Test";
+            data.propEmp.unshift({
+              teamId: (curU && (curU.id || curU.email)) || "OproAdmin",
+              teamName: "OproAdmin",
+              firstName: curName ? curName.split(" ")[0] : "Testing",
+              lastName: curName ? curName.split(" ").slice(1).join(" ") : "Test",
+              desg: "OproAdmin",
+              role: "OPROADMIN",
+              email: (curU && curU.email) || "testing@test.com"
+            });
+          }
+        }
+
         if (menuEl && Array.isArray(data.propEmp) && data.propEmp.length > 0) {
 
           const selectedSet = new Set(getSelectedModalAssignees().map(a => a.id));
@@ -1407,14 +1431,27 @@ async function populateModalDropdowns() {
 
             let label = emp.teamName;
 
-            if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+            // Special condition ONLY for OproAdmin: show firstName and lastName
+            const isEmpOpro = (
+              String(emp.role || "").toUpperCase().includes("OPROADMIN") ||
+              String(emp.userRole || "").toUpperCase().includes("OPROADMIN") ||
+              String(emp.desg || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+              String(emp.manager?.desg || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+              String(emp.manager?.role || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+              String(emp.email || "").toLowerCase().includes("oproadmin") ||
+              String(emp.teamName || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN")
+            );
 
+            if (isEmpOpro) {
+              let name = (typeof UserSession !== "undefined" && typeof UserSession.getNameFromUserOrEmail === "function")
+                ? UserSession.getNameFromUserOrEmail(emp)
+                : `${emp.firstName || ""} ${emp.lastName || ""}`.trim();
+              if (!name) name = "Testing Test";
+              label = `${name} [OproAdmin]`;
+            } else if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
               const desg = (emp.manager.desg || "").trim();
-
               const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
-
               label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
-
             }
 
             const isChecked = selectedSet.has(val) ? "checked" : "";
@@ -1453,14 +1490,27 @@ async function populateModalDropdowns() {
 
             let label = emp.teamName;
 
-            if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+            // Special condition ONLY for OproAdmin: show firstName and lastName
+            const isEmpOpro = (
+              String(emp.role || "").toUpperCase().includes("OPROADMIN") ||
+              String(emp.userRole || "").toUpperCase().includes("OPROADMIN") ||
+              String(emp.desg || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+              String(emp.manager?.desg || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+              String(emp.manager?.role || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+              String(emp.email || "").toLowerCase().includes("oproadmin") ||
+              String(emp.teamName || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN")
+            );
 
+            if (isEmpOpro) {
+              let name = (typeof UserSession !== "undefined" && typeof UserSession.getNameFromUserOrEmail === "function")
+                ? UserSession.getNameFromUserOrEmail(emp)
+                : `${emp.firstName || ""} ${emp.lastName || ""}`.trim();
+              if (!name) name = "Testing Test";
+              label = `${name} [OproAdmin]`;
+            } else if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
               const desg = (emp.manager.desg || "").trim();
-
               const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
-
               label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
-
             }
 
             const isChecked = selectedSet.has(val) ? "checked" : "";

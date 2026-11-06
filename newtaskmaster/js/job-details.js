@@ -244,6 +244,23 @@ async function loadJobDetails(jobId) {
 
 
       if (res && res.success && res.jobdata) {
+        try {
+          const cachedStr = sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data");
+          if (cachedStr) {
+            const cached = JSON.parse(cachedStr);
+            if (cached && (cached.jobId === jobId || cached.id === jobId || cached.orgjobId === jobId)) {
+              if (Array.isArray(cached.teams) && cached.teams.length > (res.jobdata.teams?.length || 0)) {
+                res.jobdata.teams = cached.teams;
+              }
+              if (cached.assignedTo) {
+                res.jobdata.assignedTo = cached.assignedTo;
+              }
+              if (Array.isArray(cached._detailAssignees)) {
+                res.jobdata._detailAssignees = cached._detailAssignees;
+              }
+            }
+          }
+        } catch (eMerge) {}
 
 
 
@@ -653,16 +670,25 @@ function renderJobDetails(data) {
 
 
 
+  const isOproAdminUser = (typeof UserSession !== "undefined" && typeof UserSession.isOproAdmin === "function" && UserSession.isOproAdmin());
+
   if (isClosed) {
-
-    // 1. Job is Officially Closed: Hide both Update Job and Close Job
-
-    if (heroUpdateBtn) heroUpdateBtn.classList.add("hidden");
-
-    if (bottomUpdateBtn) bottomUpdateBtn.classList.add("hidden");
+    // 1. Job is Officially Closed: Only OproAdmin can edit closed job
+    if (isOproAdminUser) {
+      if (heroUpdateBtn) {
+        heroUpdateBtn.classList.remove("hidden");
+        heroUpdateBtn.href = updateUrl;
+        heroUpdateBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Edit Close Job Opro Admin';
+      }
+      if (bottomUpdateBtn) {
+        bottomUpdateBtn.classList.add("hidden");
+      }
+    } else {
+      if (heroUpdateBtn) heroUpdateBtn.classList.add("hidden");
+      if (bottomUpdateBtn) bottomUpdateBtn.classList.add("hidden");
+    }
 
     if (topCloseBtn) topCloseBtn.classList.add("hidden");
-
     if (bottomCloseBtn) bottomCloseBtn.classList.add("hidden");
 
 
@@ -992,6 +1018,8 @@ function renderJobDetails(data) {
 
 
   }
+
+  
 
 
 
@@ -1928,141 +1956,119 @@ function renderJobDetails(data) {
 
 
   // 11. Assigned Team / Assign To (Multiple badge support)
-
-
-
   const assignedListEl = document.getElementById("dynJobAssignedList");
-
-
-
   if (assignedListEl) {
+    function formatAssigneeDisplay(t) {
+      if (!t) return "";
+      if (typeof t === "string") return t.trim();
+      const f = (t.firstName || "").trim();
+      const l = (t.lastName || "").trim();
+      const name = `${f} ${l}`.trim();
+      const team = (t.teamName || t.name || "").trim();
 
+      const isOpro = (
+        String(t.role || t.desg || "").toUpperCase().includes("OPRO") ||
+        String(t.teamID || t.id || "").toUpperCase().includes("OPRO") ||
+        String(team).toUpperCase().includes("OPRO")
+      );
 
+      if (isOpro) {
+        let oproName = name;
+        if (!oproName && typeof UserSession !== "undefined" && typeof UserSession.getNameFromUserOrEmail === "function") {
+          oproName = UserSession.getNameFromUserOrEmail(t);
+        }
+        const finalOproName = oproName || "Testing Test";
+        return finalOproName.includes("[OproAdmin]") ? finalOproName : `${finalOproName} [OproAdmin]`;
+      }
 
-    let teamList = [];
-
-
-
-    if (Array.isArray(data.teams) && data.teams.length > 0) {
-
-
-
-      teamList = data.teams.map(t => (typeof t === "object") ? (t.teamName || t.name) : t);
-
-
-
-    } else if (Array.isArray(data.data1) && data.data1.length > 0) {
-
-
-
-      teamList = data.data1.map(t => (typeof t === "object") ? (t.teamName || t.name) : t);
-
-
-
-    } else if (data.assignedTo) {
-
-
-
-      teamList = data.assignedTo.split(",").map(s => s.trim()).filter(Boolean);
-
-
-
+      if (name && team && name !== team) {
+        return `${name} [${team}]`;
+      }
+      return team || name || t.teamID || t.id || "";
     }
 
+    const assigneeSet = new Set();
+    const teamList = [];
 
+    function addAssignee(strOrObj) {
+      if (!strOrObj) return;
+      const formatted = formatAssigneeDisplay(strOrObj);
+      if (formatted && !assigneeSet.has(formatted.toUpperCase())) {
+        assigneeSet.add(formatted.toUpperCase());
+        teamList.push(formatted);
+      }
+    }
 
+    // 1. Check data._detailAssignees
+    if (Array.isArray(data._detailAssignees)) {
+      data._detailAssignees.forEach(addAssignee);
+    }
 
+    // 2. Check data.teams
+    if (Array.isArray(data.teams)) {
+      data.teams.forEach(addAssignee);
+    }
 
+    // 3. Check data.data1
+    if (Array.isArray(data.data1)) {
+      data.data1.forEach(addAssignee);
+    }
 
+    // 4. Check data.assignedTo (can be comma-separated string)
+    if (data.assignedTo && typeof data.assignedTo === "string") {
+      data.assignedTo.split(",").forEach(s => addAssignee(s.trim()));
+    }
+
+    // 5. Check cached job data in sessionStorage / localStorage
+    try {
+      const cachedStr = sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data");
+      if (cachedStr) {
+        const cached = JSON.parse(cachedStr);
+        if (cached && (cached.jobId === data.jobId || cached.id === data.id || cached.orgjobId === data.orgjobId)) {
+          if (Array.isArray(cached.teams)) cached.teams.forEach(addAssignee);
+          if (Array.isArray(cached._detailAssignees)) cached._detailAssignees.forEach(addAssignee);
+          if (cached.assignedTo && typeof cached.assignedTo === "string") {
+            cached.assignedTo.split(",").forEach(s => addAssignee(s.trim()));
+          }
+        }
+      }
+    } catch (eCache) {}
+
+    // 6. Check WorkWizeDB if available
+    try {
+      if (typeof WorkWizeDB !== "undefined" && typeof WorkWizeDB.getJobs === "function") {
+        const localJob = WorkWizeDB.getJobs().find(j => j.id === (data.jobId || data.id));
+        if (localJob) {
+          if (localJob.assignedTo && typeof localJob.assignedTo === "string") {
+            localJob.assignedTo.split(",").forEach(s => addAssignee(s.trim()));
+          }
+          if (Array.isArray(localJob.teams)) localJob.teams.forEach(addAssignee);
+        }
+      }
+    } catch (eDb) {}
 
     // Attach exact displayed assignees to cached data so update page pre-selects identical assignees
-
-
-
     data._detailAssignees = teamList;
-
-
-
     try {
-
-
-
       sessionStorage.setItem("workwize_current_job_data", JSON.stringify(data));
-
-
-
       localStorage.setItem("workwize_last_job_data", JSON.stringify(data));
-
-
-
     } catch (e) {}
 
-
-
-
-
-
-
     if (teamList.length === 0) {
-
-
-
       assignedListEl.innerHTML = `
-
-
-
         <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-[10px] font-bold shrink-0">
-
-
-
           <i class="fa-solid fa-user-slash"></i>
-
-
-
         </span>
-
-
-
         <span class="text-slate-400 text-xs italic">Unassigned</span>
-
-
-
       `;
-
-
-
     } else {
-
-
-
       assignedListEl.innerHTML = teamList.map(tm => `
-
-
-
         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200/80 shadow-2xs">
-
-
-
           <i class="fa-solid fa-user-check text-[10px] text-blue-500"></i>
-
-
-
           <span>${escapeHtml(tm)}</span>
-
-
-
         </span>
-
-
-
       `).join("");
-
-
-
     }
-
-
-
   }
 
 

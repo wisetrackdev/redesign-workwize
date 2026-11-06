@@ -589,6 +589,19 @@ const UserSession = {
     if (!Array.isArray(roles)) roles = [roles];
     return roles.map(r => String(r).toUpperCase().trim());
   },
+  isOproAdmin: function () {
+    const u = this.getUser();
+    if (!u) return false;
+    const roles = this.getUserRoles();
+    const desg = (u.desg || "").toUpperCase().replace(/\s+/g, "");
+    const email = (this.getUserEmail() || "").toLowerCase();
+    return roles.some(r => {
+      const clean = r.toUpperCase().replace(/[\s_]+/g, "");
+      return clean.includes("OPROADMIN") || clean === "OPRO" || clean.includes("OPRO");
+    }) ||
+    desg.includes("OPRO") ||
+    email.includes("oproadmin");
+  },
   isSuperAdminOrAdmin: function () {
     const roles = this.getUserRoles();
     const desg = (this.getUser()?.desg || "").toUpperCase();
@@ -618,7 +631,12 @@ const UserSession = {
     return true;
   },
   isFieldWritable: function (fieldCode, jobData) {
-    if (jobData && jobData.isActive === false) return false;
+    if (jobData && jobData.isActive === false) {
+      if (this.isOproAdmin()) {
+        if (fieldCode === "F04" || fieldCode === "F05") return true;
+      }
+      return false;
+    }
     const isAtmosphere = (this.getUserRole() || "").toUpperCase().includes("ATMOSPHERE");
     if (isAtmosphere) return false;
 
@@ -673,6 +691,58 @@ const UserSession = {
     const email = this.getUserEmail();
     const prefix = email.split("@")[0] || "Admin";
     return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  },
+  getUserFullName: function () {
+    const u = this.getUser();
+    if (!u) return "Testing Test";
+    const f = (u.firstName || u.FirstName || "").trim();
+    const l = (u.lastName || u.LastName || "").trim();
+    if (f || l) return `${f} ${l}`.trim();
+    if (u.name && !u.name.includes("@")) {
+      const parts = u.name.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+      }
+    }
+    return this.getNameFromUserOrEmail(u);
+  },
+  getNameFromUserOrEmail: function (userOrEmail) {
+    if (!userOrEmail) return this.getUserFullName();
+    let u = (typeof userOrEmail === "object") ? userOrEmail : null;
+    let email = (typeof userOrEmail === "string") ? userOrEmail : (u?.email || u?.username || u?.userName || "");
+
+    if (u) {
+      const f = (u.firstName || u.FirstName || "").trim();
+      const l = (u.lastName || u.LastName || "").trim();
+      if (f || l) return `${f} ${l}`.trim();
+      if (u.name && !u.name.includes("@")) {
+        const parts = u.name.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(" ");
+        }
+      }
+    }
+
+    if (email && email.includes("@")) {
+      const [localPart, domainPart] = email.toLowerCase().split("@");
+      const localTokens = localPart.split(/[._\-+]+/).filter(Boolean);
+      if (localTokens.length >= 2) {
+        const first = localTokens[0].charAt(0).toUpperCase() + localTokens[0].slice(1);
+        const last = localTokens[1].charAt(0).toUpperCase() + localTokens[1].slice(1);
+        return `${first} ${last}`;
+      }
+      const domainToken = (domainPart.split(".")[0] || "").toLowerCase();
+      const first = localTokens[0] ? (localTokens[0].charAt(0).toUpperCase() + localTokens[0].slice(1)) : "Testing";
+      let last = "";
+      if (domainToken && domainToken !== "gmail" && domainToken !== "yahoo" && domainToken !== "hotmail" && domainToken !== "outlook") {
+        last = domainToken.charAt(0).toUpperCase() + domainToken.slice(1);
+      } else {
+        last = "Test";
+      }
+      return `${first} ${last}`.trim();
+    }
+
+    return "Testing Test";
   }
 };
 

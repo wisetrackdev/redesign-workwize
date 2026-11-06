@@ -652,22 +652,31 @@ async function populateEditAssignees(data) {
 
       let label = emp.teamName;
 
-      if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+      // Special condition ONLY for OproAdmin: show firstName and lastName
+      const isOpro = (
+        String(emp.role || "").toUpperCase().includes("OPROADMIN") ||
+        String(emp.userRole || "").toUpperCase().includes("OPROADMIN") ||
+        String(emp.desg || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+        String(emp.manager?.desg || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+        String(emp.manager?.role || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+        String(emp.email || "").toLowerCase().includes("oproadmin") ||
+        String(emp.teamName || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN")
+      );
 
+      if (isOpro) {
+        let name = (typeof UserSession !== "undefined" && typeof UserSession.getNameFromUserOrEmail === "function")
+          ? UserSession.getNameFromUserOrEmail(emp)
+          : `${emp.firstName || ""} ${emp.lastName || ""}`.trim();
+        if (!name) name = "Testing Test";
+        label = `${name} [OproAdmin]`;
+      } else if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
         const desg = (emp.manager.desg || "").trim();
-
         const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
-
         label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
-
       } else if (emp.firstName || emp.desg) {
-
         const desg = (emp.desg || "").trim();
-
         const name = `${emp.firstName || ""} ${emp.lastName || ""}`.trim();
-
         label = desg ? (emp.teamName ? `${desg} [${emp.teamName}]` : desg) : (name ? (emp.teamName ? `${name} [${emp.teamName}]` : name) : (emp.teamName || emp.userName));
-
       }
 
       return { val, label };
@@ -696,6 +705,35 @@ async function populateEditAssignees(data) {
 
   // Pre-check any assignee matching this job - do NOT add raw team names
 
+  // Always ensure OproAdmin is present in Assign To dropdown
+  const curU = (typeof UserSession !== "undefined" && typeof UserSession.getUser === "function") ? UserSession.getUser() : null;
+  const curName = (typeof UserSession !== "undefined" && typeof UserSession.getUserFullName === "function")
+    ? UserSession.getUserFullName()
+    : ((curU && (curU.firstName || curU.lastName)) ? `${curU.firstName || ""} ${curU.lastName || ""}`.trim() : "Testing Test");
+  const oproVal = (curU && (curU.id || curU.userId || curU.userName || curU.email)) || "OproAdmin";
+  const oproLabel = `${curName || "Testing Test"} [OproAdmin]`;
+
+  const hasOproOption = finalOptions.some(o => 
+    String(o.val || "").toUpperCase().includes("OPRO") ||
+    String(o.label || "").toUpperCase().includes("OPRO")
+  );
+
+  if (!hasOproOption) {
+    finalOptions.unshift({
+      val: oproVal,
+      label: oproLabel
+    });
+  } else {
+    // If user is OproAdmin or has name, ensure their name is reflected on the OproAdmin option
+    const oproOpt = finalOptions.find(o => 
+      String(o.val || "").toUpperCase().includes("OPRO") ||
+      String(o.label || "").toUpperCase().includes("OPRO")
+    );
+    if (oproOpt) {
+      oproOpt.label = oproLabel;
+    }
+  }
+
   listEl.innerHTML = finalOptions.map(item => {
 
     const valUpper = (item.val || "").toUpperCase();
@@ -715,6 +753,8 @@ async function populateEditAssignees(data) {
       (item.label === "Testing - IT Admin" && currentlyAssignedSet.has("IT ADMIN")) ||
 
       (valUpper.includes("IT") && currentlyAssignedSet.has("IT ADMIN")) ||
+      (labelUpper.includes("OPRO") && Array.from(currentlyAssignedSet).some(a => a.includes("OPRO"))) ||
+      (valUpper.includes("OPRO") && Array.from(currentlyAssignedSet).some(a => a.includes("OPRO"))) ||
 
       (labelUpper.includes("IT ADMIN") && currentlyAssignedSet.has("IT ADMIN")) ||
 
@@ -1625,27 +1665,36 @@ function applyFieldPermissions(data) {
 
 
   // If Job is closed (isActive === false)
-
   if (!isJobActive) {
-
+    const isOproAdmin = (typeof UserSession !== "undefined" && typeof UserSession.isOproAdmin === "function" && UserSession.isOproAdmin());
     const saveBtn = document.getElementById("saveJobUpdateBtn");
-
     const saveBtnText = document.getElementById("saveBtnText");
-
-    if (saveBtn) {
-
-      saveBtn.disabled = true;
-
-      saveBtn.classList.add("opacity-60", "cursor-not-allowed");
-
+    if (isOproAdmin) {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.classList.remove("opacity-60", "cursor-not-allowed");
+      }
+      if (saveBtnText) {
+        saveBtnText.textContent = "Save Changes (OproAdmin)";
+      }
+      // Status and Assign To are editable by OproAdmin even when closed
+      setPermBadge("permBadge_Status", true);
+      setElementWritable("editJobStatus", true);
+      setPermBadge("permBadge_Assigned", true);
+      const assignedBtn = document.getElementById("editAssignedToBtn");
+      if (assignedBtn) {
+        assignedBtn.removeAttribute("disabled");
+        assignedBtn.classList.remove("bg-slate-100", "cursor-not-allowed", "pointer-events-none", "opacity-80");
+      }
+    } else {
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.classList.add("opacity-60", "cursor-not-allowed");
+      }
+      if (saveBtnText) {
+        saveBtnText.textContent = "Job Closed (Read Only)";
+      }
     }
-
-    if (saveBtnText) {
-
-      saveBtnText.textContent = "Job Closed (Read Only)";
-
-    }
-
   }
 
 }
@@ -2282,8 +2331,10 @@ async function handleJobUpdateSubmit(e) {
         currentJobData.expectedDate = expectedCompletion;
 
         currentJobData.teams = selectedAssignees.map(a => ({ teamID: a.id, teamName: a.name }));
-
+        currentJobData.assignedTo = assignedText;
+        currentJobData._detailAssignees = selectedAssignees.map(a => a.name);
         sessionStorage.setItem("workwize_current_job_data", JSON.stringify(currentJobData));
+        localStorage.setItem("workwize_last_job_data", JSON.stringify(currentJobData));
 
       }
 
