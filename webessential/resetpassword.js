@@ -48,7 +48,7 @@ function ResetPassword(){
                 contentType: false,
                 success: function (Response) {
                     HideSpinner()
-                    if(Response===true){
+                    if(Response === true || (Response && (Response.success === true || Response.status === true))){
                         $('#pass1').val('')
                         $('#pass2').val('')
                         var userdata = `<p class="text-primary text-center">Your password has been reset successfully</p>`
@@ -120,7 +120,7 @@ function ForgetPassword(){
             
             success: function (Response) {
                 HideSpinner()
-                if(Response===true){
+                if(Response === true || (Response && (Response.success === true || Response.status === true))){
                     $('#email').val('')
                     var userdata = `<p class="text-primary text-center">We have sent reset link, please check your registered email</p>`
                     $('#forget-validation-message').html(userdata)

@@ -480,6 +480,17 @@ const WorkWizeAPI = (function () {
     fd.append("email", email.trim());
 
     try {
+      if (typeof window !== "undefined" && window.location && window.location.origin) {
+        fd.append("origin", window.location.origin);
+        let resetPath = window.location.pathname.replace(/login\.html$/i, 'reset-password.html');
+        if (!resetPath.includes('reset-password.html') && !resetPath.includes('resetpassword.html')) {
+          resetPath = '/newtaskmaster/reset-password.html';
+        }
+        fd.append("resetUrl", window.location.origin + resetPath + "?uid={0}&token={1}");
+      }
+    } catch (e) {}
+
+    try {
       const response = await request("api/it/forgotpassword", {
         method: "POST",
         body: fd
