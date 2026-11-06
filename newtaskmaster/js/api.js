@@ -145,8 +145,26 @@ const WorkWizeAPI = (function () {
       }
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `HTTP Error ${response.status}`);
+        const contentType = response.headers.get("content-type") || "";
+        let errorMsg = `HTTP Error ${response.status}`;
+        if (contentType.includes("application/json")) {
+          try {
+            const errJson = await response.json();
+            errorMsg = errJson.message || errJson.title || errorMsg;
+          } catch (_) {}
+        } else {
+          const rawText = await response.text();
+          if (rawText && (rawText.trim().startsWith("<!DOCTYPE") || rawText.includes("<html") || rawText.includes("<HTML"))) {
+            if (response.status >= 500) {
+              errorMsg = "Server error occurred. Please verify your email or try again later.";
+            } else {
+              errorMsg = `Request failed (${response.status}). Please check your connection and try again.`;
+            }
+          } else if (rawText) {
+            errorMsg = rawText;
+          }
+        }
+        throw new Error(errorMsg);
       }
 
       const contentType = response.headers.get("content-type");

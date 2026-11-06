@@ -172,6 +172,110 @@
         btn.innerHTML = '<span>Log In</span>';
       }
     }
+
+    function openForgotPasswordModal() {
+      const modal = document.getElementById('forgotPasswordModal');
+      const err = document.getElementById('forgotError');
+      const success = document.getElementById('forgotSuccess');
+      const form = document.getElementById('forgotPasswordForm');
+      if (form) form.reset();
+      if (err) err.classList.add('hidden');
+      if (success) success.classList.add('hidden');
+      if (modal) {
+        modal.classList.remove('opacity-0', 'pointer-events-none');
+        const container = modal.querySelector('div');
+        if (container) {
+          container.classList.remove('scale-95');
+          container.classList.add('scale-100');
+        }
+      }
+    }
+
+    function closeForgotPasswordModal() {
+      const modal = document.getElementById('forgotPasswordModal');
+      if (modal) {
+        modal.classList.add('opacity-0', 'pointer-events-none');
+        const container = modal.querySelector('div');
+        if (container) {
+          container.classList.remove('scale-100');
+          container.classList.add('scale-95');
+        }
+      }
+    }
+
+    async function handleForgotPasswordSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail')?.value.trim() || '';
+      const err = document.getElementById('forgotError');
+      const success = document.getElementById('forgotSuccess');
+      const btn = document.getElementById('forgotSubmitBtn');
+
+      if (!email) {
+        if (err) {
+          err.innerText = 'Please enter your registered Email ID.';
+          err.classList.remove('hidden');
+        }
+        return;
+      }
+
+      if (err) err.classList.add('hidden');
+      if (success) success.classList.add('hidden');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-xs"></i> <span>Sending Link...</span>';
+      }
+
+      try {
+        const response = await WorkWizeAPI.forgotPassword(email);
+        if (response === true || response?.success === true || response?.status === true) {
+          if (success) {
+            success.innerHTML = `
+              <div class="flex flex-col items-center gap-1 text-center">
+                <i class="fa-solid fa-circle-check text-emerald-600 text-lg"></i>
+                <span class="font-bold text-slate-800">Reset Link Sent!</span>
+                <span class="text-[11px] text-slate-600">A password reset link has been dispatched to <b>${email}</b>. Please check your inbox.</span>
+              </div>
+            `;
+            success.classList.remove('hidden');
+          }
+          if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-check text-xs"></i> <span>Sent!</span>';
+            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            btn.classList.add('bg-emerald-600');
+          }
+          setTimeout(() => {
+            closeForgotPasswordModal();
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = '<i class="fa-solid fa-paper-plane text-xs"></i> <span>Send Reset Link</span>';
+              btn.classList.remove('bg-emerald-600');
+              btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            }
+          }, 2500);
+        } else {
+          throw new Error(response?.message || 'No account found with this email address.');
+        }
+      } catch (error) {
+        let msg = error.message || 'User not found or unable to send email. Please check your email and try again.';
+        if (msg.includes('<!DOCTYPE') || msg.includes('<html') || msg.includes('<HTML')) {
+          msg = 'Unable to send password reset email at this time. Please verify your email and try again.';
+        }
+        if (err) {
+          err.innerText = msg;
+          err.classList.remove('hidden');
+        }
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-paper-plane text-xs"></i> <span>Send Reset Link</span>';
+          btn.classList.remove('bg-emerald-600');
+          btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+        }
+      }
+    }
+
+    window.openForgotPasswordModal = openForgotPasswordModal;
+    window.closeForgotPasswordModal = closeForgotPasswordModal;
+    window.handleForgotPasswordSubmit = handleForgotPasswordSubmit;
   </script>
 
   <!-- Forgot Password Modal -->
