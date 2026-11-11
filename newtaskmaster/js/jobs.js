@@ -7359,30 +7359,23 @@ function renderAreaModalRows(jobs) {
 
         <!-- 12. Action -->
         <td class="text-right">
-          <div class="flex items-center justify-end gap-1">
-            ${isSuperAdmin ? `
-              <button type="button" onclick="superAdminDeleteAreaJob('${escapeHtml(rawId)}', '${escapeHtml(displayId)}')" class="w-7 h-7 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 inline-flex items-center justify-center transition-colors cursor-pointer" title="Delete Job">
-                <i class="fa-solid fa-trash-can text-rose-500 text-xs"></i>
-              </button>
-            ` : ''}
-            <div class="relative inline-block text-left dropdown-group">
-              <button type="button" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" onclick="toggleRowMenu(this)">
-                <i class="fa-solid fa-ellipsis"></i>
-              </button>
-              <div class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 dropdown-menu">
-                <a href="job-details.html?id=${encodeURIComponent(rawId)}" target="_blank" class="flex items-center px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium transition-colors">
-                  <i class="fa-regular fa-eye mr-2 text-blue-600"></i> View Details
-                </a>
-                <a href="job-update.html?id=${encodeURIComponent(rawId)}" target="_blank" class="flex items-center px-3 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-700 font-medium transition-colors">
-                  <i class="fa-solid fa-pen-to-square mr-2 text-amber-600"></i> Update Job
-                </a>
-                ${isSuperAdmin ? `
-                  <div class="border-t border-slate-100 my-1"></div>
-                  <button type="button" onclick="superAdminDeleteAreaJob('${escapeHtml(rawId)}', '${escapeHtml(displayId)}')" class="w-full text-left flex items-center px-3 py-2 hover:bg-rose-50 text-rose-600 font-semibold transition-colors">
-                    <i class="fa-solid fa-trash-can mr-2 text-rose-500"></i> Delete Job
-                  </button>
-                ` : ''}
-              </div>
+          <div class="relative inline-block text-left dropdown-group">
+            <button type="button" class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" onclick="toggleRowMenu(this)">
+              <i class="fa-solid fa-ellipsis"></i>
+            </button>
+            <div class="hidden absolute right-0 mt-1 w-44 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-40 text-xs text-slate-700 dropdown-menu">
+              <a href="job-details.html?id=${encodeURIComponent(rawId)}" target="_blank" class="flex items-center px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium transition-colors">
+                <i class="fa-regular fa-eye mr-2 text-blue-600"></i> View Details
+              </a>
+              <a href="job-update.html?id=${encodeURIComponent(rawId)}" target="_blank" class="flex items-center px-3 py-2 hover:bg-amber-50 text-slate-700 hover:text-amber-700 font-medium transition-colors">
+                <i class="fa-solid fa-pen-to-square mr-2 text-amber-600"></i> Update Job
+              </a>
+              ${isSuperAdmin ? `
+                <div class="border-t border-slate-100 my-1"></div>
+                <button type="button" onclick="superAdminDeleteAreaJob('${escapeHtml(rawId)}', '${escapeHtml(displayId)}')" class="w-full text-left flex items-center px-3 py-2 hover:bg-rose-50 text-rose-600 font-semibold transition-colors">
+                  <i class="fa-solid fa-trash-can mr-2 text-rose-500"></i> Delete Job
+                </button>
+              ` : ''}
             </div>
           </div>
         </td>

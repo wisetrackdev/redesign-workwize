@@ -690,14 +690,8 @@ function renderTableRows() {
       </td>
       <td class="text-slate-600 whitespace-nowrap">${job.createdBy}</td>
       <td class="text-right">
-        <div class="flex items-center justify-end gap-1">
-          ${(typeof isSuperAdminRole === 'function' && isSuperAdminRole()) ? `
-            <button type="button" onclick="superAdminDeleteJob('${job.rawId || job.id}', '${job.id}')" class="w-7 h-7 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 inline-flex items-center justify-center transition-colors cursor-pointer" title="Delete Job">
-              <i class="fa-solid fa-trash-can text-rose-500 text-xs"></i>
-            </button>
-          ` : ''}
-          <div class="relative inline-block text-left dropdown-group">
-            <button class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" onclick="toggleJobActionMenu(this)">
+        <div class="relative inline-block text-left dropdown-group">
+          <button class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors cursor-pointer" onclick="toggleJobActionMenu(this)">
             <i class="fa-solid fa-ellipsis"></i>
           </button>
           <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-30 text-xs text-slate-700 dropdown-menu">
@@ -711,12 +705,12 @@ function renderTableRows() {
             <button onclick="reopenClosedJob('${job.rawId || job.id}')" class="w-full flex items-center px-3 py-2 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 font-medium transition-colors">
               <i class="fa-solid fa-arrow-rotate-left mr-2.5 text-emerald-600"></i> Re-open Job
             </button>
+            <!-- Super Admin Job Deletion (Inside 3-dots only) -->
             ${(typeof isSuperAdminRole === 'function' && isSuperAdminRole()) ? `
               <button onclick="superAdminDeleteJob('${job.rawId || job.id}', '${job.id}')" class="w-full flex items-center px-3 py-2 hover:bg-rose-50 text-rose-600 border-t border-slate-100 font-semibold transition-colors">
                 <i class="fa-solid fa-trash-can mr-2.5 text-rose-500"></i> Delete Job
               </button>
             ` : ''}
-          </div>
           </div>
         </div>
       </td>

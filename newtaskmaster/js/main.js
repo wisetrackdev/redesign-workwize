@@ -1559,7 +1559,7 @@ function openModal() {
 
   if (!modal) return;
 
-
+  const openModalBtns = document.querySelectorAll(".btn-open-job-modal");
 
   // Enforce F01 permissions (Add New Job) matching OPRO-FRONTEND
 
