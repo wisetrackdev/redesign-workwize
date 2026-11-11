@@ -425,20 +425,39 @@ function normalizePriority(p) {
 }
 
 function formatAssignee(job) {
+  if (!job) return "Unassigned";
+
+  function extractSingle(t) {
+    if (!t) return "";
+    if (typeof t === "string") {
+      const trimmed = t.trim();
+      return (trimmed === "[object Object]" || trimmed.startsWith("[object")) ? "" : trimmed;
+    }
+    if (typeof t === "object") {
+      const fn = `${t.firstName || t.firstname || ""} ${t.lastName || t.lastname || ""}`.trim();
+      return t.teamName || t.name || t.team_name || fn || t.teamID || t.teamId || t.userID || t.userId || t.email || "";
+    }
+    return String(t);
+  }
+
   if (Array.isArray(job.data1) && job.data1.length > 0) {
-    const list = job.data1.map(t => {
-      if (typeof t === "string") return t;
-      if (typeof t === "object" && t !== null) {
-        return t.teamName || t.name || t.team_name || t.assignedTeam || t.team || t.title || "";
-      }
-      return String(t || "");
-    }).filter(Boolean);
+    const list = job.data1.map(extractSingle).filter(Boolean);
     if (list.length > 0) return list.join(", ");
   }
-  if (job.firstname || job.lastname) {
-    return `${job.firstname || ""} ${job.lastname || ""}`.trim();
+
+  if (Array.isArray(job.assignedTo) && job.assignedTo.length > 0) {
+    const list = job.assignedTo.map(extractSingle).filter(Boolean);
+    if (list.length > 0) return list.join(", ");
+  } else if (job.assignedTo) {
+    const val = extractSingle(job.assignedTo);
+    if (val && !val.includes("[object")) return val;
   }
-  return "IT Admin";
+
+  if (job.firstname || job.lastname) {
+    const fn = `${job.firstname || ""} ${job.lastname || ""}`.trim();
+    if (fn) return fn;
+  }
+  return "Unassigned";
 }
 
 function formatDate(dateStr) {

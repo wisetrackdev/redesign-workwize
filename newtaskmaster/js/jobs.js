@@ -6986,7 +6986,7 @@ function filterAreaModalJobs() {
       const ref = String(j.refNum || "").toLowerCase();
       const stat = String(j.jobStatus || j.status || "").toLowerCase();
       const prio = String(j.priority || "").toLowerCase();
-      const assigned = String(j.assignedTo || (Array.isArray(j.data1) ? j.data1.map(d => (typeof d === "object" ? d.name || d.teamName : d)).join(", ") : "") || j.firstname || "").toLowerCase();
+      const assigned = formatAssigneeDisplay(j).toLowerCase();
       const matchSearch = id.includes(q) || detail.includes(q) || villa.includes(q) || loc.includes(q) || ref.includes(q) || stat.includes(q) || prio.includes(q) || assigned.includes(q);
       if (!matchSearch) return false;
     }
@@ -7111,6 +7111,63 @@ window.populateAreaModalFilterDropdowns = populateAreaModalFilterDropdowns;
 
 
 
+
+
+function formatAssigneeDisplay(job) {
+  if (!job) return "Unassigned";
+
+  function extractSingle(t) {
+    if (!t) return "";
+    if (typeof t === "string") {
+      const trimmed = t.trim();
+      if (!trimmed || trimmed === "[object Object]" || trimmed.startsWith("[object")) return "";
+      return trimmed;
+    }
+    if (typeof t === "object") {
+      if (t.teamName && typeof t.teamName === "string" && !t.teamName.includes("[object")) return t.teamName.trim();
+      if (t.name && typeof t.name === "string" && !t.name.includes("[object")) return t.name.trim();
+      if (t.team_name && typeof t.team_name === "string") return t.team_name.trim();
+
+      const fn = `${t.firstName || t.firstname || ""} ${t.lastName || t.lastname || ""}`.trim();
+      if (fn && !fn.includes("[object")) return fn;
+
+      const idOrRole = t.teamID || t.teamId || t.role || t.desg || t.title || t.userID || t.userId || t.email;
+      if (idOrRole && typeof idOrRole === "string" && !idOrRole.includes("[object")) return idOrRole.trim();
+      return "";
+    }
+    return String(t);
+  }
+
+  if (Array.isArray(job.data1) && job.data1.length > 0) {
+    const list = job.data1.map(extractSingle).filter(Boolean);
+    if (list.length > 0) return list.join(", ");
+  }
+
+  if (Array.isArray(job.assignedTo) && job.assignedTo.length > 0) {
+    const list = job.assignedTo.map(extractSingle).filter(Boolean);
+    if (list.length > 0) return list.join(", ");
+  } else if (job.assignedTo) {
+    const val = extractSingle(job.assignedTo);
+    if (val && !val.includes("[object")) return val;
+  }
+
+  if (job.firstname || job.lastname) {
+    const fn = `${job.firstname || ""} ${job.lastname || ""}`.trim();
+    if (fn) return fn;
+  }
+
+  return "Unassigned";
+}
+
+function getAssigneeInitials(text) {
+  if (!text || text === "Unassigned" || text === "-") return "--";
+  const clean = text.replace(/\[.*?\]/g, "").trim();
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2 && parts[0][0] && parts[1][0]) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return clean.slice(0, 2).toUpperCase() || "UN";
+}
 
 function renderAreaModalRows(jobs) {
 
@@ -7246,12 +7303,7 @@ function renderAreaModalRows(jobs) {
     else if (normPriority.toLowerCase() === "low") priorityCls = "badge-priority-low";
     else if (normPriority.toLowerCase() === "safety") priorityCls = "badge-priority-safety";
 
-    let assignedText = "Unassigned";
-    if (Array.isArray(j.data1) && j.data1.length > 0) {
-      assignedText = j.data1.map(t => t.teamName || t.name || t).join(", ");
-    } else if (j.assignedTo) {
-      assignedText = j.assignedTo;
-    }
+    const assignedText = formatAssigneeDisplay(j);
 
     const attachmentsCount = j.uploadCount !== undefined ? j.uploadCount : (Array.isArray(j.imageUploads) ? j.imageUploads.length : 0);
     const commentsCount = j.commentCount !== undefined ? j.commentCount : (Array.isArray(j.comments) ? j.comments.length : 0);
@@ -7313,9 +7365,9 @@ function renderAreaModalRows(jobs) {
         <td class="text-slate-700 whitespace-nowrap">
           <div class="flex items-center gap-1.5">
             <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center text-[9px] font-bold">
-              ${(assignedText || "IT").slice(0, 2).toUpperCase()}
+              ${escapeHtml(getAssigneeInitials(assignedText))}
             </span>
-            <span>${assignedText}</span>
+            <span>${escapeHtml(assignedText)}</span>
           </div>
         </td>
 
@@ -8070,18 +8122,7 @@ function exportAreaJobsToCSV() {
     const detailText = formatDetailForExport(j.jobDetail || j.details);
     const displayAreaName = j.areaName || j.area || (currentAreaModalName ? currentAreaModalName.replace(/\s*(Open|Safety|\(.*?\))\s*$/i, '').trim() : '-');
 
-    let assigned = "Unassigned";
-    if (Array.isArray(j.data1) && j.data1.length > 0) {
-      assigned = j.data1.map(t => {
-        if (typeof t === "string") return t;
-        if (typeof t === "object" && t !== null) {
-          return t.teamName || t.name || t.team_name || t.assignedTeam || t.team || t.title || "";
-        }
-        return String(t || "");
-      }).filter(Boolean).join(", ") || "Unassigned";
-    } else if (j.assignedTo) {
-      assigned = j.assignedTo;
-    }
+    const assigned = formatAssigneeDisplay(j);
 
     const createdBy = (j.createdBy && j.createdBy !== "-" && j.createdBy !== "null" && j.createdBy !== "undefined")
       ? j.createdBy

@@ -126,11 +126,85 @@
       "Department Operational Budget"
     ];
 
-    return { propId, propName, areas, priorities, statuses, costCenters };
+    let assignees = [];
+    try {
+      if (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getPropertyInfo === "function") {
+        const propInfo = await WorkWizeAPI.getPropertyInfo(propId);
+        if (propInfo && Array.isArray(propInfo.propEmp)) {
+          propInfo.propEmp.forEach(emp => {
+            if (!emp) return;
+            const tName = (emp.teamName || "").trim();
+            const fn = (emp.firstName || "").trim();
+            const ln = (emp.lastName || "").trim();
+            const fullName = `${fn} ${ln}`.trim();
+            const desg = (emp.desg || (emp.manager && emp.manager.desg) || "").trim();
+
+            const isOpro = (
+              String(emp.role || "").toUpperCase().includes("OPRO") ||
+              String(emp.userRole || "").toUpperCase().includes("OPRO") ||
+              String(desg).toUpperCase().includes("OPRO") ||
+              String(emp.email || "").toLowerCase().includes("oproadmin") ||
+              String(tName).toUpperCase().includes("OPRO")
+            );
+
+            if (isOpro) {
+              const curName = fullName || "Testing Test";
+              assignees.push(`${curName} [OproAdmin]`);
+              assignees.push("OproAdmin");
+            } else {
+              if (tName) assignees.push(tName);
+              if (fullName && fullName !== tName) {
+                assignees.push(desg ? `${desg} [${tName || desg}]` : `${fullName} [${tName}]`);
+              }
+            }
+
+            if (Array.isArray(emp.teamates)) {
+              emp.teamates.forEach(m => {
+                if (!m) return;
+                const mName = `${m.firstName || m.firstname || ""} ${m.lastName || m.lastname || ""}`.trim();
+                if (mName && mName !== tName) assignees.push(mName);
+              });
+            }
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Could not fetch property assignees for template:", err);
+    }
+
+    const curU = (typeof UserSession !== "undefined" && typeof UserSession.getUser === "function") ? UserSession.getUser() : null;
+    const curName = (typeof UserSession !== "undefined" && typeof UserSession.getUserFullName === "function")
+      ? UserSession.getUserFullName()
+      : "Testing Test";
+    if (curName) {
+      assignees.push(`${curName} [OproAdmin]`);
+    }
+    assignees.push("OproAdmin");
+
+    const defaultAssignees = [
+      "Engineering",
+      "Engineering, HVAC",
+      "Maintenance",
+      "Facilities Team",
+      "Plumbing",
+      "Electrical",
+      "Housekeeping",
+      "IT",
+      "OproAdmin"
+    ];
+    defaultAssignees.forEach(d => {
+      if (!assignees.some(a => a.toLowerCase() === d.toLowerCase())) {
+        assignees.push(d);
+      }
+    });
+
+    assignees = Array.from(new Set(assignees.filter(Boolean)));
+
+    return { propId, propName, areas, priorities, statuses, costCenters, assignees };
   }
 
   async function generateAndDownloadExcelTemplate() {
-    const { propId, propName, areas, priorities, statuses, costCenters } = await getDynamicDropdownOptions();
+    const { propId, propName, areas, priorities, statuses, costCenters, assignees } = await getDynamicDropdownOptions();
 
     // Check if ExcelJS is loaded
     if (typeof ExcelJS === "undefined") {
@@ -198,7 +272,7 @@
       budget: 0,
       ccf: "POMEC",
       ccfdept: "Engineering",
-      assigned: "Engineering, HVAC",
+      assigned: assignees[0] || "Engineering, HVAC",
       details: "AC cooling efficiency low in master bedroom. Needs filter cleaning and refrigerant level check.",
       remarks: "Guest reported low cooling during afternoon. High priority."
     });
@@ -217,7 +291,7 @@
       budget: 150,
       ccf: "CAPEX",
       ccfdept: "Maintenance",
-      assigned: "Facilities Team",
+      assigned: assignees[1] || "Facilities Team",
       details: "Path light fixture #4 flickering near main pool bar. Replace LED ballast and check water sealing.",
       remarks: "Scheduled maintenance check."
     });
@@ -236,7 +310,7 @@
       budget: 300,
       ccf: "Department Operational Budget",
       ccfdept: "Plant Operations",
-      assigned: "Plumbing, Engineering",
+      assigned: assignees[2] || "OproAdmin",
       details: "High pressure valve vibration observed during morning shift inspection. Fasten mounting bracket and verify seal.",
       remarks: "Safety precaution required before full pressure load."
     });
@@ -247,6 +321,7 @@
     priorities.forEach((val, idx) => { lookupSheet.getCell(`B${idx + 1}`).value = val; });
     statuses.forEach((val, idx) => { lookupSheet.getCell(`C${idx + 1}`).value = val; });
     costCenters.forEach((val, idx) => { lookupSheet.getCell(`D${idx + 1}`).value = val; });
+    assignees.forEach((val, idx) => { lookupSheet.getCell(`E${idx + 1}`).value = val; });
 
     // Apply Data Validation dropdowns to rows 2 to 500
     for (let r = 2; r <= 500; r++) {
@@ -275,7 +350,14 @@
       worksheet.getCell(`L${r}`).dataValidation = {
         type: "list",
         allowBlank: true,
-        formulae: [`DropdownLists!$D$1:$D$${costCenters.length}`]
+        formulae: [`DropdownLists!$D$1:$D${costCenters.length}`]
+      };
+
+      // Assigned To (Col N)
+      worksheet.getCell(`N${r}`).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: [`DropdownLists!$E$1:$E${assignees.length}`]
       };
     }
 
