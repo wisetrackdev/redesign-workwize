@@ -170,6 +170,26 @@ async function loadAllJobsFromAPI() {
 
     let combinedMap = new Map();
 
+    function getJobIdentifiers(item) {
+      if (!item) return [];
+      return [item.rawId, item.id, item.jobId, item.orgjobId, item.JobId, item.OrgjobId, item.tempjobId, item.TempjobId]
+        .filter(Boolean)
+        .map(x => String(x).toLowerCase().trim());
+    }
+
+    function jobExistsInMap(map, item) {
+      const targetIds = getJobIdentifiers(item);
+      if (targetIds.length === 0) return false;
+
+      for (const existing of map.values()) {
+        const existingIds = getJobIdentifiers(existing);
+        if (targetIds.some(id => existingIds.includes(id))) {
+          return true;
+        }
+      }
+      return false;
+    }
+
     // 1. Process property jobs
     if (propRes.status === "fulfilled" && propRes.value) {
       const rawJobs = propRes.value?.jobs || propRes.value?.Jobs || propRes.value?.data || (Array.isArray(propRes.value) ? propRes.value : null);
@@ -177,7 +197,9 @@ async function loadAllJobsFromAPI() {
         rawJobs.forEach(j => {
           const m = mapApiJobToModel(j);
           const key = m.rawId || m.id;
-          if (key) combinedMap.set(key, m);
+          if (key && !jobExistsInMap(combinedMap, m)) {
+            combinedMap.set(key, m);
+          }
         });
       }
     }
@@ -189,19 +211,24 @@ async function loadAllJobsFromAPI() {
         rawClosed.forEach(j => {
           const m = mapApiJobToModel(j, true);
           const key = m.rawId || m.id;
-          if (key) combinedMap.set(key, m);
+          if (key && !jobExistsInMap(combinedMap, m)) {
+            combinedMap.set(key, m);
+          }
         });
       }
     }
 
-    // 3. Process newly created jobs from sessionStorage or WorkWizeDB so newly added job is always present at top
+    // 3. Process newly created jobs from sessionStorage only if NOT already returned by API
     try {
       const newJobRaw = sessionStorage.getItem("workwize_newly_created_job");
       if (newJobRaw) {
         const newJobData = JSON.parse(newJobRaw);
-        const key = newJobData.rawId || newJobData.id || newJobData.jobId;
-        if (key && !combinedMap.has(key)) {
-          combinedMap.set(key, mapApiJobToModel(newJobData));
+        if (jobExistsInMap(combinedMap, newJobData)) {
+          // Already in the list from API, clean up session storage to avoid duplicate
+          sessionStorage.removeItem("workwize_newly_created_job");
+        } else {
+          const key = newJobData.rawId || newJobData.id || newJobData.jobId;
+          if (key) combinedMap.set(key, mapApiJobToModel(newJobData));
         }
       }
     } catch (_) {}
@@ -210,9 +237,9 @@ async function loadAllJobsFromAPI() {
       const localJobs = WorkWizeDB.getJobs();
       if (Array.isArray(localJobs)) {
         localJobs.forEach(lj => {
-          const key = lj.rawId || lj.id || lj.jobId;
-          if (key && !combinedMap.has(key)) {
-            combinedMap.set(key, mapApiJobToModel(lj));
+          if (!jobExistsInMap(combinedMap, lj)) {
+            const key = lj.rawId || lj.id || lj.jobId;
+            if (key) combinedMap.set(key, mapApiJobToModel(lj));
           }
         });
       }

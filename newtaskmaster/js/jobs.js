@@ -3846,22 +3846,13 @@ async function showAreaJobsModal(areaId, areaName) {
 
 
 
-        if (!jobs.some(j => (j.jobId || j.orgjobId) === (norm.jobId || norm.orgjobId))) {
-
-
-
-
-
-
-
+        const normIds = [norm.jobId, norm.orgjobId, norm.rawId, norm.id].filter(Boolean).map(x => String(x).toLowerCase().trim());
+        const alreadyInList = jobs.some(j => {
+          const jIds = [j.jobId, j.orgjobId, j.rawId, j.id].filter(Boolean).map(x => String(x).toLowerCase().trim());
+          return normIds.some(nid => jIds.includes(nid));
+        });
+        if (!alreadyInList) {
           jobs.push(norm);
-
-
-
-
-
-
-
         }
 
 
@@ -4470,22 +4461,13 @@ async function showAreaOpenJobsModal(areaId, areaName) {
 
 
 
-        if (!jobs.some(j => (j.jobId || j.orgjobId) === (norm.jobId || norm.orgjobId))) {
-
-
-
-
-
-
-
+        const normIds = [norm.jobId, norm.orgjobId, norm.rawId, norm.id].filter(Boolean).map(x => String(x).toLowerCase().trim());
+        const alreadyInList = jobs.some(j => {
+          const jIds = [j.jobId, j.orgjobId, j.rawId, j.id].filter(Boolean).map(x => String(x).toLowerCase().trim());
+          return normIds.some(nid => jIds.includes(nid));
+        });
+        if (!alreadyInList) {
           jobs.push(norm);
-
-
-
-
-
-
-
         }
 
 

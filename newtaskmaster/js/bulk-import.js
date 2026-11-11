@@ -833,35 +833,8 @@
             if (Array.isArray(res.errors)) {
               errorLog.push(...res.errors);
             }
-            if (validRows.length > 0) {
-              const firstRow = validRows[0];
-              const firstId = createdJobIds[0] || `WRK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-00001`;
-              const newJobObj = {
-                jobId: firstId,
-                rawId: firstId,
-                id: firstId,
-                propId: firstRow.propId,
-                propName: firstRow.propName,
-                areaID: firstRow.areaId || firstRow.area,
-                areaId: firstRow.areaId || firstRow.area,
-                areaName: firstRow.area,
-                area: firstRow.area,
-                villaNumber: firstRow.villaNumber || "",
-                jobLocation: firstRow.location || "",
-                priority: firstRow.priority,
-                jobStatus: firstRow.status,
-                jobDate: firstRow.jobDate,
-                expectedCompletion: firstRow.completeDate || "",
-                refNum: firstRow.refNum || "",
-                budget: firstRow.budget || 0,
-                ccf: firstRow.ccf || "No",
-                ccfdept: firstRow.ccfdept || "",
-                assignedTo: [{ name: firstRow.assignedTo, teamName: firstRow.assignedTo }],
-                jobDetail: firstRow.details,
-                remarks: firstRow.remarks || ""
-              };
-              sessionStorage.setItem("workwize_newly_created_job", JSON.stringify(newJobObj));
-            }
+            // Clean up any stale single-job session cache so imported jobs aren't duplicated
+            sessionStorage.removeItem("workwize_newly_created_job");
           }
         } catch (err) {
           console.warn("Backend bulk import API unavailable, falling back to batch client import:", err);
@@ -918,31 +891,8 @@
             if (i === 0) {
               sessionStorage.setItem("workwize_newly_created_job_id", createdId);
               localStorage.setItem("workwize_newly_created_job_id", createdId);
-              const newJobObj = {
-                jobId: createdId,
-                rawId: createdId,
-                id: createdId,
-                propId: item.propId,
-                propName: item.propName,
-                areaID: item.areaId || item.area,
-                areaId: item.areaId || item.area,
-                areaName: item.area,
-                area: item.area,
-                villaNumber: item.villaNumber || "",
-                jobLocation: item.location || "",
-                priority: item.priority,
-                jobStatus: item.status,
-                jobDate: item.jobDate,
-                expectedCompletion: item.completeDate || "",
-                refNum: item.refNum || "",
-                budget: item.budget || 0,
-                ccf: item.ccf || "No",
-                ccfdept: item.ccfdept || "",
-                assignedTo: [{ name: item.assignedTo, teamName: item.assignedTo }],
-                jobDetail: item.details,
-                remarks: item.remarks || ""
-              };
-              sessionStorage.setItem("workwize_newly_created_job", JSON.stringify(newJobObj));
+              // Clean up any stale single-job session cache so imported jobs aren't duplicated
+              sessionStorage.removeItem("workwize_newly_created_job");
             }
           } catch (jobErr) {
             failedCount++;
