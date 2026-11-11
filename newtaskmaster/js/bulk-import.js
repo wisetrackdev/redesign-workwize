@@ -52,6 +52,11 @@
       if (propNameEl) propNameEl.textContent = propName;
       if (propIdEl) propIdEl.textContent = propId;
       await ensurePropertyAreas();
+      if (typeof window.populateModalDropdowns === "function") {
+        try {
+          await window.populateModalDropdowns();
+        } catch (e) {}
+      }
     }
 
     updatePropDisplay();
@@ -126,77 +131,104 @@
       "Department Operational Budget"
     ];
 
+    // Extract Assignees matching Create Job dropdown EXACTLY
     let assignees = [];
-    try {
-      if (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getPropertyInfo === "function") {
-        const propInfo = await WorkWizeAPI.getPropertyInfo(propId);
-        if (propInfo && Array.isArray(propInfo.propEmp)) {
-          propInfo.propEmp.forEach(emp => {
-            if (!emp) return;
-            const tName = (emp.teamName || "").trim();
-            const fn = (emp.firstName || "").trim();
-            const ln = (emp.lastName || "").trim();
-            const fullName = `${fn} ${ln}`.trim();
-            const desg = (emp.desg || (emp.manager && emp.manager.desg) || "").trim();
 
-            const isOpro = (
-              String(emp.role || "").toUpperCase().includes("OPRO") ||
-              String(emp.userRole || "").toUpperCase().includes("OPRO") ||
-              String(desg).toUpperCase().includes("OPRO") ||
-              String(emp.email || "").toLowerCase().includes("oproadmin") ||
-              String(tName).toUpperCase().includes("OPRO")
-            );
+    // Ensure Create Job modal dropdowns are populated if possible
+    if (typeof window.populateModalDropdowns === "function") {
+      try {
+        await window.populateModalDropdowns();
+      } catch (e) {}
+    }
 
-            if (isOpro) {
-              const curName = fullName || "Testing Test";
-              assignees.push(`${curName} [OproAdmin]`);
-              assignees.push("OproAdmin");
-            } else {
-              if (tName) assignees.push(tName);
-              if (fullName && fullName !== tName) {
-                assignees.push(desg ? `${desg} [${tName || desg}]` : `${fullName} [${tName}]`);
-              }
-            }
+    // 1. Read directly from the Create Job modal dropdown options (#modalAssignedToMenu)
+    const menuEl = document.getElementById("modalAssignedToMenu");
+    if (menuEl) {
+      const cbs = menuEl.querySelectorAll("input.modal-assignee-cb");
+      if (cbs && cbs.length > 0) {
+        cbs.forEach(cb => {
+          const name = (cb.dataset.name || cb.getAttribute("data-name") || cb.nextElementSibling?.textContent || cb.value || "").trim();
+          if (name && !assignees.includes(name)) {
+            assignees.push(name);
+          }
+        });
+      }
+    }
 
-            if (Array.isArray(emp.teamates)) {
-              emp.teamates.forEach(m => {
-                if (!m) return;
-                const mName = `${m.firstName || m.firstname || ""} ${m.lastName || m.lastname || ""}`.trim();
-                if (mName && mName !== tName) assignees.push(mName);
+    // 2. If not yet populated in DOM, reproduce identical Create Job logic from propEmp
+    if (assignees.length === 0) {
+      try {
+        if (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getPropertyInfo === "function") {
+          const propInfo = await WorkWizeAPI.getPropertyInfo(propId);
+          if (propInfo && Array.isArray(propInfo.propEmp)) {
+            const empList = propInfo.propEmp.map(e => ({ ...e }));
+
+            // Ensure OproAdmin is present in propEmp exactly like Create Job in main.js
+            const hasOproInEmp = empList.some(emp => {
+              const roleStr = String(emp.role || emp.userRole || emp.desg || "").toUpperCase();
+              const mgrRoleStr = String(emp.manager?.role || emp.manager?.desg || "").toUpperCase();
+              return roleStr.includes("OPRO") || mgrRoleStr.includes("OPRO") || String(emp.email || "").toLowerCase().includes("oproadmin");
+            });
+
+            if (!hasOproInEmp) {
+              const curU = (typeof UserSession !== "undefined" && typeof UserSession.getUser === "function") ? UserSession.getUser() : null;
+              const curName = (typeof UserSession !== "undefined" && typeof UserSession.getUserFullName === "function")
+                ? UserSession.getUserFullName()
+                : "Testing Test";
+              empList.unshift({
+                teamId: (curU && (curU.id || curU.email)) || "OproAdmin",
+                teamName: "OproAdmin",
+                firstName: curName ? curName.split(" ")[0] : "Testing",
+                lastName: curName ? curName.split(" ").slice(1).join(" ") : "Test",
+                desg: "OproAdmin",
+                role: "OPROADMIN",
+                email: (curU && curU.email) || "testing@test.com"
               });
             }
-          });
+
+            empList.forEach(emp => {
+              if (!emp) return;
+              let label = emp.teamName;
+
+              const isEmpOpro = (
+                String(emp.role || "").toUpperCase().includes("OPROADMIN") ||
+                String(emp.userRole || "").toUpperCase().includes("OPROADMIN") ||
+                String(emp.desg || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+                String(emp.manager?.desg || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+                String(emp.manager?.role || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN") ||
+                String(emp.email || "").toLowerCase().includes("oproadmin") ||
+                String(emp.teamName || "").toUpperCase().replace(/\s+/g, "").includes("OPROADMIN")
+              );
+
+              if (isEmpOpro) {
+                let name = (typeof UserSession !== "undefined" && typeof UserSession.getNameFromUserOrEmail === "function")
+                  ? UserSession.getNameFromUserOrEmail(emp)
+                  : `${emp.firstName || ""} ${emp.lastName || ""}`.trim();
+                if (!name) name = "Testing Test";
+                label = `${name} [OproAdmin]`;
+              } else if (emp.manager && (emp.manager.firstName || emp.manager.desg)) {
+                const desg = (emp.manager.desg || "").trim();
+                const name = `${emp.manager.firstName || ""} ${emp.manager.lastName || ""}`.trim();
+                label = desg ? `${desg} [${emp.teamName}]` : (name ? `${name} [${emp.teamName}]` : emp.teamName);
+              }
+
+              if (label && !assignees.includes(label)) {
+                assignees.push(label);
+              }
+            });
+          }
         }
+      } catch (err) {
+        console.warn("Could not fetch property assignees for template:", err);
       }
-    } catch (err) {
-      console.warn("Could not fetch property assignees for template:", err);
     }
 
-    const curU = (typeof UserSession !== "undefined" && typeof UserSession.getUser === "function") ? UserSession.getUser() : null;
-    const curName = (typeof UserSession !== "undefined" && typeof UserSession.getUserFullName === "function")
-      ? UserSession.getUserFullName()
-      : "Testing Test";
-    if (curName) {
-      assignees.push(`${curName} [OproAdmin]`);
+    if (assignees.length === 0) {
+      const curName = (typeof UserSession !== "undefined" && typeof UserSession.getUserFullName === "function")
+        ? UserSession.getUserFullName()
+        : "Testing Test";
+      assignees = [`${curName} [OproAdmin]`];
     }
-    assignees.push("OproAdmin");
-
-    const defaultAssignees = [
-      "Engineering",
-      "Engineering, HVAC",
-      "Maintenance",
-      "Facilities Team",
-      "Plumbing",
-      "Electrical",
-      "Housekeeping",
-      "IT",
-      "OproAdmin"
-    ];
-    defaultAssignees.forEach(d => {
-      if (!assignees.some(a => a.toLowerCase() === d.toLowerCase())) {
-        assignees.push(d);
-      }
-    });
 
     assignees = Array.from(new Set(assignees.filter(Boolean)));
 
@@ -272,7 +304,7 @@
       budget: 0,
       ccf: "POMEC",
       ccfdept: "Engineering",
-      assigned: assignees[0] || "Engineering, HVAC",
+      assigned: assignees[0] || "OproAdmin",
       details: "AC cooling efficiency low in master bedroom. Needs filter cleaning and refrigerant level check.",
       remarks: "Guest reported low cooling during afternoon. High priority."
     });
@@ -291,7 +323,7 @@
       budget: 150,
       ccf: "CAPEX",
       ccfdept: "Maintenance",
-      assigned: assignees[1] || "Facilities Team",
+      assigned: assignees[1] || assignees[0] || "OproAdmin",
       details: "Path light fixture #4 flickering near main pool bar. Replace LED ballast and check water sealing.",
       remarks: "Scheduled maintenance check."
     });
@@ -310,7 +342,7 @@
       budget: 300,
       ccf: "Department Operational Budget",
       ccfdept: "Plant Operations",
-      assigned: assignees[2] || "OproAdmin",
+      assigned: assignees[2] || assignees[0] || "OproAdmin",
       details: "High pressure valve vibration observed during morning shift inspection. Fasten mounting bracket and verify seal.",
       remarks: "Safety precaution required before full pressure load."
     });
@@ -898,7 +930,18 @@
               budget: String(r.budget || 0),
               ccf: r.ccf || "No",
               ccfdept: r.ccfdept || "",
-              assignedTo: r.assignedTo || "",
+              assignedTo: (() => {
+                let aVal = r.assignedTo || "";
+                const modalMenuCbs = document.querySelectorAll("#modalAssignedToMenu input.modal-assignee-cb");
+                if (modalMenuCbs && modalMenuCbs.length > 0) {
+                  const m = Array.from(modalMenuCbs).find(cb => {
+                    const n = (cb.dataset.name || cb.getAttribute("data-name") || cb.nextElementSibling?.textContent || "").trim();
+                    return n.toLowerCase() === aVal.toLowerCase() || cb.value.toLowerCase() === aVal.toLowerCase();
+                  });
+                  if (m && m.value) aVal = m.value;
+                }
+                return aVal;
+              })(),
               jobDetail: r.details,
               remarks: r.remarks || ""
             }))
@@ -950,7 +993,20 @@
             formData.append("ccf", item.ccf || "No");
             formData.append("ccfdept", item.ccfdept || "");
             formData.append("jobremark", item.remarks || "");
-            formData.append("assignedTo", item.assignedTo || "");
+
+            // Resolve assignedTo matching Create Job modal options if matched
+            let finalAssigned = item.assignedTo || "";
+            const modalMenuCbs = document.querySelectorAll("#modalAssignedToMenu input.modal-assignee-cb");
+            if (modalMenuCbs && modalMenuCbs.length > 0) {
+              const matchedCb = Array.from(modalMenuCbs).find(cb => {
+                const n = (cb.dataset.name || cb.getAttribute("data-name") || cb.nextElementSibling?.textContent || "").trim();
+                return n.toLowerCase() === finalAssigned.toLowerCase() || cb.value.toLowerCase() === finalAssigned.toLowerCase();
+              });
+              if (matchedCb && matchedCb.value) {
+                finalAssigned = matchedCb.value;
+              }
+            }
+            formData.append("assignedTo", finalAssigned);
 
             let createdId = null;
             if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.addNewJob) {
