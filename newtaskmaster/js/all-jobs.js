@@ -717,10 +717,16 @@ function renderTableRows() {
         <span class="inline-flex items-center gap-1"><i class="fa-regular fa-comment text-slate-400"></i> ${job.commentCount}</span>
       </td>
       <td class="text-right">
-        <div class="relative inline-block text-left dropdown-group">
-          <button class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" onclick="toggleJobActionMenu(this)">
-            <i class="fa-solid fa-ellipsis"></i>
-          </button>
+        <div class="flex items-center justify-end gap-1">
+          ${(typeof isSuperAdminRole === 'function' && isSuperAdminRole()) ? `
+            <button type="button" onclick="superAdminDeleteJob('${job.rawId || job.id}', '${job.id}')" class="w-7 h-7 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-600 inline-flex items-center justify-center transition-colors cursor-pointer" title="Delete Job">
+              <i class="fa-solid fa-trash-can text-rose-500 text-xs"></i>
+            </button>
+          ` : ''}
+          <div class="relative inline-block text-left dropdown-group">
+            <button class="w-7 h-7 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors" onclick="toggleJobActionMenu(this)">
+              <i class="fa-solid fa-ellipsis"></i>
+            </button>
           <div class="hidden absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-30 text-xs text-slate-700 dropdown-menu">
             <a href="job-details.html?id=${encodeURIComponent(job.rawId || job.id)}" class="flex items-center px-3 py-2 hover:bg-blue-50 text-slate-700 hover:text-blue-700 font-medium transition-colors">
               <i class="fa-regular fa-eye mr-2.5 text-blue-600"></i> View Details
@@ -738,6 +744,7 @@ function renderTableRows() {
                 <i class="fa-solid fa-trash-can mr-2.5 text-rose-500"></i> Delete Job
               </button>
             ` : ''}
+          </div>
           </div>
         </div>
       </td>
@@ -1098,8 +1105,17 @@ window.exportJobsToCSV = exportJobsToCSV;
 // Point 7: Job Status Permissions Helper
 // ==========================================
 function isSuperAdminRole() {
+  if (typeof UserSession !== "undefined" && typeof UserSession.isSuperAdmin === "function") {
+    return UserSession.isSuperAdmin();
+  }
+  const u = (typeof UserSession !== "undefined" && UserSession.getUser) ? UserSession.getUser() : null;
   const role = (typeof UserSession !== "undefined" && UserSession.getUserRole) ? UserSession.getUserRole().toUpperCase() : "";
-  return role.includes("SUPERADMIN") || role.includes("SUPER ADMIN");
+  const roles = (typeof UserSession !== "undefined" && UserSession.getUserRoles) ? UserSession.getUserRoles() : [];
+  const desg = (u?.desg || "").toUpperCase().replace(/[\s_]+/g, "");
+  const email = (typeof UserSession !== "undefined" && UserSession.getUserEmail) ? UserSession.getUserEmail().toLowerCase() : "";
+  return roles.some(r => r.replace(/[\s_]+/g, "").includes("SUPERADMIN")) ||
+         role.replace(/[\s_]+/g, "").includes("SUPERADMIN") ||
+         desg.includes("SUPERADMIN") || email.startsWith("superadmin") || email.includes("superadmin@");
 }
 
 function canUserChangeStatus(job) {
@@ -1131,10 +1147,14 @@ async function superAdminDeleteJob(jobId, displayId) {
 
   try {
     const propId = WorkWizeAPI.getCurrentProperty();
-    await WorkWizeAPI.request("api/jobtracker/deletejob", {
-      method: "POST",
-      body: { jobId: jobId, propId: propId }
-    });
+    if (typeof WorkWizeAPI.deleteJob === "function") {
+      await WorkWizeAPI.deleteJob(jobId, propId);
+    } else {
+      await WorkWizeAPI.request("api/jobtracker/deletejob", {
+        method: "POST",
+        body: { jobId: jobId, propId: propId }
+      });
+    }
 
     showToast(`Job ${displayId} deleted successfully.`, "success");
     await loadAllJobsFromAPI();

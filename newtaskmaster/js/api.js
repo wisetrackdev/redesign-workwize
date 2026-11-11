@@ -520,7 +520,29 @@ const WorkWizeAPI = (function () {
     }
   }
 
-  return {
+    // 17. Delete Job (api/jobtracker/deletejob) - SuperAdmin only
+  async function deleteJob(jobId, propId) {
+    if (!jobId) throw new Error("Job ID is required.");
+    const pId = propId || getCurrentProperty();
+    const form = new FormData();
+    form.append("jobId", jobId);
+    if (pId) form.append("propId", pId);
+
+    const result = await request("api/jobtracker/deletejob", {
+      method: "POST",
+      body: form
+    });
+
+    try {
+      if (typeof WorkWizeData !== "undefined" && typeof WorkWizeData.deleteJob === "function") {
+        WorkWizeData.deleteJob(jobId);
+      }
+    } catch (_) {}
+
+    return result;
+  }
+
+return {
     getBaseUrl,
     setBaseUrl,
     getStoredUserData,
@@ -549,7 +571,8 @@ const WorkWizeAPI = (function () {
     bulkImportJobs,
     resetPasswordLoggedIn,
     forgotPassword,
-    confirmResetPassword
+    confirmResetPassword,
+    deleteJob
   };
 })();
 
@@ -588,6 +611,20 @@ const UserSession = {
     let roles = u.role || [];
     if (!Array.isArray(roles)) roles = [roles];
     return roles.map(r => String(r).toUpperCase().trim());
+  },
+    isSuperAdmin: function () {
+    const u = this.getUser();
+    if (!u) return false;
+    const roles = this.getUserRoles();
+    const desg = (u.desg || "").toUpperCase().replace(/[\s_]+/g, "");
+    const email = (this.getUserEmail() || "").toLowerCase();
+    return roles.some(r => {
+      const clean = r.toUpperCase().replace(/[\s_]+/g, "");
+      return clean === "SUPERADMIN" || clean.includes("SUPERADMIN");
+    }) ||
+    desg.includes("SUPERADMIN") ||
+    email.startsWith("superadmin") ||
+    email.includes("superadmin@");
   },
   isOproAdmin: function () {
     const u = this.getUser();
