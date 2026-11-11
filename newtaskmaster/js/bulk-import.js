@@ -10,6 +10,7 @@
   let invalidRows = [];
   let isImporting = false;
   let activeFilter = "all"; // "all" | "valid" | "error"
+  let cachedPropAreas = [];
 
   document.addEventListener("DOMContentLoaded", function () {
     initPropertyHeader();
@@ -17,138 +18,335 @@
     initFileUpload();
     initFilterTabs();
     initImportAction();
+    ensurePropertyAreas();
   });
+
+  // Ensure property areas are preloaded and cached
+  async function ensurePropertyAreas() {
+    if (cachedPropAreas && cachedPropAreas.length > 0) return cachedPropAreas;
+    const propId = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentProperty() : "PROP001";
+    try {
+      if (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getPropertyInfo === "function") {
+        const propInfo = await WorkWizeAPI.getPropertyInfo(propId);
+        const list = propInfo?.propArea || propInfo?.propAreas || propInfo?.PropArea || propInfo?.PropAreas || [];
+        if (Array.isArray(list) && list.length > 0) {
+          cachedPropAreas = list;
+          return cachedPropAreas;
+        }
+      }
+    } catch (err) {
+      console.warn("Could not preload property areas:", err);
+    }
+    return cachedPropAreas;
+  }
 
   // 1. Property Header Display
   function initPropertyHeader() {
     const propNameEl = document.getElementById("bulkImportPropName");
     const propIdEl = document.getElementById("bulkImportPropId");
 
-    function updatePropDisplay() {
+    async function updatePropDisplay() {
+      cachedPropAreas = []; // Reset on property switch
       const propId = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentProperty() : "PROP001";
       const propName = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentPropertyName() : "Main Facility";
       if (propNameEl) propNameEl.textContent = propName;
       if (propIdEl) propIdEl.textContent = propId;
+      await ensurePropertyAreas();
     }
 
     updatePropDisplay();
     window.addEventListener("workwize:propertyChanged", updatePropDisplay);
   }
 
-  // 2. Sample CSV Template Generation & Download
+  // 2. Sample Template Generation & Download with Dynamic Excel Dropdowns
   function initDownloadSample() {
     const btn = document.getElementById("btnDownloadSampleCsv");
-    if (!btn) return;
 
-    btn.addEventListener("click", function () {
-      const propName = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentPropertyName() : "OZEN RESERVE BOLIFUSHI";
-      const propId = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentProperty() : "PROP-001";
+    if (btn) {
+      btn.addEventListener("click", async function () {
+        await generateAndDownloadExcelTemplate();
+      });
+    }
+  }
 
-      const headers = [
-        "Property Name",
-        "Property ID",
-        "Area",
-        "Villa Number",
-        "Location",
-        "Priority",
-        "Status",
-        "Job Date",
-        "Expected Completion Date",
-        "Reference Number",
-        "Budget",
-        "Cost Center",
-        "CCF Department",
-        "Assigned To",
-        "Job Details",
-        "Remarks"
-      ];
+  async function getDynamicDropdownOptions() {
+    const propId = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentProperty() : "PROP-001";
+    const propName = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentPropertyName() : "Main Facility";
 
-      const today = new Date().toISOString().split("T")[0];
-      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const defaultAreas = [
+      "Guest Villa",
+      "Public Area",
+      "Utility",
+      "Statutory Compliance",
+      "Development/Project",
+      "Fire Safety",
+      "Back of the House",
+      "CAPEX",
+      "SOP & Checklist",
+      "Energy Management",
+      "Waste Management",
+      "Landscaping"
+    ];
 
-      // Sample Row 1: Guest Villa Maintenance (Villa is required)
-      const sampleRow1 = [
-        `"${propName}"`,
-        `"${propId}"`,
-        `"Guest Villa"`,
-        `"Villa 101"`,
-        `"Master Bedroom AC Unit"`,
-        `"High"`,
-        `"Yet to Commence"`,
-        `"${today}"`,
-        `"${nextWeek}"`,
-        `"REF-GV-101"`,
-        `"0"`,
-        `"No"`,
-        `"Engineering"`,
-        `"Engineering, HVAC"`,
-        `"AC cooling efficiency low in master bedroom. Needs filter cleaning and refrigerant level check."`,
-        `"Guest reported low cooling during afternoon. High priority."`
-      ];
-
-      // Sample Row 2: Public Area Maintenance
-      const sampleRow2 = [
-        `"${propName}"`,
-        `"${propId}"`,
-        `"Public Area"`,
-        `""`,
-        `"Main Pool Deck Pathway"`,
-        `"Medium"`,
-        `"Yet to Commence"`,
-        `"${today}"`,
-        `"${nextWeek}"`,
-        `"REF-PA-202"`,
-        `"150"`,
-        `"Yes"`,
-        `"Maintenance"`,
-        `"Electrical"`,
-        `"Path light fixture #4 flickering near main pool bar. Replace LED ballast and check water sealing."`,
-        `"Scheduled maintenance check."`
-      ];
-
-      // Sample Row 3: Utility Maintenance
-      const sampleRow3 = [
-        `"${propName}"`,
-        `"${propId}"`,
-        `"Utility"`,
-        `""`,
-        `"Desalination Plant Pump B"`,
-        `"Safety"`,
-        `"In Progress"`,
-        `"${today}"`,
-        `"${nextWeek}"`,
-        `"REF-UT-303"`,
-        `"300"`,
-        `"Yes"`,
-        `"Plant Operations"`,
-        `"Plumbing, Engineering"`,
-        `"High pressure valve vibration observed during morning shift inspection. Fasten mounting bracket and verify seal."`,
-        `"Safety precaution required before full pressure load."`
-      ];
-
-      const csvRows = [
-        headers.join(","),
-        sampleRow1.join(","),
-        sampleRow2.join(","),
-        sampleRow3.join(",")
-      ];
-
-      const csvContent = "\uFEFF" + csvRows.join("\r\n");
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      const safePropName = propName.replace(/[^a-zA-Z0-9]/g, "_");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Sample_Job_Bulk_Import_${safePropName}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      if (typeof showToast === "function") {
-        showToast("Sample CSV template downloaded with current property pre-filled!", "success");
+    let areas = [];
+    try {
+      await ensurePropertyAreas();
+      if (Array.isArray(cachedPropAreas) && cachedPropAreas.length > 0) {
+        areas = cachedPropAreas
+          .filter(a => a && a.isactive !== false && a.isactive !== 0 && a.isactive !== "0" && a.status !== false && a.status !== 0)
+          .map(a => (a.areaName || a.AreaName || "").trim())
+          .filter(Boolean);
       }
+    } catch (e) {
+      console.warn("Could not fetch property areas for template:", e);
+    }
+
+    if (!areas || areas.length === 0) {
+      areas = defaultAreas;
+    }
+
+    // Deduplicate areas
+    areas = Array.from(new Set(areas));
+
+    const priorities = ["High", "Medium", "Low", "Safety"];
+
+    const statuses = [
+      "Yet to Commence",
+      "In Progress",
+      "Spares on Order",
+      "Under Discussion",
+      "Fixed",
+      "Completed",
+      "Closed"
+    ];
+
+    const costCenters = [
+      "POMEC",
+      "CAPEX",
+      "Department Operational Budget"
+    ];
+
+    return { propId, propName, areas, priorities, statuses, costCenters };
+  }
+
+  async function generateAndDownloadExcelTemplate() {
+    const { propId, propName, areas, priorities, statuses, costCenters } = await getDynamicDropdownOptions();
+
+    // Check if ExcelJS is loaded
+    if (typeof ExcelJS === "undefined") {
+      console.warn("ExcelJS not available, falling back to CSV download.");
+      downloadPlainCsv();
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "WorkWize TaskMaster";
+    workbook.created = new Date();
+
+    const worksheet = workbook.addWorksheet("Jobs Import Template");
+
+    worksheet.columns = [
+      { header: "Property Name", key: "propName", width: 26 },
+      { header: "Property ID", key: "propId", width: 16 },
+      { header: "Area", key: "area", width: 24 },
+      { header: "Villa Number", key: "villa", width: 16 },
+      { header: "Location", key: "location", width: 25 },
+      { header: "Priority", key: "priority", width: 14 },
+      { header: "Status", key: "status", width: 18 },
+      { header: "Job Date", key: "jobDate", width: 14 },
+      { header: "Expected Completion Date", key: "expDate", width: 25 },
+      { header: "Reference Number", key: "refNum", width: 18 },
+      { header: "Budget", key: "budget", width: 12 },
+      { header: "Cost Center", key: "ccf", width: 30 },
+      { header: "CCF Department", key: "ccfdept", width: 22 },
+      { header: "Assigned To", key: "assigned", width: 24 },
+      { header: "Job Details", key: "details", width: 45 },
+      { header: "Remarks", key: "remarks", width: 35 }
+    ];
+
+    // Style Header Row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10 };
+    headerRow.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF1E3A8A" }
+    };
+    headerRow.alignment = { vertical: "middle", horizontal: "center" };
+    headerRow.height = 28;
+
+    const today = new Date().toISOString().split("T")[0];
+    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    const sampleArea1 = areas.find(a => a.toLowerCase().includes("villa")) || areas[0] || "Guest Villa";
+    const sampleArea2 = areas.find(a => a.toLowerCase().includes("public")) || areas[1] || "Public Area";
+    const sampleArea3 = areas.find(a => a.toLowerCase().includes("util") || a.toLowerCase().includes("plant")) || areas[2] || "Utility";
+    const sampleVilla1 = sampleArea1.toLowerCase().includes("villa") ? "Villa 101" : "";
+
+    // Add 3 sample rows
+    worksheet.addRow({
+      propName: propName,
+      propId: propId,
+      area: sampleArea1,
+      villa: sampleVilla1,
+      location: "Master Bedroom AC Unit",
+      priority: "High",
+      status: "Yet to Commence",
+      jobDate: today,
+      expDate: nextWeek,
+      refNum: "REF-GV-101",
+      budget: 0,
+      ccf: "POMEC",
+      ccfdept: "Engineering",
+      assigned: "Engineering, HVAC",
+      details: "AC cooling efficiency low in master bedroom. Needs filter cleaning and refrigerant level check.",
+      remarks: "Guest reported low cooling during afternoon. High priority."
     });
+
+    worksheet.addRow({
+      propName: propName,
+      propId: propId,
+      area: sampleArea2,
+      villa: "",
+      location: "Main Pool Deck Pathway",
+      priority: "Medium",
+      status: "Yet to Commence",
+      jobDate: today,
+      expDate: nextWeek,
+      refNum: "REF-PA-202",
+      budget: 150,
+      ccf: "CAPEX",
+      ccfdept: "Maintenance",
+      assigned: "Facilities Team",
+      details: "Path light fixture #4 flickering near main pool bar. Replace LED ballast and check water sealing.",
+      remarks: "Scheduled maintenance check."
+    });
+
+    worksheet.addRow({
+      propName: propName,
+      propId: propId,
+      area: sampleArea3,
+      villa: "",
+      location: "Desalination Plant Pump B",
+      priority: "Safety",
+      status: "In Progress",
+      jobDate: today,
+      expDate: nextWeek,
+      refNum: "REF-UT-303",
+      budget: 300,
+      ccf: "Department Operational Budget",
+      ccfdept: "Plant Operations",
+      assigned: "Plumbing, Engineering",
+      details: "High pressure valve vibration observed during morning shift inspection. Fasten mounting bracket and verify seal.",
+      remarks: "Safety precaution required before full pressure load."
+    });
+
+    // Hidden lookup sheet for dropdown lists (Excel Best Practice)
+    const lookupSheet = workbook.addWorksheet("DropdownLists", { state: "hidden" });
+    areas.forEach((val, idx) => { lookupSheet.getCell(`A${idx + 1}`).value = val; });
+    priorities.forEach((val, idx) => { lookupSheet.getCell(`B${idx + 1}`).value = val; });
+    statuses.forEach((val, idx) => { lookupSheet.getCell(`C${idx + 1}`).value = val; });
+    costCenters.forEach((val, idx) => { lookupSheet.getCell(`D${idx + 1}`).value = val; });
+
+    // Apply Data Validation dropdowns to rows 2 to 500
+    for (let r = 2; r <= 500; r++) {
+      // Area (Col C)
+      worksheet.getCell(`C${r}`).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: [`DropdownLists!$A$1:$A$${areas.length}`]
+      };
+
+      // Priority (Col F)
+      worksheet.getCell(`F${r}`).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: [`DropdownLists!$B$1:$B$${priorities.length}`]
+      };
+
+      // Status (Col G)
+      worksheet.getCell(`G${r}`).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: [`DropdownLists!$C$1:$C$${statuses.length}`]
+      };
+
+      // Cost Center (Col L)
+      worksheet.getCell(`L${r}`).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: [`DropdownLists!$D$1:$D$${costCenters.length}`]
+      };
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safePropName = propName.replace(/[^a-zA-Z0-9]/g, "_");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Sample_Job_Bulk_Import_${safePropName}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    if (typeof showToast === "function") {
+      showToast("Template downloaded with Excel dropdowns for Area, Priority, Status, and Cost Center!", "success");
+    }
+  }
+
+  function downloadPlainCsv() {
+    const propName = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentPropertyName() : "Main Facility";
+    const propId = (typeof WorkWizeAPI !== "undefined") ? WorkWizeAPI.getCurrentProperty() : "PROP-001";
+    const today = new Date().toISOString().split("T")[0];
+    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    const headers = [
+      "Property Name", "Property ID", "Area", "Villa Number", "Location", "Priority", "Status",
+      "Job Date", "Expected Completion Date", "Reference Number", "Budget", "Cost Center",
+      "CCF Department", "Assigned To", "Job Details", "Remarks"
+    ];
+
+    const sampleRow1 = [
+      `"${propName}"`, `"${propId}"`, `"Guest Villa"`, `"Villa 101"`, `"Master Bedroom AC Unit"`,
+      `"High"`, `"Yet to Commence"`, `"${today}"`, `"${nextWeek}"`, `"REF-GV-101"`, `"0"`,
+      `"POMEC"`, `"Engineering"`, `"Engineering, HVAC"`,
+      `"AC cooling efficiency low in master bedroom. Needs filter cleaning and refrigerant level check."`,
+      `"Guest reported low cooling during afternoon. High priority."`
+    ];
+
+    const sampleRow2 = [
+      `"${propName}"`, `"${propId}"`, `"Public Area"`, `""`, `"Main Pool Deck Pathway"`,
+      `"Medium"`, `"Yet to Commence"`, `"${today}"`, `"${nextWeek}"`, `"REF-PA-202"`, `"150"`,
+      `"CAPEX"`, `"Maintenance"`, `"Facilities Team"`,
+      `"Path light fixture #4 flickering near main pool bar. Replace LED ballast and check water sealing."`,
+      `"Scheduled maintenance check."`
+    ];
+
+    const sampleRow3 = [
+      `"${propName}"`, `"${propId}"`, `"Utility"`, `""`, `"Desalination Plant Pump B"`,
+      `"Safety"`, `"In Progress"`, `"${today}"`, `"${nextWeek}"`, `"REF-UT-303"`, `"300"`,
+      `"Department Operational Budget"`, `"Plant Operations"`, `"Plumbing, Engineering"`,
+      `"High pressure valve vibration observed during morning shift inspection. Fasten mounting bracket and verify seal."`,
+      `"Safety precaution required before full pressure load."`
+    ];
+
+    const csvContent = "\uFEFF" + [headers.join(","), sampleRow1.join(","), sampleRow2.join(","), sampleRow3.join(",")].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safePropName = propName.replace(/[^a-zA-Z0-9]/g, "_");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Sample_Job_Bulk_Import_${safePropName}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    if (typeof showToast === "function") {
+      showToast("Sample CSV template downloaded successfully!", "success");
+    }
   }
 
   // 3. File Upload & Drag-and-Drop Handling
@@ -208,9 +406,12 @@
       });
     }
 
-    function processSelectedFile(file) {
-      if (!file.name.toLowerCase().endsWith(".csv")) {
-        alert("Please select a valid .csv file.");
+    async function processSelectedFile(file) {
+      const isXlsx = file.name.toLowerCase().endsWith(".xlsx") || file.name.toLowerCase().endsWith(".xls");
+      const isCsv = file.name.toLowerCase().endsWith(".csv");
+
+      if (!isXlsx && !isCsv) {
+        alert("Please select a valid .xlsx or .csv file.");
         return;
       }
 
@@ -219,15 +420,39 @@
       if (fileInfoCard) fileInfoCard.classList.remove("hidden");
       dropZone.classList.add("hidden");
 
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const text = e.target.result;
-        parseAndValidateCSV(text, file.name);
-      };
-      reader.onerror = function () {
-        alert("Failed to read the file.");
-      };
-      reader.readAsText(file, "UTF-8");
+      await ensurePropertyAreas();
+
+      if (isXlsx && typeof ExcelJS !== "undefined") {
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const wb = new ExcelJS.Workbook();
+          await wb.xlsx.load(arrayBuffer);
+          const sheet = wb.worksheets.find(s => s.state !== "hidden") || wb.worksheets[0];
+          const rawRows = [];
+          sheet.eachRow({ includeEmpty: false }, (row) => {
+            const rowValues = [];
+            row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+              rowValues[colNumber - 1] = cell.text || (cell.value !== null && cell.value !== undefined ? String(cell.value) : "");
+            });
+            rawRows.push(rowValues);
+          });
+          parseAndValidateRows(rawRows, file.name);
+        } catch (err) {
+          alert("Failed to parse Excel file: " + err.message);
+          resetFileUpload();
+        }
+      } else {
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+          const text = e.target.result;
+          await ensurePropertyAreas();
+          parseAndValidateCSV(text, file.name);
+        };
+        reader.onerror = function () {
+          alert("Failed to read the file.");
+        };
+        reader.readAsText(file, "UTF-8");
+      }
     }
 
     function resetFileUpload() {
@@ -253,11 +478,15 @@
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   }
 
-  // 4. CSV Parser & Row Validator
+  // 4. CSV & Excel Parser & Row Validator
   function parseAndValidateCSV(csvText, fileName) {
     const rawRows = parseCSV(csvText);
+    parseAndValidateRows(rawRows, fileName);
+  }
+
+  function parseAndValidateRows(rawRows, fileName) {
     if (!rawRows || rawRows.length <= 1) {
-      alert("The selected CSV file is empty or missing headers.");
+      alert("The selected file is empty or missing headers.");
       return;
     }
 
@@ -292,7 +521,8 @@
 
       const propNameVal = getCol(row, "Property Name", "Property", "propName", "prop") || currentPropName;
       const propIdVal = getCol(row, "Property ID", "propId") || currentPropId;
-      const areaVal = getCol(row, "Area", "areaName", "Operational Area") || "Guest Villa";
+      const areaValRaw = getCol(row, "Area", "areaName", "Operational Area", "areaID", "areaId");
+      const areaVal = areaValRaw ? areaValRaw.trim() : "";
       const villaVal = getCol(row, "Villa Number", "Villa", "villaNumber", "villa");
       const locationVal = getCol(row, "Location", "jobLocation");
       const priorityVal = normalizePriority(getCol(row, "Priority"));
@@ -303,9 +533,29 @@
       const budgetVal = parseFloat(getCol(row, "Budget")) || 0;
       const ccfVal = getCol(row, "Cost Center", "CCF");
       const ccfDeptVal = getCol(row, "CCF Department", "ccfdept", "Department");
-      const assignedVal = getCol(row, "Assigned To", "Assignee", "Team") || "IT";
+      const assignedVal = getCol(row, "Assigned To", "Assignee", "Team", "assignedTo");
       const detailsVal = getCol(row, "Job Details", "Details", "jobDetail", "Description");
       const remarksVal = getCol(row, "Remarks", "remark", "Job Remarks");
+
+      // Match area against cached property areas to ensure exact dropdown selection is preserved
+      let matchedArea = null;
+      if (areaVal && Array.isArray(cachedPropAreas) && cachedPropAreas.length > 0) {
+        const cleanVal = areaVal.toLowerCase();
+        matchedArea = cachedPropAreas.find(a => {
+          const aName = (a.areaName || a.AreaName || "").trim().toLowerCase();
+          const aId = (a.areaid || a.areaId || a.AreaId || a.AreaID || "").trim().toLowerCase();
+          return aName === cleanVal || aId === cleanVal;
+        });
+        if (!matchedArea) {
+          matchedArea = cachedPropAreas.find(a => {
+            const aName = (a.areaName || a.AreaName || "").trim().toLowerCase();
+            return aName && cleanVal && (aName.includes(cleanVal) || cleanVal.includes(aName));
+          });
+        }
+      }
+
+      const resolvedAreaName = matchedArea ? (matchedArea.areaName || matchedArea.AreaName || areaVal) : areaVal;
+      const resolvedAreaId = matchedArea ? (matchedArea.areaid || matchedArea.areaId || matchedArea.AreaId || matchedArea.AreaID || areaVal) : areaVal;
 
       // Validation Checks
       const errors = [];
@@ -315,17 +565,30 @@
         errors.push("Job Details is required.");
       }
 
-      // Check 2: Villa Number required if area is Guest Villa
-      const isGuestVilla = areaVal.toLowerCase().includes("villa");
+      // Check 2: Area is required
+      if (!areaVal) {
+        errors.push("Area is required.");
+      }
+
+      // Check 3: Villa Number required if area is Guest Villa
+      const isGuestVilla = resolvedAreaName.toLowerCase().includes("villa") || (matchedArea && (matchedArea.isvilla === true || matchedArea.isvilla === 1 || matchedArea.isvilla === "1"));
       if (isGuestVilla && !villaVal) {
         errors.push("Villa Number is required for Guest Villa area.");
+      }
+
+      // Check 4: Assigned To required
+      if (!assignedVal || !assignedVal.trim()) {
+        errors.push("Assigned To is required.");
       }
 
       const parsedItem = {
         rowNum: i,
         propName: propNameVal,
         propId: propIdVal,
-        area: areaVal,
+        area: resolvedAreaName,
+        areaName: resolvedAreaName,
+        areaId: resolvedAreaId,
+        areaID: resolvedAreaId,
         villaNumber: villaVal,
         location: locationVal,
         priority: priorityVal,
@@ -541,21 +804,21 @@
             jobs: validRows.map(r => ({
               propId: r.propId,
               propName: r.propName,
-              areaName: r.area,
-              areaID: r.area,
-              villaNumber: r.villaNumber,
-              jobLocation: r.location,
+              areaName: r.areaName || r.area,
+              areaID: r.areaId || r.areaID || r.area,
+              villaNumber: r.villaNumber || "",
+              jobLocation: r.location || "",
               priority: r.priority,
               jobStatus: r.status,
               jobDate: r.jobDate,
-              completeDate: r.completeDate,
-              refNum: r.refNum,
+              completeDate: r.completeDate || "",
+              refNum: r.refNum || "",
               budget: String(r.budget || 0),
-              ccf: r.ccf,
-              ccfdept: r.ccfdept,
-              assignedTo: r.assignedTo,
+              ccf: r.ccf || "No",
+              ccfdept: r.ccfdept || "",
+              assignedTo: r.assignedTo || "",
               jobDetail: r.details,
-              remarks: r.remarks
+              remarks: r.remarks || ""
             }))
           };
 
@@ -569,6 +832,35 @@
             }
             if (Array.isArray(res.errors)) {
               errorLog.push(...res.errors);
+            }
+            if (validRows.length > 0) {
+              const firstRow = validRows[0];
+              const firstId = createdJobIds[0] || `WRK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-00001`;
+              const newJobObj = {
+                jobId: firstId,
+                rawId: firstId,
+                id: firstId,
+                propId: firstRow.propId,
+                propName: firstRow.propName,
+                areaID: firstRow.areaId || firstRow.area,
+                areaId: firstRow.areaId || firstRow.area,
+                areaName: firstRow.area,
+                area: firstRow.area,
+                villaNumber: firstRow.villaNumber || "",
+                jobLocation: firstRow.location || "",
+                priority: firstRow.priority,
+                jobStatus: firstRow.status,
+                jobDate: firstRow.jobDate,
+                expectedCompletion: firstRow.completeDate || "",
+                refNum: firstRow.refNum || "",
+                budget: firstRow.budget || 0,
+                ccf: firstRow.ccf || "No",
+                ccfdept: firstRow.ccfdept || "",
+                assignedTo: [{ name: firstRow.assignedTo, teamName: firstRow.assignedTo }],
+                jobDetail: firstRow.details,
+                remarks: firstRow.remarks || ""
+              };
+              sessionStorage.setItem("workwize_newly_created_job", JSON.stringify(newJobObj));
             }
           }
         } catch (err) {
@@ -589,7 +881,8 @@
           try {
             const formData = new FormData();
             formData.append("propId", item.propId);
-            formData.append("areaID", item.area);
+            formData.append("areaID", item.areaId || item.areaID || item.area);
+            formData.append("areaName", item.areaName || item.area);
             formData.append("villaNumber", item.villaNumber || "");
             formData.append("jobLocation", item.location || "");
             formData.append("priority", item.priority);
@@ -602,7 +895,7 @@
             formData.append("ccf", item.ccf || "No");
             formData.append("ccfdept", item.ccfdept || "");
             formData.append("jobremark", item.remarks || "");
-            formData.append("assignedTo", item.assignedTo || "IT");
+            formData.append("assignedTo", item.assignedTo || "");
 
             let createdId = null;
             if (typeof WorkWizeAPI !== "undefined" && WorkWizeAPI.addNewJob) {
@@ -625,6 +918,31 @@
             if (i === 0) {
               sessionStorage.setItem("workwize_newly_created_job_id", createdId);
               localStorage.setItem("workwize_newly_created_job_id", createdId);
+              const newJobObj = {
+                jobId: createdId,
+                rawId: createdId,
+                id: createdId,
+                propId: item.propId,
+                propName: item.propName,
+                areaID: item.areaId || item.area,
+                areaId: item.areaId || item.area,
+                areaName: item.area,
+                area: item.area,
+                villaNumber: item.villaNumber || "",
+                jobLocation: item.location || "",
+                priority: item.priority,
+                jobStatus: item.status,
+                jobDate: item.jobDate,
+                expectedCompletion: item.completeDate || "",
+                refNum: item.refNum || "",
+                budget: item.budget || 0,
+                ccf: item.ccf || "No",
+                ccfdept: item.ccfdept || "",
+                assignedTo: [{ name: item.assignedTo, teamName: item.assignedTo }],
+                jobDetail: item.details,
+                remarks: item.remarks || ""
+              };
+              sessionStorage.setItem("workwize_newly_created_job", JSON.stringify(newJobObj));
             }
           } catch (jobErr) {
             failedCount++;

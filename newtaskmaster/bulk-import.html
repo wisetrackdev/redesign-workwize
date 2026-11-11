@@ -192,9 +192,9 @@
         </div>
 
         <div class="shrink-0">
-          <button type="button" id="btnDownloadSampleCsv" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-900/50 hover:shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer">
-            <i class="fa-solid fa-download text-sm"></i>
-            <span>Download Sample CSV Template</span>
+          <button type="button" id="btnDownloadSampleCsv" class="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-900/50 hover:shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer" title="Download Sample Template">
+            <i class="fa-solid fa-file-excel text-sm"></i>
+            <span>Download Sample Template</span>
           </button>
         </div>
       </div>
@@ -236,7 +236,7 @@
 
       <!-- Drag & Drop Upload Zone Card -->
       <div class="ww-card bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-sm text-center">
-        <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+        <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="hidden">
 
         <!-- Initial Drop Box -->
         <div id="csvDropZone" class="border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-2xl p-8 sm:p-12 transition-all cursor-pointer bg-slate-50/50 hover:bg-blue-50/30 flex flex-col items-center justify-center space-y-3">
@@ -666,6 +666,7 @@
   <script src="js/api.js"></script>
   <script src="js/data.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/exceljs.min.js"></script>
   <script src="js/bulk-import.js"></script>
 </body>
 </html>
