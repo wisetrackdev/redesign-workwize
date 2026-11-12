@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" class="light-style layout-navbar-fixed layout-menu-fixed layout-footer-fixed layout-menu-collapse" dir="ltr" data-theme="theme-default" data-assets-path="upkeep/assets/" data-template="horizontal-menu-template-no-customizer">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <title>WorkWize | UpKeep</title>
+    <meta name="description" content="" />
+    <link rel="icon" type="image/x-icon" href="upkeep/assets/img/AppImages/logo.jpeg" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
+    <!-- All CSS -->
+    <link rel="stylesheet" href="upkeep/assets/vendor/fonts/boxicons.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/fonts/fontawesome.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/fonts/flag-icons.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/css/rtl/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/css/rtl/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/typeahead-js/typeahead.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-checkboxes-jquery/datatables.checkboxes.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-buttons-bs5/buttons.bootstrap5.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/flatpickr/flatpickr.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-rowgroup-bs5/rowgroup.bootstrap5.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/formvalidation/dist/css/formValidation.min.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/bootstrap-datepicker/bootstrap-datepicker.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/bootstrap-daterangepicker/bootstrap-daterangepicker.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/jquery-timepicker/jquery-timepicker.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/pickr/pickr-themes.css" />
+    <!-- Main CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="main/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="main/css/style.css" rel="stylesheet" />
+    <link href="main/css/responsive.css" rel="stylesheet" />
+    <link rel="stylesheet" href="../webessential/LoadingSpin.css">
+</head>
+
+<body>
+    <!-- Layout wrapper -->
+    <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
+        <div class="layout-container">
+            <!-- Menu -->
+            <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme bg-lighter"
+                id="layout-navbar">
+                <div class="container-fluid">
+                    <div class="navbar-brand app-brand demo d-xl-flex py-0 me-4">
+                        <a href="index.html" class="app-brand-link gap-2">
+                            <div class="logo">
+                                <img src="main/images/logo.png" alt="img" title="img"/>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+                        <ul class="navbar-nav flex-row align-items-center ms-auto">
+                            <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3">
+                                <i class="bx bx-bell bx-sm"></i>
+                                <span class="badge bg-danger rounded-pill badge-notifications">5</span>
+                            </li>
+                            <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                                <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);"
+                                    data-bs-toggle="dropdown">
+                                    <div class="avatar avatar-online">
+                                        <img src="upkeep/assets/img/avatars/21.png" alt
+                                            class="w-px-40 h-auto rounded-circle" />
+                                    </div>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item">
+                                            <div class="d-flex">
+                                                <div class="flex-shrink-0 me-3">
+                                                    <div class="avatar avatar-online">
+                                                        <img src="upkeep/assets/img/avatars/21.png" alt
+                                                            class="w-px-40 h-auto rounded-circle" />
+                                                    </div>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <span class="fw-semibold d-block" id="UserName_Name"></span>
+                                                    <small class="text-muted">Sunil Kumar<span
+                                                            id="is-manager"></span></small>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <div class="dropdown-divider"></div>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" onclick="ResetPassword()">
+                                            <i class="bx bx-reset me-2"></i>
+                                            <span class="align-middle">Reset Password</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" onclick="LogoutUser()">
+                                            <i class="bx bx-power-off me-2"></i>
+                                            <span class="align-middle">Log Out</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+            <!-- Menu End -->
+
+            <!-- Layout container -->
+            <div class="layout-page mt-2 mb-5">
+                <div class="content-wrapper">
+                    <!-- Public Area Content Start -->
+                    <section class="area-main">
+                        <div class="container">
+                            <div id="mainareaselector-div">
+
+                            </div>
+                            <div id="subareaselector-div">
+                              
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Public Area Content End -->
+                </div>
+
+                <!-- Footer -->
+                <footer class="content-footer footer bg-footer-theme">
+                    <div class="container-xxl d-flex flex-wrap justify-content-between py-3 flex-md-row flex-column">
+                        <div class="mb-4 mb-md-0 text-center w-100">
+                            © 2023- 2024 <a href="#">WorkWize</a> . All Rights Reserved
+                        </div>
+                    </div>
+                </footer>
+                <!-- / Footer -->
+            </div>
+            <!-- / Layout container End -->
+        </div>
+    </div>
+    <!-- / Layout wrapper End -->
+
+    <!-- Overlay -->
+    <div class="layout-overlay layout-menu-toggle"></div>
+    <div id="modelHolder"></div>
+    <div id="teams2"></div>
+    <div id="divholder"></div>
+    <div id="permissin-divs"></div>
+    
+
+    <!-- Enable OTP Modal -->
+    <div class="modal fade" id="upload-file" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-simple modal-enable-otp modal-dialog-centered">
+            <div class="modal-content p-3 p-md-0">
+                <div class="modal-body">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="text-left mb-4">
+                        <h3 class="mb-0">Photo Upload</h3>
+                    </div>
+
+                    <div class="btcd-f-input">
+                        <div class="btcd-f-wrp">
+                            <button class="btcd-inpBtn" type="button"> <img src="" alt=""> <span> Attach
+                                    File</span></button>
+                            <span class="btcd-f-title">No File Chosen</span>
+                            <small class="f-max"> (Max 2 MB)</small>
+                            <input multiple type="file" name="multiple[]" id="">
+                        </div>
+                        <div class="btcd-files"></div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--/ Enable OTP Modal -->
+    <div id="SpinnerLoader" style="margin: 0 auto; display:none;z-index:999999"></div>
+    <!-- All JS -->
+    <script src="upkeep/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="upkeep/assets/vendor/libs/popper/popper.js"></script>
+    <script src="upkeep/assets/vendor/js/bootstrap.js"></script>
+    <script src="upkeep/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="upkeep/assets/vendor/libs/hammer/hammer.js"></script>
+    <script src="upkeep/assets/vendor/libs/i18n/i18n.js"></script>
+    <script src="upkeep/assets/vendor/libs/typeahead-js/typeahead.js"></script>
+    <script src="upkeep/assets/vendor/js/menu.js"></script>
+    <!-- <script src="upkeep/assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js"></script> -->
+    <script src="upkeep/assets/vendor/libs/moment/moment.js"></script>
+    <script src="upkeep/assets/vendor/libs/flatpickr/flatpickr.js"></script>
+    <script src="upkeep/assets/vendor/libs/formvalidation/dist/js/FormValidation.min.js"></script>
+    <script src="upkeep/assets/vendor/libs/formvalidation/dist/js/plugins/Bootstrap5.min.js"></script>
+    <script src="upkeep/assets/vendor/libs/formvalidation/dist/js/plugins/AutoFocus.min.js"></script>
+    <script src="upkeep/assets/js/main.js"></script>
+    <script src="upkeep/assets/js/tables-datatables-basic.js"></script>
+    <script src="upkeep/assets/vendor/js/helpers.js"></script>
+    <script src="upkeep/assets/vendor/js/template-customizer.js"></script>
+    <script src="upkeep/assets/js/config.js"></script>
+    <script src="upkeep/assets/js/tables-datatables-advanced.js"></script>
+    <!-- Date Picker JS -->
+    <script src="upkeep/assets/vendor/libs/moment/moment.js"></script>
+    <script src="upkeep/assets/vendor/libs/flatpickr/flatpickr.js"></script>
+    <script src="upkeep/assets/vendor/libs/bootstrap-datepicker/bootstrap-datepicker.js"></script>
+    <script src="upkeep/assets/vendor/libs/bootstrap-daterangepicker/bootstrap-daterangepicker.js"></script>
+    <script src="upkeep/assets/vendor/libs/jquery-timepicker/jquery-timepicker.js"></script>
+    <script src="upkeep/assets/vendor/libs/pickr/pickr.js"></script>
+    <script src="upkeep/assets/js/forms-pickers.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+    <!-- Main JS -->
+    <script src="main/js/demo.js"></script>
+    <!-- File Upload -->
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+    <script src="https://unpkg.com/create-file-list@1.0.1/dist/create-file-list.min.js"></script>
+
+    <script src="../webessential/domain.js"></script>
+    <script src="../upkeep/upkeepjs/authfile.js"></script>
+    <script src="../upkeep/upkeepjs/signalr.min.js"></script>
+    
+    <script>
+        function loadScript(src) {
+            var script = document.createElement('script');
+            script.src = src + '?v=' + new Date().getTime();
+            document.body.appendChild(script);
+        }
+
+        loadScript('../upkeep/upkeepjs/auditinfo.js');
+      
+    </script>
+</body>
+</html>

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en" class="light-style layout-navbar-fixed layout-menu-fixed layout-footer-fixed layout-menu-collapse" dir="ltr" data-theme="theme-default" data-assets-path="upkeep/assets/" data-template="horizontal-menu-template-no-customizer">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <title>WorkWize | UpKeep</title>
+    <meta name="description" content="UpKeep Audit Information" />
+    <link rel="icon" type="image/x-icon" href="upkeep/assets/img/AppImages/logo.jpeg" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
+
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="upkeep/assets/vendor/fonts/boxicons.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/css/rtl/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/css/rtl/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+
+    <!-- Main CSS -->
+    <link href="main/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="main/css/style.css" rel="stylesheet" />
+    <link href="main/css/responsive.css" rel="stylesheet" />
+    <link rel="stylesheet" href="../webessential/LoadingSpin.css">
+
+    <!-- New Professional Audit Styles from test.html -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Public Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            font-size: 14px;
+        }
+
+        /* Header Section */
+        .checkpoint-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 1rem 1.5rem;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .checkpoint-title {
+            color: #212529;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .add-section {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .add-input {
+            padding: 0.5rem 0.75rem;
+            width: 250px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 0.875rem;
+        }
+
+        .add-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
+        .btn-add {
+            padding: 0.5rem 1rem;
+            background: #007bff;
+            color: white;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .btn-add:hover {
+            background: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Table Container */
+        .table-container {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        /* Professional Audit Table */
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .audit-table thead {
+            background-color: #f8f9fa;
+        }
+
+        .audit-table th {
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .audit-table th:last-child {
+            border-right: none;
+        }
+
+        .audit-table tbody tr {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .audit-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .audit-table tr td,
+        .audit-table tbody tr td {
+            padding: 5px !important;
+            vertical-align: middle;
+            border-right: 1px solid #dee2e6;
+            font-size: 0.8rem !important;
+            text-decoration: none !important;
+        }
+
+        .audit-table td:last-child {
+            border-right: none;
+        }
+
+        /* Status-based row styling */
+        .row-excellent { border-left: 3px solid #28a745; }
+        .row-good { border-left: 3px solid #17a2b8; }
+        .row-satisfactory { border-left: 3px solid #ffc107; }
+        .row-unsatisfactory { border-left: 3px solid #fd7e14; }
+        .row-poor { border-left: 3px solid #dc3545; }
+        .row-safety { border-left: 3px solid #6f42c1; }
+
+        /* Center align specific columns */
+        .audit-table td:first-child,
+        .audit-table td:nth-child(5),
+        .audit-table td:nth-child(8),
+        .audit-table td:nth-child(9) {
+            text-align: center;
+        }
+
+        .serial-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+
+        /* Checkpoint Name */
+        .checkpoint-name {
+            font-weight: 500;
+            color: #212529;
+            line-height: 1.3;
+            font-size: 0.8rem;
+        }
+
+        /* Form Controls - Consistent height */
+        .form-select-new {
+            padding: 0.5rem 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 0.75rem;
+            width: 100%;
+            min-width: 115px;
+            height: 34px;
+            box-sizing: border-box;
+        }
+
+        .form-select-new:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+            outline: none;
+        }
+
+        /* Status colors */
+        .status-excellent { color: #28a745; font-weight: 600; }
+        .status-good { color: #17a2b8; font-weight: 600; }
+        .status-satisfactory { color: #ffc107; font-weight: 600; }
+        .status-unsatisfactory { color: #fd7e14; font-weight: 600; }
+        .status-poor { color: #dc3545; font-weight: 600; }
+        .status-safety { color: #6f42c1; font-weight: 600; }
+
+        /* Photo Upload */
+        .photo-container-new {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+        }
+
+        .upload-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border: 2px dashed #ced4da;
+            border-radius: 4px;
+            background: #f8f9fa;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+
+        .upload-icon {
+            font-size: 1rem;
+            color: #6c757d;
+            margin-bottom: 0.125rem;
+        }
+
+        .upload-text {
+            font-size: 0.6rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        /* Upload Photo Button - Chrome compatible */
+        .btn-upload-photo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: background 0.2s;
+            height: 34px;
+            box-sizing: border-box;
+        }
+
+        .btn-upload-photo:hover {
+            background: #0056b3;
+        }
+
+        .btn-upload-photo i {
+            font-size: 0.7rem;
+        }
+
+        .photo-container-new {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-preview-new {
+            width: 60px;
+            height: 60px;
+            border-radius: 4px;
+            overflow: visible;
+            border: 1px solid #dee2e6;
+            position: relative;
+            margin: 8px;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        /* Remove Photo Button */
+        .remove-photo-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #dc3545;
+            color: white;
+            border: 2px solid white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            padding: 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 10;
+            transition: transform 0.15s, background 0.15s;
+        }
+
+        .remove-photo-btn:hover {
+            background: #c82333;
+            transform: scale(1.1);
+        }
+
+        .remove-photo-btn i {
+            font-size: 11px;
+            line-height: 1;
+        }
+
+        /* Auto-resizing Textarea */
+        .textarea-container {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .auto-textarea {
+            width: 100%;
+            padding: 0.5rem 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 0.75rem;
+            font-family: inherit;
+            line-height: 1.3;
+            resize: none;
+            overflow: hidden;
+            min-height: 34px;
+            height: 34px;
+            box-sizing: border-box;
+        }
+
+        .auto-textarea:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+            outline: none;
+        }
+
+        .auto-textarea::placeholder {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        .edit-button {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            background: #f8f9fa;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            padding: 0.25rem;
+            color: #6c757d;
+            cursor: pointer;
+            font-size: 0.7rem;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-button:hover {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        /* Action Buttons */
+        .btn-new {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.75rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            height: 34px;
+            box-sizing: border-box;
+        }
+
+        .btn-save-new {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .btn-save-new:hover {
+            background: #218838;
+            border-color: #1e7e34;
+        }
+
+        .btn-taskmaster-new {
+            background: #007bff;
+            color: white;
+            border: 1px solid #007bff;
+            font-size: 0.75rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            height: 34px;
+            box-sizing: border-box;
+        }
+
+        .btn-taskmaster-new:hover {
+            background: #0056b3;
+            border-color: #004085;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            padding: 0.5rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            height: 34px;
+            box-sizing: border-box;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        /* Column Widths */
+        .col-sno { width: 3%; text-align: center; }
+        .col-checkpoint { width: 16%; }
+        .col-status { width: 12%; min-width: 120px; }
+        .col-responsibility { width: 12%; min-width: 120px; }
+        .col-photo { width: 9%; text-align: center; }
+        .col-observation { width: 16%; }
+        .col-issue { width: 16%; }
+        .col-taskmaster { width: 10%; text-align: center; }
+        .col-action { width: 6%; text-align: center; }
+
+        /* Info Card */
+        .info-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .info-card-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .info-card-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+        }
+
+        .info-card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #212529;
+            margin: 0;
+        }
+
+        .info-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .info-stat-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.25rem 0;
+            font-size: 0.85rem;
+        }
+
+        .info-stat-label {
+            color: #6c757d;
+        }
+
+        .info-stat-value {
+            font-weight: 600;
+            color: #212529;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .checkpoint-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .add-section {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .add-input {
+                width: 200px;
+            }
+
+            .audit-table {
+                font-size: 0.7rem;
+            }
+
+            .audit-table th,
+            .audit-table td {
+                padding: 0.375rem 0.25rem;
+            }
+
+            .info-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Toast container override */
+        .toast-container {
+            z-index: 99999 !important;
+        }
+
+        /* Rows edited but not yet saved */
+        .audit-table tr.row-dirty td {
+            background-color: #fff8e1;
+        }
+
+        .audit-table tr.row-dirty .btn-save-new {
+            box-shadow: 0 0 0 2px #ffc107;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-save-all {
+            padding: 0.5rem 1rem;
+            background: #28a745;
+            color: white;
+            border: 1px solid #28a745;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            white-space: nowrap;
+        }
+
+        .btn-save-all:hover:not(:disabled) {
+            background: #218838;
+            border-color: #1e7e34;
+        }
+
+        .btn-save-all:disabled {
+            background: #9fd3ab;
+            border-color: #9fd3ab;
+            cursor: default;
+        }
+
+        /* Key Strength tab: a different colour so it doesn't read as an area */
+        .nav-tab1 .nav-link.keystrength-tab {
+            color: #b45309;
+            border: 1px dashed #d97706;
+            background: #fffbeb;
+        }
+
+        .nav-tab1 .nav-link.keystrength-tab:hover,
+        .nav-tab1 .nav-link.keystrength-tab.active {
+            color: #fff !important;
+            background: #d97706;
+            border: 1px solid #d97706;
+        }
+
+        .nav-tab1 .nav-link.keystrength-tab.active::before {
+            border-top-color: #d97706;
+        }
+
+        .keystrength-card {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-top: 3px solid #d97706;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .keystrength-card .ql-container {
+            min-height: 260px;
+            font-size: 0.95rem;
+        }
+    </style>
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/quill/typography.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/quill/editor.css" />
+</head>
+
+<body>
+    <!-- Layout wrapper -->
+    <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
+        <div class="layout-container">
+            <!-- Navbar -->
+            <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme bg-lighter" id="layout-navbar">
+                <div class="container-fluid">
+                    <div class="navbar-brand app-brand demo d-xl-flex py-0 me-4">
+                        <a href="index.html" class="app-brand-link gap-2">
+                            <div class="logo">
+                                <img src="main/images/logo.png" alt="WorkWize Logo" title="WorkWize"/>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+                        <ul class="navbar-nav flex-row align-items-center ms-auto">
+                            <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3">
+                                <i class="bx bx-bell bx-sm"></i>
+                                <span class="badge bg-danger rounded-pill badge-notifications">5</span>
+                            </li>
+                            <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                                <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown">
+                                    <div class="avatar avatar-online">
+                                        <img src="upkeep/assets/img/avatars/21.png" alt class="w-px-40 h-auto rounded-circle" />
+                                    </div>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item">
+                                            <div class="d-flex">
+                                                <div class="flex-shrink-0 me-3">
+                                                    <div class="avatar avatar-online">
+                                                        <img src="upkeep/assets/img/avatars/21.png" alt class="w-px-40 h-auto rounded-circle" />
+                                                    </div>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <span class="fw-semibold d-block" id="UserName_Name"></span>
+                                                    <small class="text-muted"><span id="is-manager"></span></small>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li><div class="dropdown-divider"></div></li>
+                                    <li>
+                                        <a class="dropdown-item" onclick="ResetPassword()">
+                                            <i class="bx bx-reset me-2"></i>
+                                            <span class="align-middle">Reset Password</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" onclick="LogoutUser()">
+                                            <i class="bx bx-power-off me-2"></i>
+                                            <span class="align-middle">Log Out</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+            <!-- / Navbar -->
+
+            <!-- Layout container -->
+            <div class="layout-page mt-2 mb-5">
+                <div class="content-wrapper">
+                    <!-- Main Content -->
+                    <section class="area-main">
+                        <div class="container">
+                            <!-- Main Area Selector -->
+                            <div id="mainareaselector-div"></div>
+
+                            <!-- Sub Area Selector -->
+                            <div id="subareaselector-div"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Footer -->
+                <footer class="content-footer footer bg-footer-theme">
+                    <div class="container-xxl d-flex flex-wrap justify-content-between py-3 flex-md-row flex-column">
+                        <div class="mb-4 mb-md-0 text-center w-100">
+                            &copy; 2024 - 2025 <a href="#">WorkWize</a>. All Rights Reserved
+                        </div>
+                    </div>
+                </footer>
+            </div>
+            <!-- / Layout container -->
+        </div>
+    </div>
+    <!-- / Layout wrapper -->
+
+    <!-- Overlay -->
+    <div class="layout-overlay layout-menu-toggle"></div>
+
+    <!-- Dynamic Content Holders -->
+    <div id="modelHolder"></div>
+    <div id="teams2"></div>
+    <div id="divholder"></div>
+    <div id="permissin-divs"></div>
+
+    <!-- Spinner Loader -->
+    <div id="SpinnerLoader" style="margin: 0 auto; display:none; z-index:999999"></div>
+
+    <!-- Core JS -->
+    <script src="upkeep/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="upkeep/assets/vendor/libs/popper/popper.js"></script>
+    <script src="upkeep/assets/vendor/js/bootstrap.js"></script>
+    <script src="upkeep/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="upkeep/assets/vendor/js/menu.js"></script>
+    <script src="upkeep/assets/js/main.js"></script>
+    <script src="upkeep/assets/vendor/js/helpers.js"></script>
+    <script src="upkeep/assets/js/config.js"></script>
+
+    <!-- Moment.js -->
+    <script src="upkeep/assets/vendor/libs/moment/moment.js"></script>
+
+    <!-- Quill rich text editor (Key Strength) -->
+    <script src="upkeep/assets/vendor/libs/quill/quill.js"></script>
+
+    <!-- App JS - Using existing approved JS files -->
+    <script src="../webessential/domain.js?v=20261031"></script>
+    <script src="../upkeep/upkeepjs/authfile.js"></script>
+    <script src="../upkeep/upkeepjs/signalr.min.js"></script>
+
+    <!-- Load audit info JS using existing file -->
+    <script>
+        function loadScript(src) {
+            var script = document.createElement('script');
+            script.src = src + '?v=' + new Date().getTime();
+            document.body.appendChild(script);
+        }
+
+        loadScript('../upkeep/upkeepjs/auditinfo_new.js');
+    </script>
+</body>
+</html>

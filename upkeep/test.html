@@ -1,0 +1,785 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professional Audit Checkpoint Table</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            padding: 1rem;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header Section */
+        .checkpoint-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 1rem 1.5rem;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .checkpoint-title {
+            color: #212529;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .add-checkpoint-section {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .checkpoint-input {
+            padding: 0.5rem 0.75rem;
+            width: 250px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 0.875rem;
+        }
+
+        .checkpoint-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+        }
+
+        .btn-add-checkpoint {
+            padding: 0.5rem 1rem;
+            background: #007bff;
+            color: white;
+            border: 1px solid #007bff;
+            border-radius: 4px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .btn-add-checkpoint:hover {
+            background: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Table Container */
+        .table-container {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        /* Professional Audit Table */
+        .audit-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .audit-table thead {
+            background-color: #f8f9fa;
+        }
+
+        .audit-table th {
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
+        }
+
+        .audit-table th:last-child {
+            border-right: none;
+        }
+
+        /* Table Rows */
+        .audit-table tbody tr {
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .audit-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .audit-table td {
+            padding: 0.5rem;
+            vertical-align: top;
+            border-right: 1px solid #dee2e6;
+            font-size: 0.8rem;
+        }
+
+        .audit-table td:last-child {
+            border-right: none;
+        }
+
+        /* Status-based row styling - minimal */
+        .row-excellent { border-left: 3px solid #28a745; }
+        .row-good { border-left: 3px solid #17a2b8; }
+        .row-satisfactory { border-left: 3px solid #ffc107; }
+        .row-unsatisfactory { border-left: 3px solid #fd7e14; }
+        .row-poor { border-left: 3px solid #dc3545; }
+        .row-safety { border-left: 3px solid #6f42c1; }
+
+        /* Serial Number */
+        .serial-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            background-color: #6c757d;
+            color: white;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+
+        /* Checkpoint Name */
+        .checkpoint-name {
+            font-weight: 500;
+            color: #212529;
+            line-height: 1.3;
+            font-size: 0.8rem;
+        }
+
+        /* Form Controls */
+        .form-select {
+            padding: 0.375rem 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 0.75rem;
+            width: 100%;
+            min-width: 100px;
+        }
+
+        .form-select:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+            outline: none;
+        }
+
+        /* Status colors - professional */
+        .status-excellent { color: #28a745; font-weight: 600; }
+        .status-good { color: #17a2b8; font-weight: 600; }
+        .status-satisfactory { color: #ffc107; font-weight: 600; }
+        .status-unsatisfactory { color: #fd7e14; font-weight: 600; }
+        .status-poor { color: #dc3545; font-weight: 600; }
+        .status-safety { color: #6f42c1; font-weight: 600; }
+
+        /* Photo Upload - simplified */
+        .photo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+        }
+
+        .upload-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 60px;
+            height: 60px;
+            border: 2px dashed #ced4da;
+            border-radius: 4px;
+            background: #f8f9fa;
+            cursor: pointer;
+        }
+
+        .upload-zone:hover {
+            border-color: #007bff;
+            background: #e3f2fd;
+        }
+
+        .upload-icon {
+            font-size: 1rem;
+            color: #6c757d;
+            margin-bottom: 0.125rem;
+        }
+
+        .upload-text {
+            font-size: 0.6rem;
+            color: #6c757d;
+            font-weight: 500;
+        }
+
+        .image-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #dee2e6;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Auto-resizing Textarea */
+        .textarea-container {
+            position: relative;
+            width: 100%;
+        }
+
+        .auto-textarea {
+            width: 100%;
+            padding: 0.375rem 0.5rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 0.75rem;
+            font-family: inherit;
+            line-height: 1.3;
+            resize: none;
+            overflow: hidden;
+            min-height: 2.5rem;
+        }
+
+        .auto-textarea:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+            outline: none;
+        }
+
+        .auto-textarea::placeholder {
+            color: #adb5bd;
+            font-style: italic;
+        }
+
+        .edit-button {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            background: #f8f9fa;
+            border: 1px solid #ced4da;
+            border-radius: 3px;
+            padding: 0.25rem;
+            color: #6c757d;
+            cursor: pointer;
+            font-size: 0.7rem;
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .edit-button:hover {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        /* Action Buttons - simplified */
+        .btn {
+            padding: 0.375rem 0.75rem;
+            border: 1px solid;
+            border-radius: 4px;
+            font-weight: 500;
+            cursor: pointer;
+            font-size: 0.75rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .btn-save {
+            background: #28a745;
+            color: white;
+            border-color: #28a745;
+        }
+
+        .btn-save:hover {
+            background: #218838;
+            border-color: #1e7e34;
+        }
+
+        .btn-taskmaster {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .btn-taskmaster:hover {
+            background: #0056b3;
+            border-color: #004085;
+        }
+
+        /* Status Indicators - clean */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            font-weight: 500;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        /* Column Widths */
+        .col-sno { width: 4%; }
+        .col-checkpoint { width: 20%; }
+        .col-status { width: 10%; }
+        .col-responsibility { width: 10%; }
+        .col-photo { width: 8%; }
+        .col-observation { width: 18%; }
+        .col-issue { width: 18%; }
+        .col-taskmaster { width: 8%; }
+        .col-action { width: 6%; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .checkpoint-header {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .add-checkpoint-section {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .checkpoint-input {
+                width: 200px;
+            }
+            
+            .audit-table {
+                font-size: 0.7rem;
+            }
+            
+            .audit-table th,
+            .audit-table td {
+                padding: 0.375rem 0.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="checkpoint-header">
+            <h3 class="checkpoint-title">Audit Checkpoints</h3>
+            <div class="add-checkpoint-section">
+                <input type="text" class="checkpoint-input" placeholder="Enter new checkpoint name">
+                <button class="btn-add-checkpoint">
+                    <i class="fa fa-plus"></i> Add
+                </button>
+            </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table class="audit-table">
+                    <thead>
+                        <tr>
+                            <th class="col-sno">S.No.</th>
+                            <th class="col-checkpoint">Check Points</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-responsibility">Responsibility</th>
+                            <th class="col-photo">Photo</th>
+                            <th class="col-observation">Observation</th>
+                            <th class="col-issue">Issue</th>
+                            <th class="col-taskmaster">Task Master</th>
+                            <th class="col-action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Row 1 - Excellent Status -->
+                        <tr class="row-excellent">
+                            <td>
+                                <span class="serial-number">1</span>
+                            </td>
+                            <td>
+                                <div class="checkpoint-name">Equipment Safety Check</div>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01" class="status-excellent" selected>Excellent</option>
+                                    <option value="02" class="status-good">Good</option>
+                                    <option value="03" class="status-satisfactory">Satisfactory</option>
+                                    <option value="04" class="status-unsatisfactory">Unsatisfactory</option>
+                                    <option value="05" class="status-poor">Poor</option>
+                                    <option value="06" class="status-safety">Safety Issue</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01" selected>Engineering</option>
+                                    <option value="02">Housekeeping</option>
+                                    <option value="03">Eng + HK</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="photo-container">
+                                    <div class="image-preview">
+                                        <img src="https://images.unsplash.com/photo-1581092795360-fd1ca04f0952?w=60&h=60&fit=crop" alt="Equipment" class="preview-image">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter observation...">All safety protocols verified and equipment functioning properly. Last maintenance completed on schedule.</textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter issue..."></textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="status-badge status-completed">
+                                    <i class="fa fa-check"></i>
+                                    JT001
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-save">
+                                    <i class="fa fa-save"></i> Save
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Row 2 - Good Status -->
+                        <tr class="row-good">
+                            <td>
+                                <span class="serial-number">2</span>
+                            </td>
+                            <td>
+                                <div class="checkpoint-name">Fire Extinguisher Inspection</div>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01" class="status-excellent">Excellent</option>
+                                    <option value="02" class="status-good" selected>Good</option>
+                                    <option value="03" class="status-satisfactory">Satisfactory</option>
+                                    <option value="04" class="status-unsatisfactory">Unsatisfactory</option>
+                                    <option value="05" class="status-poor">Poor</option>
+                                    <option value="06" class="status-safety">Safety Issue</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01">Engineering</option>
+                                    <option value="02" selected>Housekeeping</option>
+                                    <option value="03">Eng + HK</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="photo-container">
+                                    <div class="upload-zone">
+                                        <i class="fa fa-camera upload-icon"></i>
+                                        <span class="upload-text">Photo</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter observation...">Pressure normal</textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter issue..."></textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-taskmaster">
+                                    <i class="fa fa-plus"></i> Add
+                                </button>
+                            </td>
+                            <td>
+                                <button class="btn btn-save">
+                                    <i class="fa fa-save"></i> Save
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Row 3 - Poor Status -->
+                        <tr class="row-poor">
+                            <td>
+                                <span class="serial-number">3</span>
+                            </td>
+                            <td>
+                                <div class="checkpoint-name">Ventilation System</div>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01" class="status-excellent">Excellent</option>
+                                    <option value="02" class="status-good">Good</option>
+                                    <option value="03" class="status-satisfactory">Satisfactory</option>
+                                    <option value="04" class="status-unsatisfactory">Unsatisfactory</option>
+                                    <option value="05" class="status-poor" selected>Poor</option>
+                                    <option value="06" class="status-safety">Safety Issue</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01" selected>Engineering</option>
+                                    <option value="02">Housekeeping</option>
+                                    <option value="03">Eng + HK</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="photo-container">
+                                    <div class="upload-zone">
+                                        <i class="fa fa-camera upload-icon"></i>
+                                        <span class="upload-text">Photo</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter observation...">Multiple filters severely clogged with debris and dust. Air flow significantly reduced throughout the system. Fan motor showing signs of strain.</textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter issue...">Immediate filter replacement required. System efficiency compromised. Risk of motor failure if not addressed promptly.</textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-taskmaster">
+                                    <i class="fa fa-plus"></i> Add
+                                </button>
+                            </td>
+                            <td>
+                                <button class="btn btn-save">
+                                    <i class="fa fa-save"></i> Save
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Row 4 - Safety Issue -->
+                        <tr class="row-safety">
+                            <td>
+                                <span class="serial-number">4</span>
+                            </td>
+                            <td>
+                                <div class="checkpoint-name">Electrical Panel</div>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01" class="status-excellent">Excellent</option>
+                                    <option value="02" class="status-good">Good</option>
+                                    <option value="03" class="status-satisfactory">Satisfactory</option>
+                                    <option value="04" class="status-unsatisfactory">Unsatisfactory</option>
+                                    <option value="05" class="status-poor">Poor</option>
+                                    <option value="06" class="status-safety" selected>Safety Issue</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01" selected>Engineering</option>
+                                    <option value="02">Housekeeping</option>
+                                    <option value="03">Eng + HK</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="photo-container">
+                                    <div class="image-preview">
+                                        <img src="https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=60&h=60&fit=crop" alt="Electrical" class="preview-image">
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter observation...">Exposed wiring detected in main panel. Multiple safety covers missing or damaged. Warning labels faded and illegible.</textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter issue...">URGENT: Safety hazard present. Immediate attention required. Risk of electrical shock. Area should be restricted until repairs completed.</textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="status-badge status-completed">
+                                    <i class="fa fa-check"></i>
+                                    JT004
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-save">
+                                    <i class="fa fa-save"></i> Save
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Row 5 - Satisfactory -->
+                        <tr class="row-satisfactory">
+                            <td>
+                                <span class="serial-number">5</span>
+                            </td>
+                            <td>
+                                <div class="checkpoint-name">Emergency Exit Signs</div>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01" class="status-excellent">Excellent</option>
+                                    <option value="02" class="status-good">Good</option>
+                                    <option value="03" class="status-satisfactory" selected>Satisfactory</option>
+                                    <option value="04" class="status-unsatisfactory">Unsatisfactory</option>
+                                    <option value="05" class="status-poor">Poor</option>
+                                    <option value="06" class="status-safety">Safety Issue</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select class="form-select">
+                                    <option value="01">Engineering</option>
+                                    <option value="02">Housekeeping</option>
+                                    <option value="03" selected>Eng + HK</option>
+                                </select>
+                            </td>
+                            <td>
+                                <div class="photo-container">
+                                    <div class="upload-zone">
+                                        <i class="fa fa-camera upload-icon"></i>
+                                        <span class="upload-text">Photo</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter observation...">Signs visible and functional but brightness could be improved. Some LED units showing dimming. Battery backup tested and working.</textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="textarea-container">
+                                    <textarea class="auto-textarea" placeholder="Enter issue..."></textarea>
+                                    <button type="button" class="edit-button">
+                                        <i class="fa fa-edit"></i>
+                                    </button>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="status-badge status-pending">
+                                    <i class="fa fa-clock"></i>
+                                    Pending
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-save">
+                                    <i class="fa fa-save"></i> Save
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-resize textareas to fit content
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.max(textarea.scrollHeight, 40) + 'px';
+        }
+
+        // Initialize all textareas
+        document.addEventListener('DOMContentLoaded', function() {
+            const textareas = document.querySelectorAll('.auto-textarea');
+            
+            textareas.forEach(function(textarea) {
+                // Set initial height based on content
+                autoResizeTextarea(textarea);
+                
+                // Add event listener for dynamic resizing
+                textarea.addEventListener('input', function() {
+                    autoResizeTextarea(this);
+                });
+            });
+        });
+
+        // Optional: Handle edit button clicks (placeholder)
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.edit-button')) {
+                const textarea = e.target.closest('.textarea-container').querySelector('.auto-textarea');
+                textarea.focus();
+            }
+        });
+    </script>
+</body>
+</html>

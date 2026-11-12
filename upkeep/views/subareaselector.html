@@ -1,0 +1,57 @@
+<div class="tab-content" id="pills-tabContent">
+    <!-- Tab 1 -->
+    <div class="tab-pane fade show active" id="public" role="tabpanel"
+         aria-labelledby="public-tab">
+        <h3 class="heading-title text-center mt-4"><span id="area-name"></span></h3>
+        <div class="topcont">
+            <div class="row">
+                <div class="col-md-3">
+                    <img class="img-fluid" src="main/images/task-management.png" alt="">
+                    
+                </div>
+                <div class="col-md-9">
+                    <h4 class="mt-3"><span id="area-name2"></span> Inspection Report</h4>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p><span>Inspection by</span><span id="sc_inspectby"></span></p>
+                            <p><span>Inspection Date</span><span id="sc_inspectdate"></span></p>
+                            <p><span>Score</span><span id="sc_score"></span></p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><span>Excellent</span><span id="sc_excel"></span></p>
+                            <p><span>SI</span><span id="sc_safty"></span></p>
+                            <p><span>Good</span><span id="sc_good"></span></p>
+                        </div>
+                        <div class="col-md-4">
+                            <p><span>Satisfactory</span><span id="sc_satis"></span></p>
+                            <p><span>Unsatisfactory</span><span id="sc_unsatis"></span></p>
+                            <p><span>Poor</span><span id="sc_poor"></span></p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="d-flex gap-1 mt-3">
+                <input type="text" style="width:90%" class="form-control form-control-sm mb-0" placeholder="Enter new subarea name" id="newSubareaInput">
+                <button style="padding: 8px !important;" class="btn btn-primary btn-sm" onclick="AddNewSubarea()">Add New Subarea</button>
+            </div>
+            
+        </div>
+
+        <div id="subarealist-div">
+            
+        </div>
+
+        <div id="subareachecklist-div">
+
+        </div>
+
+       
+        <!-- Arrival Pavilion End -->
+
+    </div>
+
+</div>
+
+
+<script src="views/subareaselector.js"></script>

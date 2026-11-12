@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorkWize | Login</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="main/css/bootstrap.min.css" rel="stylesheet">
+    <link href="main/css/style.css" rel="stylesheet">
+    <link href="main/css/responsive.css" rel="stylesheet">
+    <script src="upkeepjs/authfile.js"></script>
+</head>
+
+<body>
+    <section class="FormsBg d-flex align-items-center justify-content-center">
+        <div class="container">
+            <div class="FormsContainer">
+                <div class="logo">
+                    <a href="index.html">
+                        <img class="d-block m-auto" src="main/images/logo.png" alt="" />
+                    </a>
+                </div>
+                <div class="heading mt-md-3">Login</div>
+                <div action="" class="form LoginForm px-md-5">
+                    <div class="FormsField">
+                        <label class="FormsLabel" for="username">Email id</label>
+                        <input required="" class="input" type="text" name="Username" id="username"
+                               placeholder="Registered E-Mail ID">
+                    </div>
+                    <div class="FormsField">
+                        <label class="FormsLabel" for="password">Password</label>
+                        <input required="" class="input" type="password" name="Password" id="password"
+                               placeholder="*************">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 pt-3">
+                            <input type="checkbox" /><span class="mx-1">Remember Me</span>
+                        </div>
+                        <div class="col-md-6 p-0">
+                            <span class="forgot-password">
+                                <a href="../forgetpwd.html">
+                                    <b>
+                                        Forgot Password
+                                        ?
+                                    </b>
+                                </a>
+                            </span>
+                        </div>
+                    </div>
+                    <button class="FormsButton" onclick="loginUser()">Log In</button>
+                </div>
+                <div class="d-flex justify-content-center">
+                    <span class="text-danger" id="login-errors"></span>
+                </div>
+
+            </div>
+        </div>
+    </section>
+    <!-- All JS -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script src="main/js/demo.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/cjs/index.min.js"></script>
+    <script src="../webessential/domain.js"></script>
+    <script src="../upkeep/upkeepjs/authfile.js"></script>
+</body>
+</html>

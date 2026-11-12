@@ -1,0 +1,275 @@
+/* =============================================Responsive Css Start ==================================================== */
+@media screen and (max-width: 991px) {
+    .both-btns{
+        width: 52%;
+    }
+}
+
+@media screen and (max-width: 768px) {
+
+    .job-tracker-datatable-heading .all-date-btn{
+        width: 66%;
+        }
+        .footer-bg ul{
+            display: block;
+
+        }
+}
+
+@media screen and (max-width: 767px) {
+    .FormsContainer::before {
+        content: "";
+        position: absolute; 
+        background: url(../images/login/LoginTopLeft1.png);
+        height: 87px;
+        top: 0;
+        right: 0;
+        background-size: cover;
+        width: 99px;
+        background-repeat: no-repeat;
+    }
+    .after-login .create-job a {
+        padding: 7px 7px;
+        font-size: 11px;
+    }
+    .top-banner .top-banner-content {
+        padding: 80px 20px;
+    }
+    .headsdes .navbar-brand img{
+        width: 100px;
+    }
+    div.dt-buttons {
+        margin-left: 87px;
+    }
+    div.dt-buttons .buttons-excel {
+        padding: 12px 21px;
+    }
+    .buttons-collection{
+        padding: 12px 21px !important;
+    }
+    .datatable-section .all-headings {
+        top: 6px;
+    }
+    .all-jobs-table table.dataTable>tbody>tr td.child ul{
+        border-right: 0px;
+        width: 100%;
+    }
+    .both-btns {
+        width: 69%;
+    }
+    .both-btns .btn-greens, .both-btns .btn-blues {
+        padding: 10px 15px;
+        font-size: 15px;
+    }
+    .send-menager-btn .greens-btn {
+        padding: 15px 23px;
+        font-size: 13px;
+    }
+    .comments-content a{
+        position: relative;
+        color: var(--black) !important;
+        font-weight: 600;
+     }
+
+     .audit-banner {
+        padding: 30px 10px 30px 10px !important;
+    }
+
+    .top-banner-content h1 {
+        font-size: 24px;
+        line-height: 34px;
+    }
+
+    .audit-search-section .audit-search-sec {
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .audit-bg {
+        margin: 0px 0px 0px 0px;
+    }
+
+    .form-control {
+        margin-bottom: 10px;
+    }
+
+    .area-main {
+        background: #fff;
+        padding: 20px 0px;
+        margin-top: 0px;
+    }
+
+    .nav-tab1 .nav-link {
+        padding: 7px 14px;
+        font-size: 14px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+
+    .area-main .topcont p {
+        padding: 5px 0px;
+    }
+
+    .nav-tab2 .nav-link {
+        padding: 7px 14px;
+        font-size: 14px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+    .btn-gap-right {
+        margin-right: 0px !important;
+        margin-bottom: 10px;
+    }
+
+    .audit-search-section {
+        background-color: var(--white);
+        position: relative;
+        width: 100%;
+        margin-bottom: 30px;
+    }
+    .mt-4 {
+        margin-top: 2rem !important;
+    }
+    .arrival-table tbody, td, tfoot, th, thead, tr {
+        border-color: inherit;
+        border-style: solid;
+        border-width: 0;
+        padding: 5px 0px !important;
+    }
+    .arrival-bg tr td {
+        text-decoration: none !important;
+        color: #333 !important;
+        font-size: 14px;
+    }
+
+    .arrival-table thead, tr {
+        border-color: inherit;
+        border-style: solid;
+        border-width: 0;
+        background: #8a90a0;
+        padding: 0px !important;
+    }
+
+    #no-table table, #no-table thead, #no-table tbody, #no-table th, #no-table td, #no-table tr {
+        display: block;
+    }
+
+    #no-table thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+    #no-table tr {
+        border: 1px solid #ccc;
+        padding: 10px 10px !important;
+        margin-bottom: 10px;
+    }
+    #no-table td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 32%!important;
+        white-space: normal;
+        text-align:left;
+    }
+    #no-table td:before {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        /* width: 40%; */
+        padding-right: 40px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+    }
+    #no-table td:before {
+        content: attr(data-title);
+    }
+    /* .btcd-f-input {
+        display: inline-block;
+        width: 100%;
+        position: relative;
+        overflow: hidden;
+    }
+ */
+    /* .btcd-f-wrp > button {
+        cursor: pointer;
+        background: #f3f3f3;
+        padding: 5px;
+        display: inline-block;
+        border-radius: 9px;
+        border: none;
+        margin-right: 8px;
+        height: 35px;
+        width: 100%;
+    } */
+
+    .btcd-files > div {
+        display: flex;
+        align-items: center;
+        background: #f8f8f8;
+        border-radius: 10px;
+        margin-left: 0;
+        width: 85%;
+        margin-top: 10px;
+        height: 40px;
+    }
+    .modal-body {
+        position: relative;
+        flex: 1 1 auto;
+        padding: 10px!important;
+    }
+    .btcd-f-wrp:hover {
+        background:transparent;
+        border-radius: 10px;
+    }
+    .modal-simple .btn-close {
+        position: absolute;
+        top: 0rem !important;
+        right: -5px !important;
+    }
+    .btcd-f-wrp > button > img {
+        width: 18px;
+        margin-top: -14px;
+    }
+    .logo img{
+        height: 40px;
+    }
+    .arrival-bg .table-responsive {
+        margin: 0px 0px 0px 0px;
+    }
+    .area-main .topcont {
+        background: #F2F4F9;
+        padding: 20px 20px;
+        margin: 0px 0px 30px 0px;
+    }
+
+    .heading {
+        font-size: 20px;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  }
+
+
+
+  @media (max-width: 991px) {
+    .tab-content>.tab-pane {
+      display: block;
+      opacity: 1;
+    }
+  }

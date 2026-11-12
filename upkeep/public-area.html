@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en" class="light-style layout-navbar-fixed layout-menu-fixed layout-footer-fixed layout-menu-collapse" dir="ltr" data-theme="theme-default" data-assets-path="upkeep/assets/" data-template="horizontal-menu-template-no-customizer">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+    <title>WorkWize | UpKeep</title>
+    <meta name="description" content="" />
+    <link rel="icon" type="image/x-icon" href="upkeep/assets/img/AppImages/logo.jpeg" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet" />
+    <!-- All CSS -->
+    <link rel="stylesheet" href="upkeep/assets/vendor/fonts/boxicons.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/fonts/fontawesome.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/fonts/flag-icons.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/css/rtl/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/css/rtl/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/typeahead-js/typeahead.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-bs5/datatables.bootstrap5.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-checkboxes-jquery/datatables.checkboxes.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-buttons-bs5/buttons.bootstrap5.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/flatpickr/flatpickr.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/datatables-rowgroup-bs5/rowgroup.bootstrap5.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/formvalidation/dist/css/formValidation.min.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/bootstrap-datepicker/bootstrap-datepicker.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/bootstrap-daterangepicker/bootstrap-daterangepicker.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/jquery-timepicker/jquery-timepicker.css" />
+    <link rel="stylesheet" href="upkeep/assets/vendor/libs/pickr/pickr-themes.css" />
+    <!-- Main CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+    <link href="main/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="main/css/style.css" rel="stylesheet" />
+    <link href="main/css/responsive.css" rel="stylesheet" />
+</head>
+
+<body>
+    <!-- Layout wrapper -->
+    <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
+        <div class="layout-container">
+            <!-- Menu -->
+            <nav class="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme bg-lighter"
+                id="layout-navbar">
+                <div class="container-fluid">
+                    <div class="navbar-brand app-brand demo d-xl-flex py-0 me-4">
+                        <a href="index.html" class="app-brand-link gap-2">
+                            <div class="logo">
+                                <img src="main/images/logo.png" alt="img" title="img"/>
+                            </div>
+                        </a>
+                    </div>
+                    <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
+                        <ul class="navbar-nav flex-row align-items-center ms-auto">
+                            <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3">
+                                <i class="bx bx-bell bx-sm"></i>
+                                <span class="badge bg-danger rounded-pill badge-notifications">5</span>
+                            </li>
+                            <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                                <a class="nav-link dropdown-toggle hide-arrow" href="javascript:void(0);"
+                                    data-bs-toggle="dropdown">
+                                    <div class="avatar avatar-online">
+                                        <img src="upkeep/assets/img/avatars/21.png" alt
+                                            class="w-px-40 h-auto rounded-circle" />
+                                    </div>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item">
+                                            <div class="d-flex">
+                                                <div class="flex-shrink-0 me-3">
+                                                    <div class="avatar avatar-online">
+                                                        <img src="upkeep/assets/img/avatars/21.png" alt
+                                                            class="w-px-40 h-auto rounded-circle" />
+                                                    </div>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <span class="fw-semibold d-block" id="UserName_Name"></span>
+                                                    <small class="text-muted">Sunil Kumar<span
+                                                            id="is-manager"></span></small>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <div class="dropdown-divider"></div>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" onclick="ResetPassword()">
+                                            <i class="bx bx-reset me-2"></i>
+                                            <span class="align-middle">Reset Password</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" onclick="LogoutUser()">
+                                            <i class="bx bx-power-off me-2"></i>
+                                            <span class="align-middle">Log Out</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+            <!-- Menu End -->
+
+            <!-- Layout container -->
+            <div class="layout-page mt-2 mb-5">
+                <div class="content-wrapper">
+                    <!-- Public Area Content Start -->
+                    <section class="area-main">
+                        <div class="container">
+
+                            <ul class="nav nav-tab1 mb-3" id="tab1-tab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="public-tab" data-bs-toggle="pill"
+                                        data-bs-target="#public" type="button" role="tab" aria-controls="public"
+                                        aria-selected="true">Public Area (Guest)</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="guest-tab" data-bs-toggle="pill"
+                                        data-bs-target="#guest" type="button" role="tab" aria-controls="guest"
+                                        aria-selected="false">Guest Villa</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="boh-tab" data-bs-toggle="pill" data-bs-target="#boh"
+                                        type="button" role="tab" aria-controls="boh" aria-selected="false">BOH</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="equipment-tab" data-bs-toggle="pill"
+                                        data-bs-target="#equipment" type="button" role="tab" aria-controls="equipment"
+                                        aria-selected="false">Equipment</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="utility-tab" data-bs-toggle="pill"
+                                        data-bs-target="#utility" type="button" role="tab" aria-controls="utility"
+                                        aria-selected="false">Utility</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="fire-tab" data-bs-toggle="pill" data-bs-target="#fire"
+                                        type="button" role="tab" aria-controls="fire" aria-selected="false">Fire
+                                        Safety</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="pills-contact-tab" data-bs-toggle="pill"
+                                        data-bs-target="#sop" type="button" role="tab" aria-controls="sop"
+                                        aria-selected="false">SOP & Checklist</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="pathway-tab" data-bs-toggle="pill"
+                                        data-bs-target="#pathway" type="button" role="tab" aria-controls="pathway"
+                                        aria-selected="false">Pathway & Landscape</button>
+                                </li>
+                            </ul>
+                            <div class="tab-content" id="pills-tabContent">
+                                <!-- Tab 1 -->
+                                <div class="tab-pane fade show active" id="public" role="tabpanel"
+                                    aria-labelledby="public-tab">
+                                    <h3 class="heading-title text-center mt-4">Public Area</h3>
+                                    <div class="topcont">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <img class="img-fluid" src="main/images/task-management.png" alt="">
+                                            </div>
+                                            <div class="col-md-9">
+                                                <h4 class="mt-3">OLM Public Area Inspection Report</h4>
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <p><span>Inspection by</span>Inspection</p>
+                                                        <p><span>Inspection Date</span>15/07/2023</p>
+                                                        <p><span>Score</span>0</p>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <p><span>Excellent</span>0</p>
+                                                        <p><span>SI</span>0</p>
+                                                        <p><span>Good</span>0</p>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <p><span>Satisfactory</span>0</p>
+                                                        <p><span>Unsatisfactory</span>0</p>
+                                                        <p><span>Poor</span>0</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+
+                                    <!-- Arrival Pavilion Start -->
+                                    <ul class="nav nav-tab2 mb-3" id="tab2-tab" role="tablist">
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link active" id="arrival1-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival1" type="button" role="tab"
+                                                aria-controls="arrival1" aria-selected="true">Arrival Pavilion</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival2-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival2" type="button" role="tab"
+                                                aria-controls="arrival2" aria-selected="false">Reception</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival3-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival3" type="button" role="tab"
+                                                aria-controls="arrival3" aria-selected="false">Dive center</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival4-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival4" type="button" role="tab"
+                                                aria-controls="arrival4" aria-selected="false">Water sports</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival5-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival5" type="button" role="tab"
+                                                aria-controls="arrival5" aria-selected="false">Palms</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival6-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival6" type="button" role="tab"
+                                                aria-controls="arrival6" aria-selected="false">M6M Restaurant and
+                                                Bar</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival7-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival7" type="button" role="tab"
+                                                aria-controls="arrival7" aria-selected="false">Traditions</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival8-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival8" type="button" role="tab"
+                                                aria-controls="arrival8" aria-selected="false">JDV & Jin Is In</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival9-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival9" type="button" role="tab"
+                                                aria-controls="arrival9" aria-selected="false">Beach Club</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival10-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival10" type="button" role="tab"
+                                                aria-controls="arrival10" aria-selected="false">Lonu</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival11-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival11" type="button" role="tab"
+                                                aria-controls="arrival11" aria-selected="false">Spa complex</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival12-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival12" type="button" role="tab"
+                                                aria-controls="arrival12" aria-selected="false">Boutique Shop</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival13-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival13" type="button" role="tab"
+                                                aria-controls="arrival13" aria-selected="false">Recreation area/Tennis
+                                                court</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival14-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival14" type="button" role="tab"
+                                                aria-controls="arrival14" aria-selected="false">Kids Club</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival15-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival15" type="button" role="tab"
+                                                aria-controls="arrival15" aria-selected="false">HK Pantries</button>
+                                        </li>
+                                        <li class="nav-item" role="presentation">
+                                            <button class="nav-link" id="arrival16-tab" data-bs-toggle="pill"
+                                                data-bs-target="#arrival16" type="button" role="tab"
+                                                aria-controls="arrival16" aria-selected="false">Departure
+                                                lounge</button>
+                                        </li>
+                                    </ul>
+
+                                    <div class="tab-content" id="pills-tabContent">
+                                        <div class="tab-pane fade show active" id="arrival1" role="tabpanel"
+                                            aria-labelledby="arrival1-tab">
+                                            <h3 class="heading-title text-left mt-4">Arrival Pavilion</h3>
+                                            <!-- Table Start -->
+                                            <div class="arrival-bg">
+                                                <!-- <h2 class="all-headings">ALL JOBS</h2> -->
+                                                <div class="table-responsive">
+                                                    <div id="no-table">
+                                                        <table class="table table-bordered arrival-table cf">
+                                                            <thead class="cf">
+                                                                <tr>
+                                                                    <th style="width: 5%;">S.No.</th>
+                                                                    <th style="width: 30%;">Check Points</th>
+                                                                    <th style="width: 10%;">Status</th>
+                                                                    <th style="width: 5%;">Responsibility</th>
+                                                                    <th style="width: 10%;">Photo</th>
+                                                                    <th style="width: 10%;">Observation</th>
+                                                                    <th style="width: 10%;">Issue</th>
+                                                                    <th style="width: 10%;">Task Master</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                <tr>
+                                                                    <td data-title="S.No.">1</td>
+                                                                    <td data-title="Check Point">Jetty, jetty fascia &
+                                                                        platform</td>
+                                                                    <td data-title="Status">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Excellent</option>
+                                                                            <option value="02">Good</option>
+                                                                            <option value="03">Satisfactory</option>
+                                                                            <option value="04">Unsatisfactory</option>
+                                                                            <option value="05">Poor</option>
+                                                                            <option value="06">Safety Issue</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Responsibility">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Eng</option>
+                                                                            <option value="02">HK</option>
+                                                                            <option value="03">Eng+HK</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Photo"><i
+                                                                            class="fa fa-upload upload-file"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#upload-file"></i></td>
+                                                                    <td data-title="Observation">Text</td>
+                                                                    <td data-title="Issue">Text</td>
+                                                                    <td data-title="Task Master"><button
+                                                                            class="btn-blue-small">Add To
+                                                                            Master</button></td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <td data-title="S.No.">2</td>
+                                                                    <td data-title="Check Point">Fire extinguisher box,
+                                                                        MCP</td>
+                                                                    <td data-title="Status">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Excellent</option>
+                                                                            <option value="02">Good</option>
+                                                                            <option value="03">Satisfactory</option>
+                                                                            <option value="04">Unsatisfactory</option>
+                                                                            <option value="05">Poor</option>
+                                                                            <option value="06">Safety Issue</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Responsibility">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Eng</option>
+                                                                            <option value="02">HK</option>
+                                                                            <option value="03">Eng+HK</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Photo"><i
+                                                                            class="fa fa-upload upload-file"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#upload-file"></i></td>
+                                                                    <td data-title="Observation">Text</td>
+                                                                    <td data-title="Issue">Text</td>
+                                                                    <td data-title="Task Master"><button
+                                                                            class="btn-blue-small">Add To
+                                                                            Master</button></td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <td data-title="S.No.">3</td>
+                                                                    <td data-title="Check Point">Condition of
+                                                                        compound/privacy wall paint, roof fascia,
+                                                                        decrabond roof & rafters</td>
+                                                                    <td data-title="Status">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Excellent</option>
+                                                                            <option value="02">Good</option>
+                                                                            <option value="03">Satisfactory</option>
+                                                                            <option value="04">Unsatisfactory</option>
+                                                                            <option value="05">Poor</option>
+                                                                            <option value="06">Safety Issue</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Responsibility">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Eng</option>
+                                                                            <option value="02">HK</option>
+                                                                            <option value="03">Eng+HK</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Photo"><i
+                                                                            class="fa fa-upload upload-file"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#upload-file"></i></td>
+                                                                    <td data-title="Observation">Text</td>
+                                                                    <td data-title="Issue">Text</td>
+                                                                    <td data-title="Task Master"><button
+                                                                            class="btn-blue-small">Add To
+                                                                            Master</button></td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <td data-title="S.No.">4</td>
+                                                                    <td data-title="Check Point">Room number/Signage
+                                                                    </td>
+                                                                    <td data-title="Status">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Excellent</option>
+                                                                            <option value="02">Good</option>
+                                                                            <option value="03">Satisfactory</option>
+                                                                            <option value="04">Unsatisfactory</option>
+                                                                            <option value="05">Poor</option>
+                                                                            <option value="06">Safety Issue</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Responsibility">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Eng</option>
+                                                                            <option value="02">HK</option>
+                                                                            <option value="03">Eng+HK</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Photo"><i
+                                                                            class="fa fa-upload upload-file"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#upload-file"></i></td>
+                                                                    <td data-title="Observation">Text</td>
+                                                                    <td data-title="Issue">Text</td>
+                                                                    <td data-title="Task Master"><button
+                                                                            class="btn-blue-small">Add To
+                                                                            Master</button></td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <td data-title="S.No.">5</td>
+                                                                    <td data-title="Check Point">Entrance lights,
+                                                                        location, intensity </td>
+                                                                    <td data-title="Status">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Excellent</option>
+                                                                            <option value="02">Good</option>
+                                                                            <option value="03">Satisfactory</option>
+                                                                            <option value="04">Unsatisfactory</option>
+                                                                            <option value="05">Poor</option>
+                                                                            <option value="06">Safety Issue</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Responsibility">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Eng</option>
+                                                                            <option value="02">HK</option>
+                                                                            <option value="03">Eng+HK</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Photo"><i
+                                                                            class="fa fa-upload upload-file"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#upload-file"></i></td>
+                                                                    <td data-title="Observation">Text</td>
+                                                                    <td data-title="Issue">Text</td>
+                                                                    <td data-title="Task Master"><button
+                                                                            class="btn-blue-small">Add To
+                                                                            Master</button></td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <td data-title="S.No.">6</td>
+                                                                    <td data-title="Check Point">Condition of wooden
+                                                                        bench </td>
+                                                                    <td data-title="Status">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Excellent</option>
+                                                                            <option value="02">Good</option>
+                                                                            <option value="03">Satisfactory</option>
+                                                                            <option value="04">Unsatisfactory</option>
+                                                                            <option value="05">Poor</option>
+                                                                            <option value="06">Safety Issue</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Responsibility">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Eng</option>
+                                                                            <option value="02">HK</option>
+                                                                            <option value="03">Eng+HK</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Photo"><i
+                                                                            class="fa fa-upload upload-file"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#upload-file"></i></td>
+                                                                    <td data-title="Observation">Text</td>
+                                                                    <td data-title="Issue">Text</td>
+                                                                    <td data-title="Task Master"><button
+                                                                            class="btn-blue-small">Add To
+                                                                            Master</button></td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <td data-title="S.No.">7</td>
+                                                                    <td data-title="Check Point">MEP room door, wall &
+                                                                        interior </td>
+                                                                    <td data-title="Status">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Excellent</option>
+                                                                            <option value="02">Good</option>
+                                                                            <option value="03">Satisfactory</option>
+                                                                            <option value="04">Unsatisfactory</option>
+                                                                            <option value="05">Poor</option>
+                                                                            <option value="06">Safety Issue</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Responsibility">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Eng</option>
+                                                                            <option value="02">HK</option>
+                                                                            <option value="03">Eng+HK</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Photo"><i
+                                                                            class="fa fa-upload upload-file"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#upload-file"></i></td>
+                                                                    <td data-title="Observation">Text</td>
+                                                                    <td data-title="Issue">Text</td>
+                                                                    <td data-title="Task Master"><button
+                                                                            class="btn-blue-small">Add To
+                                                                            Master</button></td>
+                                                                </tr>
+
+                                                                <tr>
+                                                                    <td data-title="S.No.">8</td>
+                                                                    <td data-title="Check Point">Entrance pathway/sub-jetty to
+                                                                        the villa </td>
+                                                                    <td data-title="Status">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Excellent</option>
+                                                                            <option value="02">Good</option>
+                                                                            <option value="03">Satisfactory</option>
+                                                                            <option value="04">Unsatisfactory</option>
+                                                                            <option value="05">Poor</option>
+                                                                            <option value="06">Safety Issue</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Responsibility">
+                                                                        <select name="" id="" class="form-select">
+                                                                            <option value="01">Eng</option>
+                                                                            <option value="02">HK</option>
+                                                                            <option value="03">Eng+HK</option>
+                                                                        </select>
+                                                                    </td>
+                                                                    <td data-title="Photo"><i
+                                                                            class="fa fa-upload upload-file"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#upload-file"></i></td>
+                                                                    <td data-title="Observation">Text</td>
+                                                                    <td data-title="Issue">Text</td>
+                                                                    <td data-title="Task Master"><button
+                                                                            class="btn-blue-small">Add To
+                                                                            Master</button></td>
+                                                                </tr>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                <div class="row">
+                                                    <div class="col-md-12 float-end text-end">
+                                                        <a href="index.html" class="btn btn-blue btn-gap-right">Back to
+                                                            Home</a>
+                                                        <button class="btn btn-green btn-gap-right">Save</button>
+                                                        <button class="btn btn-blue btn-gap-right">Prev</button>
+                                                        <button class="btn btn-green btn-gap-right me-0">Next</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="tab-pane fade" id="arrival2" role="tabpanel"
+                                            aria-labelledby="arrival2-tab">2</div>
+                                        <div class="tab-pane fade" id="arrival3" role="tabpanel"
+                                            aria-labelledby="arrival3-tab">3</div>
+                                        <div class="tab-pane fade" id="arrival4" role="tabpanel"
+                                            aria-labelledby="arrival4-tab">4</div>
+                                        <div class="tab-pane fade" id="arrival5" role="tabpanel"
+                                            aria-labelledby="arrival5-tab">5</div>
+                                        <div class="tab-pane fade" id="arrival6" role="tabpanel"
+                                            aria-labelledby="arrival6-tab">6</div>
+                                        <div class="tab-pane fade" id="arrival7" role="tabpanel"
+                                            aria-labelledby="arrival7-tab">7</div>
+                                        <div class="tab-pane fade" id="arrival8" role="tabpanel"
+                                            aria-labelledby="arrival8-tab">8</div>
+                                        <div class="tab-pane fade" id="arrival9" role="tabpanel"
+                                            aria-labelledby="arrival9-tab">9</div>
+                                        <div class="tab-pane fade" id="arrival10" role="tabpanel"
+                                            aria-labelledby="arrival10-tab">10</div>
+                                        <div class="tab-pane fade" id="arrival11" role="tabpanel"
+                                            aria-labelledby="arrival11-tab">11</div>
+                                        <div class="tab-pane fade" id="arrival12" role="tabpanel"
+                                            aria-labelledby="arrival12-tab">12</div>
+                                        <div class="tab-pane fade" id="arrival13" role="tabpanel"
+                                            aria-labelledby="arrival13-tab">13</div>
+                                        <div class="tab-pane fade" id="arrival14" role="tabpanel"
+                                            aria-labelledby="arrival14-tab">14</div>
+                                        <div class="tab-pane fade" id="arrival15" role="tabpanel"
+                                            aria-labelledby="arrival15-tab">15</div>
+                                        <div class="tab-pane fade" id="arrival16" role="tabpanel"
+                                            aria-labelledby="arrival16-tab">16</div>
+                                    </div>
+                                    <!-- Arrival Pavilion End -->
+
+                                </div>
+                                <!-- Tab 2 -->
+                                <div class="tab-pane fade" id="guest" role="tabpanel" aria-labelledby="guest-tab">
+                                    <h3 class="heading-title text-center mt-4">Guest Villa (324, WV )</h3>
+                                    <form action="" class="mb-4">
+                                        <div class="row">
+                                            <div class="col-md-4 offset-md-4">
+                                                <select name="" class="form-select" id="select_box">
+                                                    <option>Select Guest Villan</option>
+                                                    <option value="a">Guest Villa 1</option>
+                                                    <option value="b">Guest Villa 2</option>
+                                                    <option value="c">Guest Villa 3</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                    <!-- Guest Villa Start -->
+                                    <div id="a" class="hide">
+                                        <div class="topcont">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <img class="img-fluid" src="main/images/task-management.png" alt="">
+                                                </div>
+                                                <div class="col-md-9">
+                                                    <h4 class="mt-3">OLM Villa Inspection Report</h4>
+                                                    <div class="row">
+                                                        <div class="col-md-4">
+                                                            <p><span>Inspection by</span>Sunil Kumar</p>
+                                                            <p><span>Inspection Date</span>15/07/2023</p>
+                                                            <p><span>SL</span>4</p>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <p><span>Score</span>56%</p>
+                                                            <p><span>Good</span>21%</p>
+                                                            <p><span>Unsatisfactory</span>15%</p>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <p><span>Excellent </span>29%</p>
+                                                            <p><span>Satisfactory </span>15%</p>
+                                                            <p><span>Poor</span>12%</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                        <ul class="nav nav-tab2 mb-3" id="tab2-tab" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="villa1-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa1" type="button" role="tab"
+                                                    aria-controls="villa1" aria-selected="true">Villa Entrance</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa2-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa2" type="button" role="tab"
+                                                    aria-controls="villa2" aria-selected="false">Bedroom</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa3-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa3" type="button" role="tab"
+                                                    aria-controls="villa3" aria-selected="false">Bathroom</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa4-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa4" type="button" role="tab"
+                                                    aria-controls="villa4" aria-selected="false">Outdoor Deck</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa5-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa5" type="button" role="tab"
+                                                    aria-controls="villa5" aria-selected="false">Pool</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa6-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa6" type="button" role="tab"
+                                                    aria-controls="villa6" aria-selected="false">Villa
+                                                    Inspection</button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content" id="pills-tabContent">
+                                            <div class="tab-pane fade show active" id="villa1" role="tabpanel"
+                                                aria-labelledby="villa1-tab">
+                                                <h3 class="heading-title text-blue text-left mt-4">Villa Entrance</h3>
+                                                <!-- Table Start -->
+                                                <div class="arrival-bg">
+                                                    <!-- <h2 class="all-headings">ALL JOBS</h2> -->
+                                                    <div class="table-responsive">
+                                                        <div id="no-table">
+                                                            <table class="table table-bordered arrival-table cf">
+                                                                <thead class="cf">
+                                                                    <tr>
+                                                                        <th style="width: 5%;">S.No.</th>
+                                                                        <th style="width: 30%;">Check Points</th>
+                                                                        <th style="width: 10%;">Status</th>
+                                                                        <th style="width: 5%;">Responsibility</th>
+                                                                        <th style="width: 10%;">Photo</th>
+                                                                        <th style="width: 10%;">Observation</th>
+                                                                        <th style="width: 10%;">Issue</th>
+                                                                        <th style="width: 10%;">Task Master</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td data-title="S.No.">1</td>
+                                                                        <td data-title="Check Point">Jetty, jetty fascia &
+                                                                            platform</td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">2</td>
+                                                                        <td data-title="Check Point">Fire extinguisher box,
+                                                                            MCP</td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">3</td>
+                                                                        <td data-title="Check Point">Condition of
+                                                                            compound/privacy wall paint, roof fascia,
+                                                                            decrabond roof & rafters</td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">4</td>
+                                                                        <td data-title="Check Point">Room number/Signage
+                                                                        </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">5</td>
+                                                                        <td data-title="Check Point">Entrance lights,
+                                                                            location, intensity </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">6</td>
+                                                                        <td data-title="Check Point">Condition of wooden
+                                                                            bench </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">7</td>
+                                                                        <td data-title="Check Point">MEP room door, wall &
+                                                                            interior </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">8</td>
+                                                                        <td data-title="Check Point">Entrance pathway/sub-jetty to
+                                                                            the villa </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-12 float-end text-end">
+                                                            <a href="index.html" class="btn btn-blue btn-gap-right">Back to
+                                                                Home</a>
+                                                            <button class="btn btn-green btn-gap-right">Save</button>
+                                                            <button class="btn btn-blue btn-gap-right">Prev</button>
+                                                            <button class="btn btn-green btn-gap-right me-0">Next</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="tab-pane fade" id="villa2" role="tabpanel"
+                                                aria-labelledby="villa2-tab">2</div>
+                                            <div class="tab-pane fade" id="villa3" role="tabpanel"
+                                                aria-labelledby="villa3-tab">3</div>
+                                            <div class="tab-pane fade" id="villa4" role="tabpanel"
+                                                aria-labelledby="villa4-tab">4</div>
+                                            <div class="tab-pane fade" id="villa5" role="tabpanel"
+                                                aria-labelledby="villa5-tab">5</div>
+                                            <div class="tab-pane fade" id="villa6" role="tabpanel"
+                                                aria-labelledby="villa6-tab">6</div>
+                                        </div>
+                                    </div>
+
+                                    <div id="b" class="hide">
+                                        <div class="topcont">
+                                            <div class="row">
+                                                <div class="col-md-3">
+                                                    <img class="img-fluid" src="main/images/task-management.png" alt="">
+                                                </div>
+                                                <div class="col-md-9">
+                                                    <h5 class="mt-3">OLM Villa Inspection Report</h5>
+                                                    <div class="row">
+                                                        <div class="col-md-4">
+                                                            <p><span>Inspection by</span>Sunil Kumar</p>
+                                                            <p><span>Inspection Date</span>15/07/2023</p>
+                                                            <p><span>SL</span>4</p>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <p><span>Score</span>56%</p>
+                                                            <p><span>Good</span>21%</p>
+                                                            <p><span>Unsatisfactory</span>15%</p>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            <p><span>Excellent </span>29%</p>
+                                                            <p><span>Satisfactory </span>15%</p>
+                                                            <p><span>Poor</span>12%</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+                                        </div>
+                                        <ul class="nav nav-tab2 mb-3" id="tab2-tab" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="villa1-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa1" type="button" role="tab"
+                                                    aria-controls="villa1" aria-selected="true">Villa Entrance</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa2-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa2" type="button" role="tab"
+                                                    aria-controls="villa2" aria-selected="false">Bedroom</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa3-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa3" type="button" role="tab"
+                                                    aria-controls="villa3" aria-selected="false">Bathroom</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa4-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa4" type="button" role="tab"
+                                                    aria-controls="villa4" aria-selected="false">Outdoor Deck</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa5-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa5" type="button" role="tab"
+                                                    aria-controls="villa5" aria-selected="false">Pool</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="villa6-tab" data-bs-toggle="pill"
+                                                    data-bs-target="#villa6" type="button" role="tab"
+                                                    aria-controls="villa6" aria-selected="false">Villa
+                                                    Inspection</button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content" id="pills-tabContent">
+                                            <div class="tab-pane fade show active" id="villa1" role="tabpanel"
+                                                aria-labelledby="villa1-tab">
+                                                <h3 class="text-left mb-3 text-blue">Villa Entrance</h3>
+                                                <!-- Table Start -->
+                                                <div class="arrival-bg">
+                                                    <!-- <h2 class="all-headings">ALL JOBS</h2> -->
+                                                    <div class="table-responsive">
+                                                        <div id="no-table">
+                                                            <table class="table table-bordered arrival-table cf">
+                                                                <thead class="cf">
+                                                                    <tr>
+                                                                        <th style="width: 5%;">S.No.</th>
+                                                                        <th style="width: 30%;">Check Points</th>
+                                                                        <th style="width: 10%;">Status</th>
+                                                                        <th style="width: 5%;">Responsibility</th>
+                                                                        <th style="width: 10%;">Photo</th>
+                                                                        <th style="width: 10%;">Observation</th>
+                                                                        <th style="width: 10%;">Issue</th>
+                                                                        <th style="width: 10%;">Task Master</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td data-title="S.No.">1</td>
+                                                                        <td data-title="Check Point">Jetty, jetty fascia &
+                                                                            platform</td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">2</td>
+                                                                        <td data-title="Check Point">Fire extinguisher box,
+                                                                            MCP</td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">3</td>
+                                                                        <td data-title="Check Point">Condition of
+                                                                            compound/privacy wall paint, roof fascia,
+                                                                            decrabond roof & rafters</td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">4</td>
+                                                                        <td data-title="Check Point">Room number/Signage
+                                                                        </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">5</td>
+                                                                        <td data-title="Check Point">Entrance lights,
+                                                                            location, intensity </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">6</td>
+                                                                        <td data-title="Check Point">Condition of wooden
+                                                                            bench </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">7</td>
+                                                                        <td data-title="Check Point">MEP room door, wall &
+                                                                            interior </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+    
+                                                                    <tr>
+                                                                        <td data-title="S.No.">8</td>
+                                                                        <td data-title="Check Point">Entrance pathway/sub-jetty to
+                                                                            the villa </td>
+                                                                        <td data-title="Status">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Excellent</option>
+                                                                                <option value="02">Good</option>
+                                                                                <option value="03">Satisfactory</option>
+                                                                                <option value="04">Unsatisfactory</option>
+                                                                                <option value="05">Poor</option>
+                                                                                <option value="06">Safety Issue</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Responsibility">
+                                                                            <select name="" id="" class="form-select">
+                                                                                <option value="01">Eng</option>
+                                                                                <option value="02">HK</option>
+                                                                                <option value="03">Eng+HK</option>
+                                                                            </select>
+                                                                        </td>
+                                                                        <td data-title="Photo"><i
+                                                                                class="fa fa-upload upload-file"
+                                                                                data-bs-toggle="modal"
+                                                                                data-bs-target="#upload-file"></i></td>
+                                                                        <td data-title="Observation">Text</td>
+                                                                        <td data-title="Issue">Text</td>
+                                                                        <td data-title="Task Master"><button
+                                                                                class="btn-blue-small">Add To
+                                                                                Master</button></td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row">
+                                                        <div class="col-md-12 float-end text-end">
+                                                            <a href="index.html" class="btn btn-blue btn-gap-right">Back to
+                                                                Home</a>
+                                                            <button class="btn btn-green btn-gap-right">Save</button>
+                                                            <button class="btn btn-blue btn-gap-right">Prev</button>
+                                                            <button class="btn btn-green btn-gap-right me-0">Next</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="tab-pane fade" id="villa2" role="tabpanel"
+                                                aria-labelledby="villa2-tab">2</div>
+                                            <div class="tab-pane fade" id="villa3" role="tabpanel"
+                                                aria-labelledby="villa3-tab">3</div>
+                                            <div class="tab-pane fade" id="villa4" role="tabpanel"
+                                                aria-labelledby="villa4-tab">4</div>
+                                            <div class="tab-pane fade" id="villa5" role="tabpanel"
+                                                aria-labelledby="villa5-tab">5</div>
+                                            <div class="tab-pane fade" id="villa6" role="tabpanel"
+                                                aria-labelledby="villa6-tab">6</div>
+                                        </div>
+                                    </div>
+                                    <!--  Guest Villa End -->
+
+                                </div>
+                                <!-- Tab 3 -->
+                                <div class="tab-pane fade" id="boh" role="tabpanel" aria-labelledby="boh-tab">3333333
+                                </div>
+                                <!-- Tab 4 -->
+                                <div class="tab-pane fade" id="equipment" role="tabpanel"
+                                    aria-labelledby="equipment-tab">444444</div>
+                                <!-- Tab 5 -->
+                                <div class="tab-pane fade" id="utility" role="tabpanel" aria-labelledby="utility-tab">
+                                    55555</div>
+                                <!-- Tab 6 -->
+                                <div class="tab-pane fade" id="fire" role="tabpanel" aria-labelledby="fire-tab">
+                                    6666666666</div>
+                                <!-- Tab 7 -->
+                                <div class="tab-pane fade" id="sop" role="tabpanel" aria-labelledby="sop-tab">777</div>
+                                <!-- Tab 8 -->
+                                <div class="tab-pane fade" id="pathway" role="tabpanel" aria-labelledby="pathway-tab">
+                                    888888</div>
+                            </div>
+                        </div>
+                    </section>
+                    <!-- Public Area Content End -->
+                </div>
+
+                <!-- Footer -->
+                <footer class="content-footer footer bg-footer-theme">
+                    <div class="container-xxl d-flex flex-wrap justify-content-between py-3 flex-md-row flex-column">
+                        <div class="mb-4 mb-md-0 text-center w-100">
+                            © 2023- 2024 <a href="#">WorkWize</a> . All Rights Reserved
+                        </div>
+                    </div>
+                </footer>
+                <!-- / Footer -->
+            </div>
+            <!-- / Layout container End -->
+        </div>
+    </div>
+    <!-- / Layout wrapper End -->
+
+    <!-- Overlay -->
+    <div class="layout-overlay layout-menu-toggle"></div>
+    <div id="modelHolder"></div>
+    <div id="teams2"></div>
+    <div id="divholder"></div>
+    <div id="permissin-divs"></div>
+
+
+    <!-- Enable OTP Modal -->
+    <div class="modal fade" id="upload-file" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-simple modal-enable-otp modal-dialog-centered">
+            <div class="modal-content p-3 p-md-0">
+                <div class="modal-body">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="text-left mb-4">
+                        <h3 class="mb-0">Photo Upload</h3>
+                    </div>
+
+                    <div class="btcd-f-input">
+                        <div class="btcd-f-wrp">
+                            <button class="btcd-inpBtn" type="button"> <img src="" alt=""> <span> Attach
+                                    File</span></button>
+                            <span class="btcd-f-title">No File Chosen</span>
+                            <small class="f-max"> (Max 2 MB)</small>
+                            <input multiple type="file" name="multiple[]" id="">
+                        </div>
+                        <div class="btcd-files"></div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--/ Enable OTP Modal -->
+
+    <!-- All JS -->
+    <script src="upkeep/assets/vendor/libs/jquery/jquery.js"></script>
+    <script src="upkeep/assets/vendor/libs/popper/popper.js"></script>
+    <script src="upkeep/assets/vendor/js/bootstrap.js"></script>
+    <script src="upkeep/assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
+    <script src="upkeep/assets/vendor/libs/hammer/hammer.js"></script>
+    <script src="upkeep/assets/vendor/libs/i18n/i18n.js"></script>
+    <script src="upkeep/assets/vendor/libs/typeahead-js/typeahead.js"></script>
+    <script src="upkeep/assets/vendor/js/menu.js"></script>
+    <!-- <script src="upkeep/assets/vendor/libs/datatables-bs5/datatables-bootstrap5.js"></script> -->
+    <script src="upkeep/assets/vendor/libs/moment/moment.js"></script>
+    <script src="upkeep/assets/vendor/libs/flatpickr/flatpickr.js"></script>
+    <script src="upkeep/assets/vendor/libs/formvalidation/dist/js/FormValidation.min.js"></script>
+    <script src="upkeep/assets/vendor/libs/formvalidation/dist/js/plugins/Bootstrap5.min.js"></script>
+    <script src="upkeep/assets/vendor/libs/formvalidation/dist/js/plugins/AutoFocus.min.js"></script>
+    <script src="upkeep/assets/js/main.js"></script>
+    <script src="upkeep/assets/js/tables-datatables-basic.js"></script>
+    <script src="upkeep/assets/vendor/js/helpers.js"></script>
+    <script src="upkeep/assets/vendor/js/template-customizer.js"></script>
+    <script src="upkeep/assets/js/config.js"></script>
+    <script src="upkeep/assets/js/tables-datatables-advanced.js"></script>
+    <!-- Date Picker JS -->
+    <script src="upkeep/assets/vendor/libs/moment/moment.js"></script>
+    <script src="upkeep/assets/vendor/libs/flatpickr/flatpickr.js"></script>
+    <script src="upkeep/assets/vendor/libs/bootstrap-datepicker/bootstrap-datepicker.js"></script>
+    <script src="upkeep/assets/vendor/libs/bootstrap-daterangepicker/bootstrap-daterangepicker.js"></script>
+    <script src="upkeep/assets/vendor/libs/jquery-timepicker/jquery-timepicker.js"></script>
+    <script src="upkeep/assets/vendor/libs/pickr/pickr.js"></script>
+    <script src="upkeep/assets/js/forms-pickers.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.bootstrap5.js"></script>
+    <!-- Main JS -->
+    <script src="main/js/demo.js"></script>
+    <!-- File Upload -->
+    <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+    <script src="https://unpkg.com/create-file-list@1.0.1/dist/create-file-list.min.js"></script>
+
+</body>
+</html>
