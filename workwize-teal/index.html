@@ -465,7 +465,7 @@
         <div class="fld" id="eAssignedWrap"><label>Assign To</label>
           <select id="eAssigned"><option value="">Assign To</option></select></div>
         <div class="fld" id="eStatusWrap"><label>Status</label>
-          <select id="eStatus"><option>Open</option><option>Assigned</option><option>Closed</option></select></div>
+          <select id="eStatus"><option>Open</option><option>Assigned</option><option value="In-Progress">In-Progress</option><option>Closed</option></select></div>
         <div class="fld" id="eClosedByWrap" hidden><label>Closed By</label><input id="eClosedBy"></div>
         <div class="fld full"><label>Remarks</label><input id="eRemarks" placeholder="NA"></div>
 
@@ -583,15 +583,15 @@
         <span id="closeTeamNotice">Jobs can be closed by authorized members of the responsible team.</span>
       </div>
       <div class="fgrid">
-        <div class="fld full">
+        <div class="fld full" id="clByWrap">
           <label for="clBy">Closing Team Member</label>
           <select id="clBy" required></select>
         </div>
-        <div class="fld full">
+        <div class="fld full" id="clRemarksWrap">
           <label for="clRemarks">Completion Remarks</label>
           <input id="clRemarks" placeholder="e.g. Work completed. Done." value="Done." required>
         </div>
-        <div class="fld full">
+        <div class="fld full" id="clPhotoWrap">
           <label>Photo After (Optional)</label>
           <div class="pp" id="closePhotoWrap" data-which="After">
             <div class="ppb" style="margin-bottom:6px;">
@@ -605,7 +605,8 @@
         </div>
       </div>
       <div class="btns">
-        <button type="submit" class="btn g">Confirm &amp; Close Job</button>
+        <button type="button" class="btn s" data-close>Cancel</button>
+        <button type="submit" class="btn g" id="closeSubmitBtn">Confirm &amp; Close Job</button>
       </div>
     </form>
   </div>
@@ -679,6 +680,14 @@
     <div class="lb-thumbs" id="lbThumbs" style="display:none;"></div>
   </div>
   <input type="file" accept="image/*" id="quickPhoto" hidden>
+
+  <!-- ===== SCREEN LOADING OVERLAY ===== -->
+  <div class="screen-loader" id="screenLoader" hidden aria-live="polite" aria-busy="true">
+    <div class="screen-loader-box">
+      <div class="screen-loader-spin"></div>
+      <div class="screen-loader-text" id="screenLoaderText">Updating status...</div>
+    </div>
+  </div>
 
   <button class="totop" id="toTop" aria-label="Back to top" hidden>&uarr;</button>
   <div class="toast" id="toast" role="status"></div>

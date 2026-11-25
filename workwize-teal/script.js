@@ -456,6 +456,18 @@
     toast._t = setTimeout(function () { t.classList.remove('show'); }, 2800);
   }
 
+  function showScreenLoader(msg) {
+    var el = $('#screenLoader');
+    var txt = $('#screenLoaderText');
+    if (txt) txt.textContent = msg || 'Updating status...';
+    if (el) el.hidden = false;
+  }
+
+  function hideScreenLoader() {
+    var el = $('#screenLoader');
+    if (el) el.hidden = true;
+  }
+
   /* Icons */
   var I = {
     dots: '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>',
@@ -470,7 +482,8 @@
     trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>',
     copy: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
     copiedTick: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
-    taskmaster: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>'
+    taskmaster: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>',
+    progress: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>'
   };
 
   /* Helper to render Job ID badge with copy button */
@@ -1011,7 +1024,7 @@
         matchAssign &&
         matchClosedBy &&
         matchDate &&
-        (ignoreStatus || tab === 'closed' || state.status === 'all' || j.status === state.status || (state.status === 'In-Progress' && (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress')));
+        (ignoreStatus || tab === 'closed' || state.status === 'all' || j.status === state.status || (state.status === 'In-Progress' && isInProgressStatus(j.status)));
     });
     var s = state.sort;
     arr.sort(function (a, b) {
@@ -1147,10 +1160,20 @@
       '</div>';
   }
 
+  function isInProgressStatus(status) {
+    return status === 'In-Progress' || status === 'InProgress' || status === 'In Progress';
+  }
+
+  function statusTagClass(status) {
+    var s = String(status || 'Open').trim();
+    if (isInProgressStatus(s)) return 'st-In-Progress';
+    return 'st-' + s.replace(/\s+/g, '-');
+  }
+
   function clsOf(j) {
     if (j.status === 'Closed') return 'Closed';
     if (j.status === 'Assigned') return 'Assigned';
-    if (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress') return 'InProgress';
+    if (isInProgressStatus(j.status)) return 'InProgress';
     return j.status === 'Open' ? 'Open' : '';
   }
 
@@ -1188,6 +1211,14 @@
     if (closed) return false;
     if (isAdmin()) return true;
     return isJobIssuedToUserTeam(j);
+  }
+
+  // Anyone (any team / any email login, except view-only Atmosphere Admin) can update a non-closed job status (Open, Assigned, In-Progress)
+  function canMarkInProgress(j) {
+    if (isAtmosphereAdmin()) return false;
+    if (!j) return false;
+    var closed = (j.status === 'Closed') || (state.tab === 'closed');
+    return !closed;
   }
 
   // QuickFix condition: who can close / change status of a job
@@ -1310,6 +1341,11 @@
       taskMasterBtn = '<button data-act="taskmaster" data-id="' + j.id + '">' + I.taskmaster + ' Move to Task Master</button>';
     }
 
+    var inProgressBtn = '';
+    if (!closed && canMarkInProgress(j) && !isInProgressStatus(j.status)) {
+      inProgressBtn = '<button data-act="inprogress" data-id="' + j.id + '" style="color:#0369A1;">' + I.progress + ' Mark In-Progress</button>';
+    }
+
     var closeBtn = '';
     if (!closed && canClose) {
       closeBtn = '<button data-act="close" data-id="' + j.id + '">' + I.check + ' Close Job</button>';
@@ -1327,6 +1363,7 @@
       // changeTeamBtn +
       assignBtn +
       taskMasterBtn +
+      inProgressBtn +
       closeBtn +
       deleteBtn +
       '</div></div>';
@@ -1371,10 +1408,8 @@
           '<span>Assigned To</span><b title="' + esc(j.assigned) + '">' + (j.assigned ? hl(j.assigned) : '<span class="na">Not assigned</span>') + '</b>' +
           (j.assignedDate ? '<span>Assigned Date</span><b title="' + esc(fmt(j.assignedDate)) + '">' + fmt(j.assignedDate) + '</b>' : ''));
 
-    var canClose = canCloseJob(j);
-    var statusTag = !closed && canClose
-      ? '<button type="button" class="tag st-' + j.status + '" data-act="close" data-id="' + j.id + '" title="Click to update status / close job" style="cursor:pointer;border:none;font:inherit;">' + j.status + '</button>'
-      : '<span class="tag st-' + j.status + '">' + j.status + '</span>';
+    var stCls = statusTagClass(j.status);
+    var statusTag = '<span class="tag ' + stCls + '">' + esc(j.status) + '</span>';
 
     return '<article class="jcard ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="top">' +
@@ -1418,10 +1453,8 @@
       '</article>';
     }
 
-    var canClose = canCloseJob(j);
-    var statusTag = !closed && canClose
-      ? '<button type="button" class="tag st-' + j.status + '" data-act="close" data-id="' + j.id + '" title="Click to update status / close job" style="cursor:pointer;border:none;font:inherit;">' + j.status + '</button>'
-      : '<span class="tag st-' + j.status + '">' + j.status + '</span>';
+    var stCls = statusTagClass(j.status);
+    var statusTag = '<span class="tag ' + stCls + '">' + esc(j.status) + '</span>';
 
     return '<article class="jrow ' + clsOf(j) + hlCls + '" data-id="' + j.id + '" tabindex="0">' +
       '<div class="rt">' +
@@ -2139,7 +2172,7 @@
           total: pJobs.length,
           open: pJobs.filter(function (j) { return j.status === 'Open'; }).length,
           assigned: pJobs.filter(function (j) { return j.status === 'Assigned'; }).length,
-          inProgress: pJobs.filter(function (j) { return j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress'; }).length,
+          inProgress: pJobs.filter(function (j) { return isInProgressStatus(j.status); }).length,
           closed: pClosed.length
         };
       };
@@ -2178,7 +2211,7 @@
       var agingOpen = openJobs.filter(function (j) { return j.status === 'Open' && isWeekOld(j); }).length;
       var agingAssigned = openJobs.filter(function (j) { return j.status === 'Assigned' && isWeekOld(j); }).length;
       var agingInProgress = openJobs.filter(function (j) {
-        return (j.status === 'In-Progress' || j.status === 'InProgress' || j.status === 'In Progress') && isWeekOld(j);
+        return isInProgressStatus(j.status) && isWeekOld(j);
       }).length;
 
       var elAgingOpenF = $('#agingOpenCount');
@@ -2871,9 +2904,114 @@
     $('#closeModal').hidden = false;
   }
 
+  function resolveJobAreaId(job) {
+    if (!job) return '';
+    var aid = job.areaId || (job.raw && (job.raw.areaId || job.raw.areaID)) || '';
+    if (!aid && cachedAreas && cachedAreas.length && job.area) {
+      var matchedArea = cachedAreas.find(function (a) {
+        return (a.areaName || a.name || '').toLowerCase() === String(job.area).toLowerCase();
+      });
+      if (matchedArea) aid = matchedArea.areaid || matchedArea.areaId || '';
+    }
+    return aid;
+  }
+
+  async function executeChangeJobStatus(job, newStatus) {
+    if (!job) return;
+    var normalizedNew = isInProgressStatus(newStatus) ? 'In-Progress' : newStatus;
+    var allowed = (normalizedNew === 'Closed') ? canCloseJob(job) : canMarkInProgress(job);
+    if (!allowed) {
+      toast('You do not have permission to update this job status.');
+      return;
+    }
+
+    var normalizedCur = isInProgressStatus(job.status) ? 'In-Progress' : job.status;
+    if (normalizedNew === normalizedCur) {
+      toast('Job is already ' + normalizedNew + '.');
+      var cmSame = $('#closeModal');
+      if (cmSame && !cmSame.hidden) cmSame.hidden = true;
+      return;
+    }
+
+    var submitBtn = $('#closeSubmitBtn');
+    var origBtnText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Updating...';
+    }
+    showScreenLoader('Updating status to ' + normalizedNew + '...');
+
+    try {
+      var targetJobId = job.jobId != null ? job.jobId : (job.raw && job.raw.jobId != null ? job.raw.jobId : job.id);
+      var targetPropId = (job.raw && job.raw.propId) ? job.raw.propId : currentPropertyId;
+      var targetAreaId = resolveJobAreaId(job);
+
+      var res = await api.changeJobStatus(
+        targetJobId,
+        targetPropId,
+        targetAreaId,
+        normalizedNew,
+        '',
+        []
+      );
+
+      if (res === true || (res && typeof res === 'object' && res.success !== false)) {
+        job.status = normalizedNew;
+        if (job.raw) job.raw.job_status = normalizedNew;
+
+        var cm = $('#closeModal');
+        if (cm && !cm.hidden) cm.hidden = true;
+        closeTargetJob = null;
+
+        var vm = $('#viewModal');
+        if (vm && !vm.hidden) {
+          renderView();
+        } else {
+          document.body.classList.remove('noscroll');
+        }
+
+        renderList(state.tab);
+        renderRecentStats();
+        toast('Job status updated to ' + normalizedNew + '!');
+
+        if (state.tab === 'open' && currentPropertyId) {
+          fetchOpenJobs((pagination.open && pagination.open.page) || 1, true).catch(function () {});
+        }
+      } else {
+        toast('Failed to update job status. Please try again.');
+      }
+    } catch (err) {
+      console.error('Status update error:', err);
+      if (err && err.message === 'UNAUTHORIZED') {
+        toast('Session expired or unauthorized. Please sign in.');
+        showLoginModal();
+      } else {
+        toast('Failed to update status: ' + (err && err.message ? err.message : 'Unknown error'));
+      }
+    } finally {
+      hideScreenLoader();
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        if (origBtnText) submitBtn.textContent = origBtnText;
+      }
+    }
+  }
+
   async function submitCloseForm(e) {
     e.preventDefault();
     if (!closeTargetJob) return;
+
+    if (!canCloseJob(closeTargetJob)) {
+      toast('You do not have permission to close this job.');
+      return;
+    }
+
+    if (!isAdmin() && (!closeTargetJob.assigned_supervisor || closeTargetJob.assigned_supervisor === 'NA' || closeTargetJob.assigned_supervisor === 'null' || !String(closeTargetJob.assigned_supervisor).trim())) {
+      toast('This job must be assigned to a supervisor before it can be closed. Please assign a team member first.');
+      closeModals();
+      openAssign(closeTargetJob);
+      return;
+    }
 
     var clRem = $('#clRemarks');
     var remarks = clRem ? clRem.value.trim() : '';
@@ -3273,7 +3411,7 @@
 
     $('#eSub').value = job.sub || '';
 
-    $('#eStatus').value = job.status || 'Open';
+    $('#eStatus').value = isInProgressStatus(job.status) ? 'In-Progress' : (job.status || 'Open');
     var eClosedBy = $('#eClosedBy');
     if (eClosedBy) eClosedBy.value = (job.status === 'Closed') ? (job.closedBy || (currentUser && currentUser.name) || '') : '';
 
@@ -3552,6 +3690,7 @@
     if (pos === -1 && j.jobId != null) pos = ctx.ids.map(String).indexOf(String(j.jobId));
     if (pos === -1) pos = 0;
     var tot = ctx.ids.length;
+    var isInProgress = isInProgressStatus(j.status);
     var isAssigned = (j.assigned && j.assigned !== 'NA') || j.status === 'Assigned';
     var age = closed
       ? (j.closedAt ? 'Resolved in ' + span(j.opened, j.closedAt) : 'Closed')
@@ -3559,8 +3698,9 @@
 
     var steps = [
       { done: true, cur: false, t: 'Job Created', s: fmt(j.opened), x: 'by ' + esc(j.by) },
-      { done: isAssigned, cur: !isAssigned && !closed, t: isAssigned ? 'Assigned to ' + esc(j.assigned) : 'Waiting for assignment', s: isAssigned ? (j.assignedDate ? fmt(j.assignedDate) : (j.assignDept && j.assignDept !== 'NA' ? esc(j.assignDept) : 'Assigned')) : 'Not assigned yet', x: isAssigned && j.assignDept && j.assignDept !== 'NA' ? esc(j.assignDept) : '' },
-      { done: closed, cur: !closed && isAssigned, t: closed ? 'Closed' : 'In progress', s: closed ? (j.closedAt ? fmt(j.closedAt) : 'Closed') : 'Pending resolution', x: closed ? 'by ' + esc(j.closedBy || 'Staff') : '' }
+      { done: isAssigned || isInProgress || closed, cur: !isAssigned && !isInProgress && !closed, t: isAssigned ? 'Assigned to ' + esc(j.assigned) : (isInProgress || closed ? 'Assignment' : 'Waiting for assignment'), s: isAssigned ? (j.assignedDate ? fmt(j.assignedDate) : (j.assignDept && j.assignDept !== 'NA' ? esc(j.assignDept) : 'Assigned')) : (isInProgress || closed ? 'Direct / Team handling' : 'Not assigned yet'), x: isAssigned && j.assignDept && j.assignDept !== 'NA' ? esc(j.assignDept) : '' },
+      { done: closed, cur: isInProgress && !closed, t: 'In-Progress', s: isInProgress ? 'Work in progress' : (closed ? 'Completed' : 'Not started yet'), x: '' },
+      { done: closed, cur: false, t: 'Closed', s: closed ? (j.closedAt ? fmt(j.closedAt) : 'Closed') : 'Pending resolution', x: closed ? 'by ' + esc(j.closedBy || 'Staff') : '' }
     ];
 
     var tl = steps.map(function (s) {
@@ -3572,7 +3712,7 @@
       field('Job Details', esc(j.details), true) +
       field('Issued To', esc(j.dept)) + field('Issued By', esc(j.by)) +
       field('Area', esc(j.area)) + field('Sub-Area', na(j.sub)) +
-      field('Open Date/Time', fmt(j.opened)) + field('Status', '<span class="tag st-' + j.status + '">' + j.status + '</span>') +
+      field('Open Date/Time', fmt(j.opened)) + field('Status', '<span class="tag ' + statusTagClass(j.status) + '">' + esc(j.status) + '</span>') +
       field('Assign Sub-Dept.', na(j.assignDept)) + field('Assign To', na(j.assigned)) +
       (j.assignedDate ? field('Assigned Date/Time', fmt(j.assignedDate)) : '') +
       (closed ? field('Closed By', na(j.closedBy)) + field('Closed Date/Time', fmt(j.closedAt)) : '') +
@@ -3597,6 +3737,9 @@
         if (canMoveToTaskMaster(j)) {
           viewActions += '<button type="button" class="btn s" data-vact="taskmaster">' + I.taskmaster + ' Move to Task Master</button>';
         }
+        if (canMarkInProgress(j) && !isInProgress) {
+          viewActions += '<button type="button" class="btn info" data-vact="inprogress">' + I.progress + ' Mark In-Progress</button>';
+        }
         if (canClose) {
           viewActions += '<button class="btn g" data-vact="close">' + I.check + ' Close Job</button>';
         }
@@ -3604,7 +3747,7 @@
     }
 
     $('#viewDialog').innerHTML =
-      '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips">' + propBadgeHTML(j.propId, 'font-size:12px;padding:3px 9px') + '<span class="tag st-' + j.status + '">' + j.status + '</span><span class="age">' + age + '</span></div>' +
+      '<div class="vhead ' + clsOf(j) + '"><div class="vtop"><div class="vchips">' + propBadgeHTML(j.propId, 'font-size:12px;padding:3px 9px') + '<span class="tag ' + statusTagClass(j.status) + '">' + esc(j.status) + '</span><span class="age">' + age + '</span></div>' +
       '<div class="vnav"><button data-vnav="-1" title="Previous (&larr;)"' + (pos <= 0 ? ' disabled' : '') + '>&lsaquo;</button><span>' + (pos + 1) + ' of ' + tot + '</span><button data-vnav="1" title="Next (&rarr;)"' + (pos >= tot - 1 ? ' disabled' : '') + '>&rsaquo;</button><button class="vx" data-vclose title="Close (Esc)">&times;</button></div></div>' +
       '<h2>' + esc(j.details) + '</h2><p>Issued To: ' + esc(j.dept) + ' &middot; Area: ' + esc(j.area) + (j.sub ? ' &middot; Sub Area: ' + esc(j.sub) : '') + '</p></div>' +
       '<div class="vbody"><div class="vmain"><h4>Job Information</h4><div class="fv">' + fields + '</div>' +
@@ -4450,6 +4593,7 @@
         openEdit(job);
       }
       else if (act === 'assign') openAssign(job);
+      else if (act === 'inprogress') executeChangeJobStatus(job, 'In-Progress');
       else if (act === 'close') openClose(job);
       else if (act === 'del') openDel(job);
       else if (act === 'taskmaster') {
@@ -4617,6 +4761,7 @@
         if (!job) return;
         var act = a.dataset.vact;
         if (act === 'assign') { closeView(); openAssign(job); }
+        else if (act === 'inprogress') { executeChangeJobStatus(job, 'In-Progress'); }
         else if (act === 'close') { closeView(); openClose(job); }
         else if (act === 'edit') {
           if (!canEditJob(job)) return;
