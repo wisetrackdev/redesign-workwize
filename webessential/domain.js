@@ -1,4 +1,4 @@
-var applicationdomain = "https://oprofase2.workarya.com/";
+var applicationdomain = "https://oprofase2.rikaenterprises.com/";
 var applicationdomain2 = "https://localhost:7151/";
 var loginendpoint = applicationdomain + "api/login"
 

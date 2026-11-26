@@ -1,13 +1,13 @@
 # WorkWize Redesign & Taskmaster 17-Point Upgrade Specification
 
-This repository houses the modern frontend redesign of **WorkWize Taskmaster** (`newtaskmaster/`) and the integrated **Admin Console** (`admin/`), connected to the live enterprise backend **`oproface2`** at `https://oprofase2.workarya.com/`.
+This repository houses the modern frontend redesign of **WorkWize Taskmaster** (`newtaskmaster/`) and the integrated **Admin Console** (`admin/`), connected to the live enterprise backend **`oproface2`** at `https://oprofase2.rikaenterprises.com/`.
 
 ---
 
 ## 🚀 System Architecture & Domain Alignment
-- **Live Backend API**: `https://oprofase2.workarya.com/`
+- **Live Backend API**: `https://oprofase2.rikaenterprises.com/`
 - **Connected Services**:
-  - `webessential/domain.js` & `admin/admincssjs/theme/systemjscss/js/domain.js`: Synced with live domain `https://oprofase2.workarya.com/`.
+  - `webessential/domain.js` & `admin/admincssjs/theme/systemjscss/js/domain.js`: Synced with live domain `https://oprofase2.rikaenterprises.com/`.
   - `newtaskmaster/js/api.js`: Standardized live endpoint communication.
   - `admin/`: Fully migrated from `OPRO-FRONTEND` into `redesign-workwize/admin/`.
   - Password Reset Support: `forgetpwd.html` and `resetpassword.html` integrated.

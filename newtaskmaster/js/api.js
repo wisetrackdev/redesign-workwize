@@ -5,7 +5,7 @@
 
 const WorkWizeAPI = (function () {
   // Primary API domain (from webessential/domain.js)
-  const DEFAULT_DOMAIN = "https://oprofase2.workarya.com/";
+  const DEFAULT_DOMAIN = "https://oprofase2.rikaenterprises.com/";
   const LOCAL_DOMAIN = "https://localhost:7151/";
 
   function getBaseUrl() {

@@ -4613,7 +4613,7 @@ async function deleteJobAttachment(fileName, fileUrl) {
 
 
 
-    // If remote cloud server (https://oprofase2.workarya.com/) returns 404 because backend hasn't been re-deployed there yet
+    // If remote cloud server (https://oprofase2.rikaenterprises.com/) returns 404 because backend hasn't been re-deployed there yet
 
 
 

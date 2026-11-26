@@ -7,7 +7,7 @@
 
   var API_CONFIG = {
     // Primary backend endpoint
-    BASE_URL: 'https://oprofase2.workarya.com/',
+    BASE_URL: 'https://oprofase2.rikaenterprises.com/',
     // Local / fallback endpoint if running locally
     LOCAL_URL: 'https://localhost:7151/',
     // Storage key used across all WorkWize / quickfix apps

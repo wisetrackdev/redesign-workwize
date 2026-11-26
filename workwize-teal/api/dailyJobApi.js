@@ -13,7 +13,7 @@
   'use strict';
 
   var cfg = global.WorkWizeConfig;
-  var BASE_URL = (cfg && cfg.API_CONFIG && cfg.API_CONFIG.BASE_URL) || 'https://oprofase2.workarya.com/';
+  var BASE_URL = (cfg && cfg.API_CONFIG && cfg.API_CONFIG.BASE_URL) || 'https://oprofase2.rikaenterprises.com/';
 
   /**
    * Helper to perform authenticated fetch
