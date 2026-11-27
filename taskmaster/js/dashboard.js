@@ -9,6 +9,8 @@ let dashboardStats = { total: 0, open: 0, closed: 0, safety: 0 };
 let allDashboardJobs = [];
 let activeNewJobsRange = "week";
 let selectedNewJobsArea = null;
+let dashboardLoadSeq = 0;
+let areaIdToNameMap = new Map();
 
 document.addEventListener("DOMContentLoaded", function () {
   initNewJobsStatControls();
@@ -17,7 +19,8 @@ document.addEventListener("DOMContentLoaded", function () {
   // Listen for property selection change in header
   window.addEventListener("workwize:propertyChanged", function (e) {
     const propId = e.detail ? e.detail.propId : null;
-    loadDashboardForProperty(propId);
+    const propName = e.detail ? e.detail.propName : null;
+    loadDashboardForProperty(propId, propName);
   });
 });
 
@@ -28,7 +31,7 @@ async function initDashboard() {
       const props = await WorkWizeAPI.getAllProperties();
       if (Array.isArray(props) && props.length > 0) {
         const storedProp = localStorage.getItem("workwize_current_property");
-        if (!storedProp || storedProp === "PROP-001" || !props.some(p => p.propId === storedProp)) {
+        if (!storedProp || storedProp === "PROP-001" || !props.some(p => String(p.propId) === String(storedProp))) {
           WorkWizeAPI.setCurrentProperty(props[0].propId, props[0].propName);
         }
       }
@@ -44,11 +47,33 @@ async function initDashboard() {
   await loadDashboardForProperty(currentPropId);
 }
 
-async function loadDashboardForProperty(propId) {
+function resetNewJobsStatUI() {
+  allDashboardJobs = [];
+  areaIdToNameMap = new Map();
+  selectedNewJobsArea = null;
+  activeNewJobsRange = "week";
+  updateNewJobsRangeButtonsUI();
+
+  const buttonsContainer = document.getElementById("newJobsAreaButtons");
+  if (buttonsContainer) {
+    buttonsContainer.innerHTML = `<div class="text-xs text-slate-400 italic">Loading newly logged jobs...</div>`;
+  }
+
+  const panelEl = document.getElementById("newJobsAreaJobsPanel");
+  if (panelEl) panelEl.classList.add("hidden");
+
+  const listEl = document.getElementById("newJobsAreaJobsList");
+  if (listEl) listEl.innerHTML = "";
+}
+
+async function loadDashboardForProperty(propId, propNameOverride) {
+  const reqId = ++dashboardLoadSeq;
   const currentPropId = propId || (typeof WorkWizeAPI !== "undefined" ? WorkWizeAPI.getCurrentProperty() : null);
-  const currentPropName = (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getCurrentPropertyName === "function")
+  const currentPropName = propNameOverride || ((typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getCurrentPropertyName === "function")
     ? WorkWizeAPI.getCurrentPropertyName()
-    : (localStorage.getItem("workwize_current_property_name") || "Current Property");
+    : (localStorage.getItem("workwize_current_property_name") || "Current Property"));
+
+  resetNewJobsStatUI();
 
   const subtitleEl = document.getElementById("jobsByAreaSubtitle");
   if (subtitleEl) {
@@ -56,6 +81,7 @@ async function loadDashboardForProperty(propId) {
   }
 
   let overviewLoaded = false;
+  let jobsFetched = false;
   try {
     if (typeof WorkWizeAPI !== "undefined" && typeof WorkWizeAPI.getJobOverview === "function") {
       const [overviewRes, openJobsRes, closedJobsRes] = await Promise.allSettled([
@@ -64,6 +90,8 @@ async function loadDashboardForProperty(propId) {
         typeof WorkWizeAPI.getClosedJobs === "function" ? WorkWizeAPI.getClosedJobs(currentPropId) : Promise.resolve(null)
       ]);
 
+      if (reqId !== dashboardLoadSeq) return;
+
       if (overviewRes.status === "fulfilled" && Array.isArray(overviewRes.value)) {
         renderDashboardWithAreas(overviewRes.value, currentPropName);
         overviewLoaded = true;
@@ -71,18 +99,24 @@ async function loadDashboardForProperty(propId) {
 
       loadNewJobsStatFromResponses(
         openJobsRes.status === "fulfilled" ? openJobsRes.value : null,
-        closedJobsRes.status === "fulfilled" ? closedJobsRes.value : null
+        closedJobsRes.status === "fulfilled" ? closedJobsRes.value : null,
+        currentPropId
       );
+      jobsFetched = true;
       if (overviewLoaded) return;
     }
   } catch (err) {
     console.warn("Failed to load overview from API for prop:", currentPropId, err);
   }
 
+  if (reqId !== dashboardLoadSeq) return;
+
   // Fallback if no areas returned or API fails
   if (!overviewLoaded) {
     renderDashboardFallback(currentPropName);
-    loadNewJobsStatFromResponses(null, null);
+    if (!jobsFetched) {
+      loadNewJobsStatFromResponses(null, null, currentPropId);
+    }
   }
 }
 
@@ -98,7 +132,11 @@ function renderDashboardWithAreas(overview, propName) {
   let totalSafety = 0;
 
   overview.forEach(item => {
-    const name = item.areaName || item.name || "Area";
+    const name = String(item.areaName || item.AreaName || item.name || "Area").trim() || "Area";
+    const aid = String(item.areaId || item.AreaId || item.areaID || item.AreaID || item.areaid || "").trim().toLowerCase();
+    if (aid && name) {
+      areaIdToNameMap.set(aid, name);
+    }
     const total = (item.total_jobs !== undefined && item.total_jobs !== null && !isNaN(item.total_jobs))
       ? Number(item.total_jobs)
       : ((item.total !== undefined && item.total !== null && !isNaN(item.total)) ? Number(item.total) : 0);
@@ -421,8 +459,9 @@ function updateNewJobsRangeButtonsUI() {
   });
 }
 
-function loadNewJobsStatFromResponses(openRes, closedRes) {
+function loadNewJobsStatFromResponses(openRes, closedRes, propId) {
   const combinedMap = new Map();
+  const normalizedTargetProp = propId ? String(propId).trim().toLowerCase() : "";
 
   const extractList = (res) => {
     if (!res) return [];
@@ -430,9 +469,17 @@ function loadNewJobsStatFromResponses(openRes, closedRes) {
     return Array.isArray(raw) ? raw : [];
   };
 
+  const matchesProperty = (item, requireExplicitProp = false) => {
+    if (!normalizedTargetProp) return true;
+    const itemProp = item.propId || item.PropId || item.propID || item.PropID || item.propertyId || item.PropertyId || "";
+    const normalizedItemProp = String(itemProp).trim().toLowerCase();
+    if (!normalizedItemProp) return !requireExplicitProp;
+    return normalizedItemProp === normalizedTargetProp;
+  };
+
   const addJobs = (list, forceClosed) => {
     list.forEach(item => {
-      if (!item) return;
+      if (!item || !matchesProperty(item, false)) return;
       const key = String(item.jobId || item.JobId || item.orgjobId || item.OrgjobId || item.id || "").trim();
       if (!key || combinedMap.has(key)) return;
       combinedMap.set(key, { ...item, _isClosedFallback: forceClosed });
@@ -444,6 +491,7 @@ function loadNewJobsStatFromResponses(openRes, closedRes) {
 
   if (typeof WorkWizeDB !== "undefined" && typeof WorkWizeDB.getJobs === "function") {
     WorkWizeDB.getJobs().forEach(lj => {
+      if (!lj || !matchesProperty(lj, true)) return;
       const key = String(lj.rawId || lj.id || lj.jobId || "").trim();
       if (key && !combinedMap.has(key)) combinedMap.set(key, lj);
     });
@@ -488,6 +536,15 @@ function getNewJobsRangeStartDate(rangeKey) {
   return new Date(now.getFullYear(), now.getMonth() - 6, now.getDate(), 0, 0, 0, 0);
 }
 
+function getJobAreaName(job) {
+  if (!job) return "";
+  const direct = String(job.areaName || job.AreaName || job.area || job.Area || "").trim();
+  if (direct) return direct;
+  const aid = String(job.areaId || job.AreaId || job.areaID || job.AreaID || job.areaid || "").trim().toLowerCase();
+  if (aid && areaIdToNameMap.has(aid)) return areaIdToNameMap.get(aid);
+  return "";
+}
+
 function getJobsForNewStatRange(rangeKey) {
   const start = getNewJobsRangeStartDate(rangeKey);
   const now = new Date();
@@ -495,7 +552,7 @@ function getJobsForNewStatRange(rangeKey) {
 
   return allDashboardJobs.filter(job => {
     const dt = parseDashboardJobDate(job);
-    return dt && dt >= start && dt <= endOfToday;
+    return dt && dt >= start && dt <= endOfToday && Boolean(getJobAreaName(job));
   });
 }
 
@@ -556,7 +613,7 @@ function renderNewJobsStatSection() {
     "6months": "Last 6 months"
   };
 
-  // Update count badges on all 4 timeframe tabs
+  // Update count badges on all 4 timeframe tabs (always visible)
   ["week", "month", "2months", "6months"].forEach(r => {
     const countEl = document.querySelector(`[data-range-count="${r}"]`);
     if (countEl) countEl.textContent = String(getJobsForNewStatRange(r).length);
@@ -572,7 +629,8 @@ function renderNewJobsStatSection() {
   // Group strictly by Area (ONLY areas with >= 1 logged job in this range)
   const areaMap = new Map();
   matchingJobs.forEach(job => {
-    const areaName = String(job.areaName || job.AreaName || job.area || job.Area || "General Area").trim() || "General Area";
+    const areaName = getJobAreaName(job);
+    if (!areaName) return;
     if (!areaMap.has(areaName)) areaMap.set(areaName, []);
     areaMap.get(areaName).push(job);
   });
