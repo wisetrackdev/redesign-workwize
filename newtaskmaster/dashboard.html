@@ -25,9 +25,9 @@
   <aside id="appSidebar" class="app-sidebar fixed lg:sticky top-0 left-0 bottom-0 z-50 w-64 bg-white border-r border-slate-200/80 flex flex-col h-screen flex-shrink-0 transition-transform duration-300 -translate-x-full lg:translate-x-0 shadow-lg lg:shadow-none">
     
     <!-- Sidebar Brand Logo Header -->
-    <div class="h-16 px-5 flex items-center justify-between border-b border-slate-100 shrink-0">
+    <div class="h-20 px-5 flex items-center justify-between border-b border-slate-100 shrink-0">
       <a href="job-by-area.html" class="flex items-center gap-2.5">
-        <img src="assets/logo.png" alt="WorkWize Logo" class="h-8 w-auto object-contain">
+        <img src="assets/logo.png" alt="WorkWize Logo" class="h-12 w-auto max-w-[185px] object-contain">
       </a>
       <button type="button" id="closeSidebarBtn" class="lg:hidden p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors">
         <i class="fa-solid fa-xmark text-base"></i>
@@ -150,7 +150,7 @@
         <button id="openSidebarBtn" type="button" class="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors">
           <i class="fa-solid fa-bars text-base"></i>
         </button>
-        <img src="assets/logo.png" alt="WorkWize Logo" class="h-7 w-auto object-contain">
+        <img src="assets/logo.png" alt="WorkWize Logo" class="h-10 w-auto object-contain">
       </div>
       <div class="flex items-center gap-2">
         <span class="text-xs font-bold text-slate-700 truncate max-w-[130px]" id="mobileHeaderPropertyName">Loading Property...</span>
@@ -235,6 +235,61 @@
               No critical issues
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- New Jobs Stat Section -->
+      <div class="ww-card space-y-4" id="newJobsStatCard">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-100 pb-3.5">
+          <div class="flex items-start sm:items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-sm shrink-0">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-bold text-slate-900 text-sm">New Jobs Stat</h3>
+                <span id="newJobsTotalRangeBadge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">0 Logged</span>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5" id="newJobsStatSubtitle">Areas with newly logged jobs — click an area button to view jobs</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1.5 bg-slate-100/80 p-1 rounded-xl border border-slate-200/70" id="newJobsRangeTabs">
+            <button type="button" data-range="week" class="new-jobs-range-btn px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-white text-blue-700 shadow-xs">
+              This Week <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-700" data-range-count="week">0</span>
+            </button>
+            <button type="button" data-range="month" class="new-jobs-range-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+              This Month <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200/80 text-slate-700" data-range-count="month">0</span>
+            </button>
+            <button type="button" data-range="2months" class="new-jobs-range-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+              Last 2 months <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200/80 text-slate-700" data-range-count="2months">0</span>
+            </button>
+            <button type="button" data-range="6months" class="new-jobs-range-btn px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all cursor-pointer">
+              Last 6 months <span class="ml-1 px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200/80 text-slate-700" data-range-count="6months">0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Animated Area Buttons (Only areas with logged jobs in active timeframe) -->
+        <div id="newJobsAreaButtons" class="flex flex-wrap gap-2.5 items-center min-h-[42px]">
+          <div class="text-xs text-slate-400 italic">Loading newly logged jobs...</div>
+        </div>
+
+        <!-- Clicked Area Jobs Panel -->
+        <div id="newJobsAreaJobsPanel" class="hidden pt-3 border-t border-slate-100">
+          <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-ping"></span>
+              <h4 class="text-xs font-bold text-slate-900">
+                New Jobs in <span id="selectedStatAreaName" class="text-blue-600">-</span>
+              </h4>
+              <span id="selectedStatAreaCount" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">0</span>
+            </div>
+            <button type="button" id="closeNewJobsAreaPanelBtn" class="text-[11px] font-semibold text-slate-400 hover:text-slate-700 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer">
+              <i class="fa-solid fa-xmark mr-1"></i> Hide
+            </button>
+          </div>
+          <div id="newJobsAreaJobsList" class="overflow-x-auto border border-slate-200 rounded-xl bg-slate-50/40 max-h-[340px] overflow-y-auto"></div>
         </div>
       </div>
 
