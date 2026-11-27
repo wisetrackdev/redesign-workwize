@@ -244,23 +244,26 @@ async function loadJobDetails(jobId) {
 
 
       if (res && res.success && res.jobdata) {
-        try {
-          const cachedStr = sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data");
-          if (cachedStr) {
-            const cached = JSON.parse(cachedStr);
-            if (cached && (cached.jobId === jobId || cached.id === jobId || cached.orgjobId === jobId)) {
-              if (Array.isArray(cached.teams) && cached.teams.length > (res.jobdata.teams?.length || 0)) {
-                res.jobdata.teams = cached.teams;
-              }
-              if (cached.assignedTo) {
-                res.jobdata.assignedTo = cached.assignedTo;
-              }
-              if (Array.isArray(cached._detailAssignees)) {
-                res.jobdata._detailAssignees = cached._detailAssignees;
+        const hasServerAssignees = Array.isArray(res.jobdata.data1) && res.jobdata.data1.length > 0;
+        if (!hasServerAssignees) {
+          try {
+            const cachedStr = sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data");
+            if (cachedStr) {
+              const cached = JSON.parse(cachedStr);
+              if (cached && (cached.jobId === jobId || cached.id === jobId || cached.orgjobId === jobId)) {
+                if (Array.isArray(cached.teams) && cached.teams.length > (res.jobdata.teams?.length || 0)) {
+                  res.jobdata.teams = cached.teams;
+                }
+                if (cached.assignedTo && !res.jobdata.assignedTo) {
+                  res.jobdata.assignedTo = cached.assignedTo;
+                }
+                if (Array.isArray(cached._detailAssignees) && cached._detailAssignees.length > 0) {
+                  res.jobdata._detailAssignees = cached._detailAssignees;
+                }
               }
             }
-          }
-        } catch (eMerge) {}
+          } catch (eMerge) {}
+        }
 
 
 
@@ -1988,64 +1991,82 @@ function renderJobDetails(data) {
     }
 
     const assigneeSet = new Set();
+    const teamIdToIndex = new Map();
     const teamList = [];
 
     function addAssignee(strOrObj) {
       if (!strOrObj) return;
       const formatted = formatAssigneeDisplay(strOrObj);
-      if (formatted && !assigneeSet.has(formatted.toUpperCase())) {
+      if (!formatted) return;
+
+      if (typeof strOrObj === "object") {
+        const tid = String(strOrObj.teamID || strOrObj.teamId || strOrObj.id || "").trim().toUpperCase();
+        if (tid) {
+          const existingIdx = teamIdToIndex.get(tid);
+          if (existingIdx !== undefined) {
+            const prev = teamList[existingIdx];
+            if (prev) assigneeSet.delete(prev.toUpperCase());
+            teamList[existingIdx] = formatted;
+            assigneeSet.add(formatted.toUpperCase());
+            return;
+          }
+          if (!assigneeSet.has(formatted.toUpperCase())) {
+            teamIdToIndex.set(tid, teamList.length);
+            assigneeSet.add(formatted.toUpperCase());
+            teamList.push(formatted);
+          }
+          return;
+        }
+      }
+
+      if (!assigneeSet.has(formatted.toUpperCase())) {
         assigneeSet.add(formatted.toUpperCase());
         teamList.push(formatted);
       }
     }
 
-    // 1. Check data._detailAssignees
-    if (Array.isArray(data._detailAssignees)) {
-      data._detailAssignees.forEach(addAssignee);
-    }
-
-    // 2. Check data.teams
-    if (Array.isArray(data.teams)) {
-      data.teams.forEach(addAssignee);
-    }
-
-    // 3. Check data.data1
-    if (Array.isArray(data.data1)) {
+    // Use live backend data1 first (deduplicated by teamID so multi-manager teams show once),
+    // and only fall back to local/cached sources when backend team data is unavailable.
+    if (Array.isArray(data.data1) && data.data1.length > 0) {
       data.data1.forEach(addAssignee);
-    }
-
-    // 4. Check data.assignedTo (can be comma-separated string)
-    if (data.assignedTo && typeof data.assignedTo === "string") {
+    } else if (Array.isArray(data.teams) && data.teams.length > 0) {
+      data.teams.forEach(addAssignee);
+    } else if (Array.isArray(data._detailAssignees) && data._detailAssignees.length > 0) {
+      data._detailAssignees.forEach(addAssignee);
+    } else if (data.assignedTo && typeof data.assignedTo === "string") {
       data.assignedTo.split(",").forEach(s => addAssignee(s.trim()));
     }
 
-    // 5. Check cached job data in sessionStorage / localStorage
-    try {
-      const cachedStr = sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data");
-      if (cachedStr) {
-        const cached = JSON.parse(cachedStr);
-        if (cached && (cached.jobId === data.jobId || cached.id === data.id || cached.orgjobId === data.orgjobId)) {
-          if (Array.isArray(cached.teams)) cached.teams.forEach(addAssignee);
-          if (Array.isArray(cached._detailAssignees)) cached._detailAssignees.forEach(addAssignee);
-          if (cached.assignedTo && typeof cached.assignedTo === "string") {
-            cached.assignedTo.split(",").forEach(s => addAssignee(s.trim()));
+    if (teamList.length === 0) {
+      try {
+        const cachedStr = sessionStorage.getItem("workwize_current_job_data") || localStorage.getItem("workwize_last_job_data");
+        if (cachedStr) {
+          const cached = JSON.parse(cachedStr);
+          if (cached && (cached.jobId === data.jobId || cached.id === data.id || cached.orgjobId === data.orgjobId)) {
+            if (Array.isArray(cached.teams)) cached.teams.forEach(addAssignee);
+            if (teamList.length === 0 && Array.isArray(cached._detailAssignees)) cached._detailAssignees.forEach(addAssignee);
+            if (teamList.length === 0 && cached.assignedTo && typeof cached.assignedTo === "string") {
+              cached.assignedTo.split(",").forEach(s => addAssignee(s.trim()));
+            }
           }
         }
-      }
-    } catch (eCache) {}
+      } catch (eCache) {}
+    }
 
-    // 6. Check WorkWizeDB if available
-    try {
-      if (typeof WorkWizeDB !== "undefined" && typeof WorkWizeDB.getJobs === "function") {
-        const localJob = WorkWizeDB.getJobs().find(j => j.id === (data.jobId || data.id));
-        if (localJob) {
-          if (localJob.assignedTo && typeof localJob.assignedTo === "string") {
-            localJob.assignedTo.split(",").forEach(s => addAssignee(s.trim()));
+    if (teamList.length === 0) {
+      try {
+        if (typeof WorkWizeDB !== "undefined" && typeof WorkWizeDB.getJobs === "function") {
+          const localJob = WorkWizeDB.getJobs().find(j => j.id === (data.jobId || data.id));
+          if (localJob) {
+            if (Array.isArray(localJob.teams) && localJob.teams.length > 0) {
+              localJob.teams.forEach(addAssignee);
+            } else if (localJob.assignedTo && typeof localJob.assignedTo === "string") {
+              localJob.assignedTo.split(",").forEach(s => addAssignee(s.trim()));
+            }
           }
-          if (Array.isArray(localJob.teams)) localJob.teams.forEach(addAssignee);
         }
-      }
-    } catch (eDb) {}
+      } catch (eDb) {}
+    }
 
     // Attach exact displayed assignees to cached data so update page pre-selects identical assignees
     data._detailAssignees = teamList;
@@ -2101,7 +2122,13 @@ function renderJobDetails(data) {
 
 
 
-  if (budgetEl) budgetEl.textContent = `$${Number(data.budget || 0).toLocaleString()}`;
+  const formatUsdNumber = (val) => {
+    const num = Number(val || 0);
+    if (!Number.isFinite(num)) return "$0";
+    return `$${num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  };
+
+  if (budgetEl) budgetEl.textContent = formatUsdNumber(data.budget);
 
 
 
@@ -2149,7 +2176,7 @@ function renderJobDetails(data) {
 
 
 
-  if (finalExpEl) finalExpEl.textContent = `$${Number(data.finalExp || data.expense || 0).toLocaleString()}`;
+  if (finalExpEl) finalExpEl.textContent = formatUsdNumber(data.finalExp || data.expense);
 
 
 

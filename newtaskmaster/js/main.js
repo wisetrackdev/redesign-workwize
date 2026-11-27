@@ -2349,6 +2349,8 @@ async function submitJobForm() {
 
         assignedTo: assignedText,
 
+        teams: selectedAssignees.map(a => ({ teamID: a.id, teamName: a.name, name: a.name })),
+
         openedOn: creationDate,
 
         createdOn: creationDate,
@@ -2419,8 +2421,24 @@ async function submitJobForm() {
 
     try {
       sessionStorage.setItem("workwize_newly_created_job_id", createdId);
-      sessionStorage.setItem("workwize_newly_created_job", JSON.stringify(newJobObj));
+      if (typeof newJobObj !== "undefined") {
+        sessionStorage.setItem("workwize_newly_created_job", JSON.stringify(newJobObj));
+      }
       localStorage.setItem("workwize_newly_created_job_id", createdId);
+      sessionStorage.setItem("workwize_jump_to_page1", "1");
+      sessionStorage.removeItem("ww_selected_job_id");
+      localStorage.removeItem("ww_selected_job_id");
+
+      let recentCreated = [];
+      try {
+        recentCreated = JSON.parse(localStorage.getItem("workwize_recent_created_jobs") || sessionStorage.getItem("workwize_recent_created_jobs") || "[]");
+        if (!Array.isArray(recentCreated)) recentCreated = [];
+      } catch (_) { recentCreated = []; }
+      const idStr = String(createdId).trim();
+      recentCreated = [idStr, ...recentCreated.filter(x => String(x).trim().toLowerCase() !== idStr.toLowerCase())].slice(0, 50);
+      const recentJson = JSON.stringify(recentCreated);
+      sessionStorage.setItem("workwize_recent_created_jobs", recentJson);
+      localStorage.setItem("workwize_recent_created_jobs", recentJson);
     } catch (_) {}
 
     closeModal();

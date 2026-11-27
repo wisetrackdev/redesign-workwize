@@ -279,22 +279,51 @@ async function loadAllJobsFromAPI() {
   filterAndRenderJobs();
 }
 
+function getJobSortIdentifiers(item) {
+  if (!item) return [];
+  return [item.rawId, item.id, item.jobId, item.orgjobId, item.JobId, item.OrgjobId, item.tempjobId, item.TempjobId]
+    .filter(Boolean)
+    .map(x => String(x).toLowerCase().trim());
+}
+
 /**
  * Point 11: Date Sorting across all sections (Created Date, Expected Date, Close Date)
  */
 function sortJobsByField(jobs, field = currentSortField, order = currentSortOrder) {
   if (!Array.isArray(jobs)) return jobs;
-  const newlyCreatedId = sessionStorage.getItem("workwize_newly_created_job_id") || localStorage.getItem("workwize_newly_created_job_id") || "";
+  const newlyCreatedId = (sessionStorage.getItem("workwize_newly_created_job_id") || localStorage.getItem("workwize_newly_created_job_id") || "").toLowerCase().trim();
+  let recentList = [];
+  try {
+    recentList = JSON.parse(sessionStorage.getItem("workwize_recent_created_jobs") || localStorage.getItem("workwize_recent_created_jobs") || "[]");
+    if (!Array.isArray(recentList)) recentList = [];
+  } catch (_) { recentList = []; }
+
+  const recentRankMap = new Map();
+  if (newlyCreatedId) recentRankMap.set(newlyCreatedId, 0);
+  recentList.forEach(id => {
+    const key = String(id || "").toLowerCase().trim();
+    if (key && !recentRankMap.has(key)) recentRankMap.set(key, recentRankMap.size);
+  });
+
+  const getRecentRank = (job) => {
+    let best = Infinity;
+    for (const key of getJobSortIdentifiers(job)) {
+      if (recentRankMap.has(key)) {
+        const r = recentRankMap.get(key);
+        if (r < best) best = r;
+      }
+    }
+    return best;
+  };
 
   return jobs.sort((a, b) => {
+    // Always pin newly/recently created jobs to the very top (newest created first)
+    const rankA = getRecentRank(a);
+    const rankB = getRecentRank(b);
+    if (rankA !== rankB) return rankA - rankB;
+
     const idA = String(a.rawId || a.id || a.orgjobId || "");
     const idB = String(b.rawId || b.id || b.orgjobId || "");
-
-    // If one of the jobs was just created, prioritize it to the very top!
-    if (newlyCreatedId) {
-      if (idA === newlyCreatedId && idB !== newlyCreatedId) return -1;
-      if (idB === newlyCreatedId && idA !== newlyCreatedId) return 1;
-    }
 
     let valA = a[field];
     let valB = b[field];
@@ -441,7 +470,37 @@ function formatAssignee(job) {
   }
 
   if (Array.isArray(job.data1) && job.data1.length > 0) {
-    const list = job.data1.map(extractSingle).filter(Boolean);
+    const teamIdToIdx = new Map();
+    const seenNames = new Set();
+    const list = [];
+    job.data1.forEach(t => {
+      if (!t) return;
+      const name = extractSingle(t);
+      if (!name) return;
+      if (typeof t === "object") {
+        const tid = String(t.teamID || t.teamId || t.id || "").trim().toUpperCase();
+        if (tid) {
+          const existingIdx = teamIdToIdx.get(tid);
+          if (existingIdx !== undefined) {
+            const prev = list[existingIdx];
+            if (prev) seenNames.delete(prev.toUpperCase());
+            list[existingIdx] = name;
+            seenNames.add(name.toUpperCase());
+            return;
+          }
+          if (!seenNames.has(name.toUpperCase())) {
+            teamIdToIdx.set(tid, list.length);
+            seenNames.add(name.toUpperCase());
+            list.push(name);
+          }
+          return;
+        }
+      }
+      if (!seenNames.has(name.toUpperCase())) {
+        seenNames.add(name.toUpperCase());
+        list.push(name);
+      }
+    });
     if (list.length > 0) return list.join(", ");
   }
 
@@ -612,11 +671,16 @@ function filterAndRenderJobs() {
   // Point 15: Save search state to sessionStorage
   saveAllJobsState();
 
-  const selectedJobId = sessionStorage.getItem("ww_selected_job_id") || localStorage.getItem("ww_selected_job_id");
-  if (selectedJobId) {
-    const jobIdx = filteredJobs.findIndex(j => (j.rawId || j.id) === selectedJobId || j.id === selectedJobId);
-    if (jobIdx !== -1) {
-      currentPage = Math.floor(jobIdx / pageSize) + 1;
+  if (sessionStorage.getItem("workwize_jump_to_page1") === "1") {
+    sessionStorage.removeItem("workwize_jump_to_page1");
+    currentPage = 1;
+  } else {
+    const selectedJobId = sessionStorage.getItem("ww_selected_job_id") || localStorage.getItem("ww_selected_job_id");
+    if (selectedJobId) {
+      const jobIdx = filteredJobs.findIndex(j => (j.rawId || j.id) === selectedJobId || j.id === selectedJobId);
+      if (jobIdx !== -1) {
+        currentPage = Math.floor(jobIdx / pageSize) + 1;
+      }
     }
   }
 
@@ -677,8 +741,8 @@ function renderTableRows() {
   const pageJobs = filteredJobs.slice(startIndex, startIndex + pageSize);
 
   pageJobs.forEach(job => {
-    const newlyCreatedId = sessionStorage.getItem("workwize_newly_created_job_id") || localStorage.getItem("workwize_newly_created_job_id") || "";
-    const isNew = Boolean(newlyCreatedId && (job.rawId === newlyCreatedId || job.id === newlyCreatedId || job.orgjobId === newlyCreatedId));
+    const newlyCreatedId = (sessionStorage.getItem("workwize_newly_created_job_id") || localStorage.getItem("workwize_newly_created_job_id") || "").toLowerCase().trim();
+    const isNew = Boolean(newlyCreatedId && getJobSortIdentifiers(job).includes(newlyCreatedId));
 
     const tr = document.createElement("tr");
     tr.className = isNew
