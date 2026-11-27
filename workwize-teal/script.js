@@ -3583,6 +3583,8 @@
 
   function openTaskMaster(job) {
     if (!job || !canMoveToTaskMaster(job)) return;
+    closeView();
+    if (job && job.id) highlightJob(job.id);
     taskMasterTargetJob = job;
     var tt = $('#taskMasterText');
     if (tt) {
@@ -5399,6 +5401,7 @@
         var target = taskMasterTargetJob;
         confirmMoveTaskMasterBtn.disabled = true;
         confirmMoveTaskMasterBtn.textContent = 'Saving...';
+        showScreenLoader('Moving job to Task Master...');
 
         try {
           var targetPropId = (target.raw && target.raw.propId) ? target.raw.propId : currentPropertyId;
@@ -5411,7 +5414,7 @@
             res = await window.WorkWizeDailyJobApi.moveToTaskMaster(targetPropId, targetJobId);
           }
 
-          if (res === true || (res && res.success !== false && !res.error)) {
+          if (res === true || res === 'true' || (res && typeof res === 'object' && res.success !== false && !res.error)) {
             var targetIdStr = String(target.id);
             var targetJobIdStr = target.jobId != null ? String(target.jobId) : null;
 
@@ -5440,16 +5443,22 @@
             toast('Job moved to Task Master');
 
             // Refresh open jobs list from API in background if online
-            if (typeof loadJobs === 'function' && currentPropertyId) {
-              loadJobs('open', (pagination.open && pagination.open.page) || 1, false).catch(function () {});
+            if (state.tab === 'open' && currentPropertyId) {
+              fetchOpenJobs((pagination.open && pagination.open.page) || 1, true).catch(function () {});
             }
           } else {
             toast('Failed to move to Task Master');
           }
         } catch (err) {
           console.error('Error moving to TaskMaster:', err);
-          toast('Failed to move to Task Master: ' + (err.message || 'Unknown error'));
+          if (err && err.message === 'UNAUTHORIZED') {
+            toast('Session expired or unauthorized. Please sign in.');
+            showLoginModal();
+          } else {
+            toast('Failed to move to Task Master: ' + (err.message || 'Unknown error'));
+          }
         } finally {
+          hideScreenLoader();
           confirmMoveTaskMasterBtn.disabled = false;
           confirmMoveTaskMasterBtn.textContent = 'Save';
           taskMasterTargetJob = null;
