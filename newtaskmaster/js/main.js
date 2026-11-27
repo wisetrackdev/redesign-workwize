@@ -1053,11 +1053,7 @@ function initAddJobModal() {
 
       e.preventDefault();
 
-      if (validateJobForm()) {
-
-        submitJobForm();
-
-      }
+      attemptSubmitJobForm();
 
     });
 
@@ -1073,11 +1069,7 @@ function initAddJobModal() {
 
       e.preventDefault();
 
-      if (validateJobForm()) {
-
-        submitJobForm();
-
-      }
+      attemptSubmitJobForm();
 
     });
 
@@ -1551,9 +1543,135 @@ async function populateModalDropdowns() {
 
 
 
+function resetAddJobModalForm() {
+  const form = document.getElementById("addJobForm");
+  if (form && typeof form.reset === "function") form.reset();
+
+  ["modalReferenceNo", "modalExpectedDate", "modalBudget", "modalLocation", "modalVillaNumber", "modalCcfDept", "modalJobCreationDate", "modalCreatedBy"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+
+  const fileInput = document.getElementById("fileUploadInput");
+  if (fileInput) fileInput.value = "";
+  const ownerFileInput = document.getElementById("modalOwnerUploadInput");
+  if (ownerFileInput) ownerFileInput.value = "";
+
+  setRichEditorValue("modalJobDetails", "");
+  setRichEditorValue("modalRemarks", "");
+  clearModalAssignees();
+  modalUploadFiles = [];
+  modalOwnerUploadFiles = [];
+
+  const fileList = document.getElementById("uploadedFileList");
+  if (fileList) fileList.innerHTML = "";
+
+  const ownerCommentField = document.getElementById("modalOwnerComment");
+  if (ownerCommentField) ownerCommentField.value = "";
+  const ownerFileList = document.getElementById("modalOwnerUploadedFileList");
+  if (ownerFileList) ownerFileList.innerHTML = "";
+
+  const noImageModal = document.getElementById("noImageConfirmModal");
+  if (noImageModal) {
+    noImageModal.classList.add("hidden");
+    noImageModal.classList.remove("flex");
+    noImageModal.style.display = "none";
+  }
+
+  handleModalAreaChange();
+  handleModalCcfChange();
+}
+
+function showNoImageConfirmModal(onConfirm) {
+  let confirmModal = document.getElementById("noImageConfirmModal");
+  if (!confirmModal) {
+    confirmModal = document.createElement("div");
+    confirmModal.id = "noImageConfirmModal";
+    confirmModal.className = "fixed inset-0 hidden items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4";
+    confirmModal.style.position = "fixed";
+    confirmModal.style.inset = "0";
+    confirmModal.style.zIndex = "10050";
+    confirmModal.style.display = "none";
+    confirmModal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="p-5 flex items-start gap-3.5 border-b border-slate-100">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0 text-lg">
+            <i class="fa-regular fa-image"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-sm font-bold text-slate-900">Submit Without Image?</h3>
+            <p class="text-xs text-slate-600 mt-1 leading-relaxed">You have not attached any image to this job. Do you want to continue and create the job without an image?</p>
+          </div>
+          <button type="button" id="noImageCloseBtn" class="text-slate-400 hover:text-slate-600 p-1 rounded-lg transition-colors cursor-pointer" title="Close">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
+        </div>
+        <div class="px-5 py-3.5 bg-slate-50/80 flex items-center justify-end gap-2.5">
+          <button type="button" id="noImageAddPhotoBtn" class="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold transition-colors cursor-pointer">
+            Cancel &amp; Add Image
+          </button>
+          <button type="button" id="noImageContinueBtn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer inline-flex items-center gap-1.5">
+            <i class="fa-solid fa-paper-plane text-[11px]"></i> Continue Without Image
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(confirmModal);
+  }
+
+  confirmModal.style.zIndex = "10050";
+
+  const closeConfirm = () => {
+    confirmModal.classList.add("hidden");
+    confirmModal.classList.remove("flex");
+    confirmModal.style.display = "none";
+  };
+
+  const closeBtn = document.getElementById("noImageCloseBtn");
+  const addPhotoBtn = document.getElementById("noImageAddPhotoBtn");
+  const continueBtn = document.getElementById("noImageContinueBtn");
+
+  if (closeBtn) closeBtn.onclick = closeConfirm;
+  if (addPhotoBtn) {
+    addPhotoBtn.onclick = () => {
+      closeConfirm();
+      const dropZone = document.getElementById("fileDropZone");
+      if (dropZone) {
+        dropZone.scrollIntoView({ behavior: "smooth", block: "center" });
+        dropZone.classList.add("border-blue-500", "bg-blue-50/40");
+        setTimeout(() => dropZone.classList.remove("border-blue-500", "bg-blue-50/40"), 1500);
+      }
+    };
+  }
+  if (continueBtn) {
+    continueBtn.onclick = () => {
+      closeConfirm();
+      if (typeof onConfirm === "function") onConfirm();
+    };
+  }
+  confirmModal.onclick = (e) => {
+    if (e.target === confirmModal) closeConfirm();
+  };
+
+  confirmModal.classList.remove("hidden");
+  confirmModal.classList.add("flex");
+  confirmModal.style.display = "flex";
+}
+
+function attemptSubmitJobForm() {
+  if (!validateJobForm()) return;
+  if (!modalUploadFiles || modalUploadFiles.length === 0) {
+    showNoImageConfirmModal(() => {
+      submitJobForm();
+    });
+    return;
+  }
+  submitJobForm();
+}
+
 function openModal() {
 
-  clearModalAssignees();
+  resetAddJobModalForm();
 
   const modal = document.getElementById("addJobModal");
 
@@ -1757,7 +1875,7 @@ function closeModal() {
 
   modal.classList.remove("open");
 
-
+  resetAddJobModalForm();
 
   // Remove highlight from Create New Job button and restore current page active tab
 
@@ -2311,28 +2429,9 @@ async function submitJobForm() {
 
 
 
-    // Reset form & uploads & rich editors
+    // Reset form & uploads & rich editors (also cleared in closeModal)
 
-    const form = document.getElementById("addJobForm");
-
-    if (form && typeof form.reset === "function") form.reset();
-
-    setRichEditorValue("modalJobDetails", "");
-
-    setRichEditorValue("modalRemarks", "");
-
-    clearModalAssignees();
-
-    modalUploadFiles = [];
-    modalOwnerUploadFiles = [];
-
-    const fileList = document.getElementById("uploadedFileList");
-    if (fileList) fileList.innerHTML = "";
-
-    const ownerCommentField = document.getElementById("modalOwnerComment");
-    if (ownerCommentField) ownerCommentField.value = "";
-    const ownerFileList = document.getElementById("modalOwnerUploadedFileList");
-    if (ownerFileList) ownerFileList.innerHTML = "";
+    resetAddJobModalForm();
 
 
 

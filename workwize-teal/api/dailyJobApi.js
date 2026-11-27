@@ -256,10 +256,13 @@
      * Move job to TaskMaster
      * Endpoint: POST /api/dailyjob/quickfixtojobtracker
      */
-    moveToTaskMaster: async function (propId, jobId) {
+    moveToTaskMaster: async function (propId, jobId, customJobId) {
       var form = new FormData();
       form.append('jobId', jobId);
       form.append('propId', propId);
+      if (customJobId) {
+        form.append('customJobId', customJobId);
+      }
 
       return await apiFetch('api/dailyjob/quickfixtojobtracker', {
         method: 'POST',

@@ -5406,12 +5406,15 @@
         try {
           var targetPropId = (target.raw && target.raw.propId) ? target.raw.propId : currentPropertyId;
           var targetJobId = (target.raw && target.raw.jobId != null) ? target.raw.jobId : (target.jobId != null ? target.jobId : target.id);
+          var targetCustomJobId = (target.customJobId && String(target.customJobId).trim()) ||
+            (target.propId && String(target.propId).trim()) ||
+            (target.raw && target.raw.customJobId && String(target.raw.customJobId).trim()) || '';
 
           var res = null;
           if (api && api.moveToTaskMaster) {
-            res = await api.moveToTaskMaster(targetPropId, targetJobId);
+            res = await api.moveToTaskMaster(targetPropId, targetJobId, targetCustomJobId);
           } else if (window.WorkWizeDailyJobApi && window.WorkWizeDailyJobApi.moveToTaskMaster) {
-            res = await window.WorkWizeDailyJobApi.moveToTaskMaster(targetPropId, targetJobId);
+            res = await window.WorkWizeDailyJobApi.moveToTaskMaster(targetPropId, targetJobId, targetCustomJobId);
           }
 
           if (res === true || res === 'true' || (res && typeof res === 'object' && res.success !== false && !res.error)) {
